@@ -1,0 +1,12 @@
+.git
+.gitignore
+**/bin
+**/obj
+**/node_modules
+**/.next
+.vscode
+.idea
+*.db
+*.db-shm
+*.db-wal
+data

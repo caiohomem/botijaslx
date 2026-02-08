@@ -1,0 +1,64 @@
+using Botijas.Application.Common;
+using Botijas.Domain.Entities;
+using Botijas.Domain.Repositories;
+
+namespace Botijas.Application.Orders.Commands;
+
+public class AddCylinderToOrderCommandHandler
+{
+    private readonly IRefillOrderRepository _orderRepository;
+    private readonly ICylinderRepository _cylinderRepository;
+
+    public AddCylinderToOrderCommandHandler(
+        IRefillOrderRepository orderRepository,
+        ICylinderRepository cylinderRepository)
+    {
+        _orderRepository = orderRepository;
+        _cylinderRepository = cylinderRepository;
+    }
+
+    public async Task<Result<CylinderDto>> Handle(AddCylinderToOrderCommand command, CancellationToken cancellationToken)
+    {
+        var order = await _orderRepository.FindByIdAsync(command.OrderId, cancellationToken);
+        if (order == null)
+        {
+            return Result<CylinderDto>.Failure("Order not found");
+        }
+
+        Cylinder cylinder;
+
+        if (command.CylinderId.HasValue)
+        {
+            // Usar botija existente
+            cylinder = await _cylinderRepository.FindByIdAsync(command.CylinderId.Value, cancellationToken);
+            if (cylinder == null)
+            {
+                return Result<CylinderDto>.Failure("Cylinder not found");
+            }
+
+            // Verificar se não está em outro pedido aberto
+            var inOtherOrder = await _cylinderRepository.FindInOpenOrderAsync(cylinder.CylinderId, cancellationToken);
+            if (inOtherOrder != null)
+            {
+                return Result<CylinderDto>.Failure("Cylinder is already in another open order");
+            }
+        }
+        else
+        {
+            // Criar nova botija sem etiqueta
+            cylinder = Cylinder.Create();
+            await _cylinderRepository.AddAsync(cylinder, cancellationToken);
+        }
+
+        order.AddCylinder(cylinder);
+        await _orderRepository.SaveChangesAsync(cancellationToken);
+        await _cylinderRepository.SaveChangesAsync(cancellationToken);
+
+        return Result<CylinderDto>.Success(new CylinderDto
+        {
+            CylinderId = cylinder.CylinderId,
+            LabelToken = cylinder.LabelToken?.Value,
+            State = cylinder.State.ToString()
+        });
+    }
+}
