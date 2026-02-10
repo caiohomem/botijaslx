@@ -93,6 +93,29 @@ export default function PickupPage() {
     });
   };
 
+  // M8: Calculate wait time and urgency
+  const getWaitTimeMinutes = (createdAt: string): number => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - created.getTime()) / 60000);
+  };
+
+  const getWaitTimeBadgeClass = (waitMinutes: number): string => {
+    if (waitMinutes >= 120) return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'; // 2+ hours
+    if (waitMinutes >= 60) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'; // 1+ hour
+    if (waitMinutes >= 30) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'; // 30+ minutes
+    return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'; // < 30 minutes
+  };
+
+  const formatWaitTime = (waitMinutes: number): string => {
+    if (waitMinutes >= 60) {
+      const hours = Math.floor(waitMinutes / 60);
+      const mins = waitMinutes % 60;
+      return `${hours}h ${mins}m`;
+    }
+    return `${waitMinutes}m`;
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -183,7 +206,10 @@ export default function PickupPage() {
       {/* Orders List */}
       {!loading && orders.length > 0 && (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {/* M8: Sort orders by wait time (longest waiting first) */}
+          {[...orders].sort((a, b) =>
+            getWaitTimeMinutes(b.createdAt) - getWaitTimeMinutes(a.createdAt)
+          ).map((order) => (
             (() => {
               const undeliveredCount = order.cylinders.filter(c => !c.isDelivered).length;
               const deliveredCount = order.totalCylinders - undeliveredCount;
@@ -207,6 +233,11 @@ export default function PickupPage() {
                   </button>
 
                   <div className="flex items-center gap-2">
+                    {/* M8: Wait time badge */}
+                    <div className={`text-sm px-3 py-1 rounded-full whitespace-nowrap font-medium ${getWaitTimeBadgeClass(getWaitTimeMinutes(order.createdAt))}`}>
+                      {formatWaitTime(getWaitTimeMinutes(order.createdAt))}
+                    </div>
+
                     <div className="text-sm bg-background px-3 py-1 rounded-full whitespace-nowrap">
                       {t('pickup.progress', { delivered: deliveredCount, total: order.totalCylinders })}
                     </div>
