@@ -3,6 +3,7 @@ using Botijas.Infrastructure.Hubs;
 using Botijas.Infrastructure.Data;
 using Botijas.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,8 +14,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 
 // Database
-var connectionString = builder.Configuration.GetConnectionString("Default")
+var rawConnectionString = builder.Configuration.GetConnectionString("Default")
+    ?? builder.Configuration["DATABASE_URL"]
     ?? "Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true";
+
+var connectionString = NormalizePostgresConnectionString(rawConnectionString);
 
 builder.Services.AddDbContext<BotijasDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -114,3 +118,65 @@ if (autoInitDb)
 }
 
 app.Run();
+
+static string NormalizePostgresConnectionString(string input)
+{
+    if (!(input.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+          input.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)))
+    {
+        return input;
+    }
+
+    var uri = new Uri(input);
+    var userInfo = uri.UserInfo.Split(':', 2, StringSplitOptions.None);
+    var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : string.Empty;
+    var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+    var database = uri.AbsolutePath.TrimStart('/');
+    var port = uri.IsDefaultPort ? 5432 : uri.Port;
+
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = port,
+        Database = database,
+        Username = username,
+        Password = password
+    };
+
+    if (!string.IsNullOrWhiteSpace(uri.Query))
+    {
+        var parts = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var part in parts)
+        {
+            var kv = part.Split('=', 2, StringSplitOptions.None);
+            var key = Uri.UnescapeDataString(kv[0]);
+            var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : string.Empty;
+
+            if (key.Equals("sslmode", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("ssl mode", StringComparison.OrdinalIgnoreCase))
+            {
+                builder.SslMode = Enum.TryParse<SslMode>(value, true, out var sslMode)
+                    ? sslMode
+                    : SslMode.Require;
+            }
+            else if (key.Equals("channel_binding", StringComparison.OrdinalIgnoreCase))
+            {
+                builder["Channel Binding"] = value;
+            }
+            else if (!string.IsNullOrWhiteSpace(value))
+            {
+                builder[key] = value;
+            }
+        }
+    }
+
+    if (builder.SslMode == SslMode.Disable)
+    {
+        builder.SslMode = SslMode.Require;
+    }
+
+    builder.TrustServerCertificate = true;
+    return builder.ConnectionString;
+}
