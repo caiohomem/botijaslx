@@ -11,6 +11,7 @@ public class CylindersController : ControllerBase
 {
     private readonly GetFillingQueueQueryHandler _getFillingQueueHandler;
     private readonly MarkCylinderReadyCommandHandler _markReadyHandler;
+    private readonly MarkCylindersReadyBatchCommandHandler _markReadyBatchHandler;
     private readonly ReportCylinderProblemCommandHandler _reportProblemHandler;
     private readonly AssignLabelCommandHandler _assignLabelHandler;
     private readonly GetCylinderHistoryQueryHandler _getHistoryHandler;
@@ -19,6 +20,7 @@ public class CylindersController : ControllerBase
     public CylindersController(
         GetFillingQueueQueryHandler getFillingQueueHandler,
         MarkCylinderReadyCommandHandler markReadyHandler,
+        MarkCylindersReadyBatchCommandHandler markReadyBatchHandler,
         ReportCylinderProblemCommandHandler reportProblemHandler,
         AssignLabelCommandHandler assignLabelHandler,
         GetCylinderHistoryQueryHandler getHistoryHandler,
@@ -26,6 +28,7 @@ public class CylindersController : ControllerBase
     {
         _getFillingQueueHandler = getFillingQueueHandler;
         _markReadyHandler = markReadyHandler;
+        _markReadyBatchHandler = markReadyBatchHandler;
         _reportProblemHandler = reportProblemHandler;
         _assignLabelHandler = assignLabelHandler;
         _getHistoryHandler = getHistoryHandler;
@@ -60,6 +63,24 @@ public class CylindersController : ControllerBase
         {
             return BadRequest(new { error = result.Error });
         }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Marca todas as botijas de um pedido como prontas (batch operation)
+    /// </summary>
+    [HttpPost("batch/mark-ready")]
+    public async Task<IActionResult> MarkReadyBatch(
+        [FromBody] MarkOrderBatchRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _markReadyBatchHandler.Handle(
+            new MarkCylindersReadyBatchCommand(request.OrderId),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
 
         return Ok(result.Value);
     }
@@ -143,3 +164,4 @@ public class CylindersController : ControllerBase
 
 public record ReportProblemRequest(string Type, string Notes);
 public record AssignLabelRequest(string QrToken);
+public record MarkOrderBatchRequest(Guid OrderId);

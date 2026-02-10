@@ -96,6 +96,43 @@ export default function FillingPage() {
     }
   };
 
+  // M3: Mark all cylinders in order as ready
+  const handleMarkAllReady = async (orderId: string, count: number) => {
+    const batchKey = `${orderId}_batch`;
+    setActionLoading(batchKey);
+    setError(null);
+
+    try {
+      const result = await cylindersApi.markReadyBatch(orderId);
+
+      // Remove all cylinders from this order from the list
+      setCylinders(prev => prev.filter(c => c.orderId !== orderId));
+
+      // Get customer info from remaining cylinders (for notification)
+      const cylindersInOrder = cylinders.filter(c => c.orderId === orderId);
+      const customerInfo = cylindersInOrder[0];
+
+      if (result.isOrderComplete && customerInfo) {
+        // All cylinders filled - notify customer via WhatsApp
+        sendOrderCompleteWhatsApp(
+          customerInfo.customerName,
+          customerInfo.customerPhone,
+          customerInfo.totalCylindersInOrder,
+          orderId
+        );
+        setSuccessMessage(t('filling.orderCompleteNotified', { name: customerInfo.customerName }));
+      } else {
+        setSuccessMessage(t('filling.marked'));
+      }
+
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao marcar botijas');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleReportProblem = async () => {
     if (!problemModal || !problemType) return;
 
@@ -243,16 +280,33 @@ export default function FillingPage() {
             <div key={group.orderId} className="border rounded-lg overflow-hidden">
               {/* Order Header */}
               <div className="bg-muted/50 p-4 border-b">
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1">
                     <div className="font-semibold">{group.customerName}</div>
                     <div className="text-sm text-muted-foreground">{group.customerPhone}</div>
                   </div>
-                  <div className="text-sm bg-background px-3 py-1 rounded-full">
-                    {t('filling.progress', {
-                      ready: group.readyCylindersInOrder,
-                      total: group.totalCylindersInOrder
-                    })}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm bg-background px-3 py-1 rounded-full whitespace-nowrap">
+                      {t('filling.progress', {
+                        ready: group.readyCylindersInOrder,
+                        total: group.totalCylindersInOrder
+                      })}
+                    </div>
+                    {/* M3: Mark all ready button */}
+                    {group.cylinders.some(c => c.cylinderId && !c.cylinderId.endsWith('_ready')) && (
+                      <button
+                        onClick={() => handleMarkAllReady(group.orderId, group.cylinders.filter(c => c.cylinderId && !c.cylinderId.endsWith('_ready')).length)}
+                        disabled={actionLoading === `${group.orderId}_batch`}
+                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
+                        title={t('filling.markAllReady', { count: group.cylinders.length - group.readyCylindersInOrder })}
+                      >
+                        {actionLoading === `${group.orderId}_batch` ? (
+                          <span className="inline-block animate-spin">⟳</span>
+                        ) : (
+                          `✓ ${group.cylinders.length - group.readyCylindersInOrder}`
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

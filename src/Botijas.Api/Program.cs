@@ -45,6 +45,7 @@ builder.Services.AddScoped<Botijas.Application.PrintJobs.Commands.AckPrintJobPri
 builder.Services.AddScoped<Botijas.Application.PrintJobs.Commands.AckPrintJobFailedCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Queries.GetFillingQueueQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.MarkCylinderReadyCommandHandler>();
+builder.Services.AddScoped<Botijas.Application.Filling.Commands.MarkCylindersReadyBatchCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.ReportCylinderProblemCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.AssignLabelCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Cylinders.Queries.GetCylinderHistoryQueryHandler>();

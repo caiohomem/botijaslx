@@ -112,6 +112,7 @@
     "progress": "{ready} de {total} prontas",
     "confirmMark": "Marcar como cheia?",
     "marked": "Botija marcada como cheia",
+    "markAllReady": "Marcar {count} como prontas",
     "orderComplete": "Pedido completo! Cliente será notificado.",
     "orderCompleteNotified": "Pedido completo! WhatsApp enviado para {name}.",
     "scanPlaceholder": "Escanear ou digitar codigo QR...",

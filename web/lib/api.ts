@@ -165,6 +165,17 @@ export const cylindersApi = {
       method: 'POST',
     }),
 
+  markReadyBatch: (orderId: string) =>
+    apiRequest<{
+      orderId: string;
+      markedCount: number;
+      isOrderComplete: boolean;
+      totalCylindersInOrder: number;
+    }>('/api/cylinders/batch/mark-ready', {
+      method: 'POST',
+      body: JSON.stringify({ orderId }),
+    }),
+
   reportProblem: (cylinderId: string, type: string, notes: string) =>
     apiRequest<ReportProblemResult>(`/api/cylinders/${cylinderId}/report-problem`, {
       method: 'POST',

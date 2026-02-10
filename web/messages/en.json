@@ -112,6 +112,7 @@
     "progress": "{ready} of {total} ready",
     "confirmMark": "Mark as ready?",
     "marked": "Cylinder marked as ready",
+    "markAllReady": "Mark {count} as ready",
     "orderComplete": "Order complete! Customer will be notified.",
     "orderCompleteNotified": "Order complete! WhatsApp sent to {name}.",
     "scanPlaceholder": "Scan or type QR code...",
