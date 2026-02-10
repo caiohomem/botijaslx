@@ -85,8 +85,38 @@ export default function DashboardPage() {
       const result = await customersApi.getCylinders(customerId);
       setSelectedCustomerCylinders(result);
       setCustomerResults([]);
+      setSearchInput('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar botijas do cliente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle QR scan in customer mode to identify customer from cylinder
+  const handleCustomerModeScan = async (qrCode: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // First, get the cylinder to find the customer
+      const cylinderResult = await historyApi.scanCylinder(qrCode);
+
+      // If cylinder has a customer associated, load that customer's cylinders
+      if (cylinderResult.customerName && cylinderResult.customerPhone) {
+        // Search for the customer by name
+        const customers = await customersApi.search(cylinderResult.customerName);
+        if (customers.customers.length > 0) {
+          // Select the first matching customer
+          await handleSelectCustomer(customers.customers[0].customerId);
+        } else {
+          setError(t('customer.notFound'));
+        }
+      } else {
+        setError(t('dashboard.cylinderNotFound'));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('customer.notFound'));
     } finally {
       setLoading(false);
     }
@@ -230,13 +260,22 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Customer Search - New typeahead (M0) */}
+        {/* Customer Search - New typeahead (M0) + QR Scanner */}
         {lookupMode === 'customer' && (
-          <CustomerSearch
-            onSelect={(customer) => handleSelectCustomer(customer.customerId)}
-            onCreateNew={() => {}}
-            disabled={loading}
-          />
+          <>
+            {/* QR Scanner to identify customer from cylinder */}
+            <QrScanner
+              onScan={(code) => handleCustomerModeScan(code)}
+              label={t('dashboard.scanCamera')}
+            />
+
+            {/* Typeahead customer search */}
+            <CustomerSearch
+              onSelect={(customer) => handleSelectCustomer(customer.customerId)}
+              onCreateNew={() => {}}
+              disabled={loading}
+            />
+          </>
         )}
 
         {/* Cylinder Search - Camera Scanner + Manual Input */}
