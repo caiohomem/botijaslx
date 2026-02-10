@@ -97,6 +97,18 @@ export const ordersApi = {
       body: JSON.stringify({ cylinderId }),
     }),
 
+  addCylindersBatch: (orderId: string, quantity: number) =>
+    apiRequest<{
+      cylinders: Array<{
+        cylinderId: string;
+        labelToken?: string;
+        state: string;
+      }>;
+    }>(`/api/orders/${orderId}/cylinders/batch`, {
+      method: 'POST',
+      body: JSON.stringify({ quantity }),
+    }),
+
   scanCylinder: (orderId: string, qrToken: string) =>
     apiRequest<{
       cylinderId: string;

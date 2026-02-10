@@ -147,6 +147,8 @@
     "cylinderAddedNoLabel": "Cylinder without label added",
     "printNewLabels": "Print Labels",
     "howManyLabels": "How many labels do you want to print?",
+    "quickPrint": "Quick Print",
+    "customizeQuantity": "Customize...",
     "printJobCreatedAndCylinders": "{count} label(s) sent to printer and cylinder(s) created",
     "pendingPrint": "Pending print",
     "noCylinders": "Add at least one cylinder",

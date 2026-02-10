@@ -272,8 +272,8 @@ export default function DeliveryPage() {
     }
   };
 
-  const handlePrintAndCreate = async () => {
-    if (!order || !selectedCustomer || printQuantity < 1) return;
+  const handlePrintAndCreate = async (quantity: number) => {
+    if (!order || !selectedCustomer || quantity < 1) return;
 
     setLoading(true);
     setError(null);
@@ -281,19 +281,27 @@ export default function DeliveryPage() {
     try {
       // Create print job with customer info
       const printJob = await printJobsApi.create(
-        printQuantity,
+        quantity,
         selectedCustomer.name,
         selectedCustomer.phone
       );
 
-      // Create N cylinders in the order
-      const newCylinders: Cylinder[] = [];
-      for (let i = 0; i < printQuantity; i++) {
-        const cylinder = await ordersApi.addCylinder(order.orderId);
+      // Create N cylinders in batch (M1)
+      const result = await ordersApi.addCylindersBatch(order.orderId, quantity);
+      const newCylinders = result.cylinders.map((c: any) => ({
+        cylinderId: c.cylinderId,
+        labelToken: c.labelToken,
+        state: c.state,
+      }));
+
+      // Assign QR codes to cylinders
+      for (let i = 0; i < newCylinders.length; i++) {
+        const cylinder = newCylinders[i];
         const qrToken = `${printJob.printJobId}-${i + 1}`;
         const assigned = await cylindersApi.assignLabel(cylinder.cylinderId, qrToken);
-        newCylinders.push({ ...cylinder, labelToken: assigned.labelToken });
+        cylinder.labelToken = assigned.labelToken;
       }
+
       setCylinders([...cylinders, ...newCylinders]);
 
       setShowPrintDialog(false);
@@ -301,7 +309,7 @@ export default function DeliveryPage() {
       const preview = { printJobId: printJob.printJobId, quantity: printJob.quantity };
       setPrintPreview(preview);
       setLastPrintPreview(preview);
-      showSuccess(t('delivery.printJobCreatedAndCylinders', { count: printQuantity }), 3000);
+      showSuccess(t('delivery.printJobCreatedAndCylinders', { count: quantity }), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao imprimir e criar botijas');
     } finally {
@@ -519,13 +527,41 @@ export default function DeliveryPage() {
               </button>
             </div>
 
-            <button
-              onClick={() => setShowPrintDialog(true)}
-              disabled={loading}
-              className="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors"
-            >
-              {t('delivery.printNewLabels')}
-            </button>
+            {/* Quick print buttons (M2) */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-muted-foreground">{t('delivery.quickPrint')}</h4>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => handlePrintAndCreate(1)}
+                  disabled={loading}
+                  className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
+                >
+                  1 {t('order.cylinders')}
+                </button>
+                <button
+                  onClick={() => handlePrintAndCreate(3)}
+                  disabled={loading}
+                  className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
+                >
+                  3 {t('order.cylinders')}
+                </button>
+                <button
+                  onClick={() => handlePrintAndCreate(5)}
+                  disabled={loading}
+                  className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
+                >
+                  5 {t('order.cylinders')}
+                </button>
+              </div>
+              <button
+                onClick={() => setShowPrintDialog(true)}
+                disabled={loading}
+                className="w-full px-4 py-2 border border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
+              >
+                {t('delivery.customizeQuantity')}
+              </button>
+            </div>
+
             {lastPrintPreview && (
               <button
                 onClick={() => setPrintPreview(lastPrintPreview)}

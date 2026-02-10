@@ -11,6 +11,7 @@ public class OrdersController : ControllerBase
 {
     private readonly CreateOrderCommandHandler _createHandler;
     private readonly AddCylinderToOrderCommandHandler _addCylinderHandler;
+    private readonly AddCylindersToOrderBatchCommandHandler _addCylindersHandler;
     private readonly ScanCylinderToOrderCommandHandler _scanHandler;
     private readonly GetReadyForPickupQueryHandler _getReadyForPickupHandler;
     private readonly DeliverCylinderCommandHandler _deliverCylinderHandler;
@@ -19,6 +20,7 @@ public class OrdersController : ControllerBase
     public OrdersController(
         CreateOrderCommandHandler createHandler,
         AddCylinderToOrderCommandHandler addCylinderHandler,
+        AddCylindersToOrderBatchCommandHandler addCylindersHandler,
         ScanCylinderToOrderCommandHandler scanHandler,
         GetReadyForPickupQueryHandler getReadyForPickupHandler,
         DeliverCylinderCommandHandler deliverCylinderHandler,
@@ -26,6 +28,7 @@ public class OrdersController : ControllerBase
     {
         _createHandler = createHandler;
         _addCylinderHandler = addCylinderHandler;
+        _addCylindersHandler = addCylindersHandler;
         _scanHandler = scanHandler;
         _getReadyForPickupHandler = getReadyForPickupHandler;
         _deliverCylinderHandler = deliverCylinderHandler;
@@ -59,6 +62,22 @@ public class OrdersController : ControllerBase
         }
 
         return Ok(result.Value);
+    }
+
+    [HttpPost("{orderId}/cylinders/batch")]
+    public async Task<IActionResult> AddCylindersBatch(
+        Guid orderId,
+        [FromBody] AddCylindersToOrderBatchCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _addCylindersHandler.Handle(command with { OrderId = orderId }, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(new { cylinders = result.Value });
     }
 
     [HttpPost("{orderId}/cylinders/scan")]

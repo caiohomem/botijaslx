@@ -1,0 +1,58 @@
+using Botijas.Application.Common;
+using Botijas.Domain.Entities;
+using Botijas.Domain.Repositories;
+
+namespace Botijas.Application.Orders.Commands;
+
+public class AddCylindersToOrderBatchCommandHandler
+{
+    private readonly IRefillOrderRepository _orderRepository;
+    private readonly ICylinderRepository _cylinderRepository;
+
+    public AddCylindersToOrderBatchCommandHandler(
+        IRefillOrderRepository orderRepository,
+        ICylinderRepository cylinderRepository)
+    {
+        _orderRepository = orderRepository;
+        _cylinderRepository = cylinderRepository;
+    }
+
+    public async Task<Result<List<CylinderDto>>> Handle(
+        AddCylindersToOrderBatchCommand command,
+        CancellationToken cancellationToken)
+    {
+        var order = await _orderRepository.FindByIdAsync(command.OrderId, cancellationToken);
+        if (order == null)
+        {
+            return Result<List<CylinderDto>>.Failure("Order not found");
+        }
+
+        if (command.Quantity < 1)
+        {
+            return Result<List<CylinderDto>>.Failure("Quantity must be at least 1");
+        }
+
+        var cylinders = new List<CylinderDto>();
+
+        // Create N cylinders in a single batch operation
+        for (int i = 0; i < command.Quantity; i++)
+        {
+            var cylinder = Cylinder.Create();
+            await _cylinderRepository.AddAsync(cylinder, cancellationToken);
+            order.AddCylinder(cylinder);
+
+            cylinders.Add(new CylinderDto
+            {
+                CylinderId = cylinder.CylinderId,
+                LabelToken = cylinder.LabelToken?.Value,
+                State = cylinder.State.ToString()
+            });
+        }
+
+        // Single batch save operation
+        await _orderRepository.SaveChangesAsync(cancellationToken);
+        await _cylinderRepository.SaveChangesAsync(cancellationToken);
+
+        return Result<List<CylinderDto>>.Success(cylinders);
+    }
+}

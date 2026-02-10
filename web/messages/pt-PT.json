@@ -147,6 +147,8 @@
     "cylinderAddedNoLabel": "Botija sem etiqueta adicionada",
     "printNewLabels": "Imprimir Etiquetas",
     "howManyLabels": "Quantas etiquetas deseja imprimir?",
+    "quickPrint": "Impressão Rápida",
+    "customizeQuantity": "Personalizar...",
     "printJobCreatedAndCylinders": "{count} etiqueta(s) enviada(s) para impressão e botija(s) criada(s)",
     "pendingPrint": "Aguardando impressão",
     "noCylinders": "Adicione pelo menos uma botija",

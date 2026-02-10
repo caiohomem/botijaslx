@@ -36,6 +36,7 @@ builder.Services.AddScoped<Botijas.Application.Customers.Queries.SearchCustomers
 builder.Services.AddScoped<Botijas.Application.Customers.Queries.GetCustomerCylindersQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.CreateOrderCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.AddCylinderToOrderCommandHandler>();
+builder.Services.AddScoped<Botijas.Application.Orders.Commands.AddCylindersToOrderBatchCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.ScanCylinderToOrderCommandHandler>();
 // Simulated print dispatcher (auto-acks as printed; swap for SignalRPrintJobDispatcher when real printer is connected)
 builder.Services.AddScoped<Botijas.Application.PrintJobs.IPrintJobDispatcher, Botijas.Infrastructure.PrintJobs.SimulatedPrintJobDispatcher>();
