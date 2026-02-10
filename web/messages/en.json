@@ -13,7 +13,15 @@
     "submit": "Submit",
     "close": "Close",
     "confirm": "Confirm",
-    "autoRefresh": "Auto-refresh: every 10s"
+    "autoRefresh": "Auto-refresh: every 10s",
+    "total": "Total",
+    "pending": "Pending",
+    "ready": "Ready",
+    "awaiting": "Awaiting",
+    "completed": "Completed",
+    "orders": "Orders",
+    "cylinders": "Cylinders",
+    "delivery": "Delivery"
   },
   "theme": {
     "light": "Light",

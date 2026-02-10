@@ -110,6 +110,31 @@ export default function PickupPage() {
         </div>
       </div>
 
+      {/* M7: KPI Counters */}
+      {!loading && orders.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('common.orders') || 'Orders'}</div>
+            <div className="text-2xl font-bold mt-2">{orders.length}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('pickup.title')}</div>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+            <div className="text-xs text-purple-700 dark:text-purple-300 uppercase tracking-wide font-medium">{t('common.cylinders') || 'Cylinders'}</div>
+            <div className="text-2xl font-bold mt-2 text-purple-700 dark:text-purple-300">
+              {orders.reduce((sum, o) => sum + o.totalCylinders, 0)}
+            </div>
+            <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">{t('common.total') || 'Total'}</div>
+          </div>
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="text-xs text-orange-700 dark:text-orange-300 uppercase tracking-wide font-medium">{t('common.pending') || 'Pending'}</div>
+            <div className="text-2xl font-bold mt-2 text-orange-700 dark:text-orange-300">
+              {orders.reduce((sum, o) => sum + (o.totalCylinders - o.deliveredCylinders), 0)}
+            </div>
+            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">{t('common.delivery') || 'Delivery'}</div>
+          </div>
+        </div>
+      )}
+
       {/* Search */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <input

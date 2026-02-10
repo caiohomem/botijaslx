@@ -13,7 +13,15 @@
     "submit": "Submeter",
     "close": "Fechar",
     "confirm": "Confirmar",
-    "autoRefresh": "Auto-atualizar: a cada 10s"
+    "autoRefresh": "Auto-atualizar: a cada 10s",
+    "total": "Total",
+    "pending": "Pendente",
+    "ready": "Pronto",
+    "awaiting": "A aguardar",
+    "completed": "Concluído",
+    "orders": "Pedidos",
+    "cylinders": "Botijas",
+    "delivery": "Entrega"
   },
   "theme": {
     "light": "Claro",

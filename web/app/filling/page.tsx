@@ -258,6 +258,31 @@ export default function FillingPage() {
         </div>
       </div>
 
+      {/* M7: KPI Counters */}
+      {!loading && cylinders.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-muted/30 p-4 rounded-lg border">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('common.total') || 'Total'}</div>
+            <div className="text-2xl font-bold mt-2">{cylinders.length}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('filling.title')}</div>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="text-xs text-blue-700 dark:text-blue-300 uppercase tracking-wide font-medium">{t('common.pending') || 'Pending'}</div>
+            <div className="text-2xl font-bold mt-2 text-blue-700 dark:text-blue-300">
+              {cylinders.filter(c => !c.labelToken?.endsWith('_ready')).length}
+            </div>
+            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">{t('common.awaiting') || 'Awaiting'}</div>
+          </div>
+          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="text-xs text-green-700 dark:text-green-300 uppercase tracking-wide font-medium">{t('common.ready') || 'Ready'}</div>
+            <div className="text-2xl font-bold mt-2 text-green-700 dark:text-green-300">
+              {cylinders.filter(c => c.labelToken?.endsWith('_ready')).length}
+            </div>
+            <div className="text-xs text-green-600 dark:text-green-400 mt-1">{t('common.completed') || 'Completed'}</div>
+          </div>
+        </div>
+      )}
+
       {/* Scan Input */}
       <QrScanner
         onScan={(code) => handleScanValue(code)}
