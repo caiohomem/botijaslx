@@ -331,9 +331,10 @@ export default function FillingPage() {
         </div>
       )}
 
-      {/* Loading */}
-      {loading && (
-        <div className="text-center text-muted-foreground py-8">
+      {/* M11: Inline loading indicator instead of full-screen block */}
+      {loading && cylinders.length === 0 && (
+        <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+          <span className="inline-block animate-spin">⟳</span>
           {t('common.loading')}
         </div>
       )}
