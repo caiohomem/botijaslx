@@ -199,6 +199,29 @@ export default function FillingPage() {
     });
   };
 
+  // M6: Calculate wait time and priority
+  const getWaitTimeMinutes = (receivedAt: string): number => {
+    const received = new Date(receivedAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - received.getTime()) / 60000);
+  };
+
+  const getWaitTimeBadgeClass = (waitMinutes: number): string => {
+    if (waitMinutes >= 60) return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'; // 1+ hour
+    if (waitMinutes >= 30) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'; // 30+ minutes
+    if (waitMinutes >= 15) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'; // 15+ minutes
+    return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'; // < 15 minutes
+  };
+
+  const formatWaitTime = (waitMinutes: number): string => {
+    if (waitMinutes >= 60) {
+      const hours = Math.floor(waitMinutes / 60);
+      const mins = waitMinutes % 60;
+      return `${hours}h ${mins}m`;
+    }
+    return `${waitMinutes}m`;
+  };
+
   // Agrupar botijas por pedido
   const groupedByOrder = cylinders.reduce((acc, cylinder) => {
     if (!acc[cylinder.orderId]) {
@@ -327,7 +350,10 @@ export default function FillingPage() {
 
               {/* Cylinders */}
               <div className="divide-y">
-                {group.cylinders.map((cylinder) => (
+                {/* M6: Sort cylinders by wait time (longest waiting first) */}
+                {[...group.cylinders].sort((a, b) =>
+                  getWaitTimeMinutes(b.receivedAt) - getWaitTimeMinutes(a.receivedAt)
+                ).map((cylinder) => (
                   <div
                     key={cylinder.cylinderId}
                     className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -337,7 +363,7 @@ export default function FillingPage() {
                         <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm">
                           {cylinder.labelToken ? cylinder.labelToken.slice(0, 4) : '?'}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <div className="font-mono text-sm">
                             {cylinder.labelToken || (
                               <span className="text-muted-foreground italic">
@@ -348,6 +374,10 @@ export default function FillingPage() {
                           <div className="text-xs text-muted-foreground">
                             {t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}
                           </div>
+                        </div>
+                        {/* M6: Wait time badge */}
+                        <div className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${getWaitTimeBadgeClass(getWaitTimeMinutes(cylinder.receivedAt))}`}>
+                          {formatWaitTime(getWaitTimeMinutes(cylinder.receivedAt))}
                         </div>
                       </div>
                     </div>
