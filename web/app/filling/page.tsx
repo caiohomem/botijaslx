@@ -45,6 +45,13 @@ export default function FillingPage() {
 
   useEffect(() => {
     loadQueue();
+
+    // M5: Auto-refresh with polling every 10 seconds
+    const pollInterval = setInterval(() => {
+      loadQueue();
+    }, 10000);
+
+    return () => clearInterval(pollInterval);
   }, [loadQueue]);
 
   const sendOrderCompleteWhatsApp = async (customerName: string, customerPhone: string, cylinderCount: number, orderId: string) => {
@@ -219,7 +226,14 @@ export default function FillingPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t('filling.title')}</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">{t('filling.title')}</h1>
+        {/* M5: Auto-refresh indicator */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          {t('common.autoRefresh') || 'Auto-refresh: every 10s'}
+        </div>
+      </div>
 
       {/* Scan Input */}
       <QrScanner

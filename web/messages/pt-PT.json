@@ -12,7 +12,8 @@
     "previous": "Anterior",
     "submit": "Submeter",
     "close": "Fechar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "autoRefresh": "Auto-atualizar: a cada 10s"
   },
   "theme": {
     "light": "Claro",

@@ -12,7 +12,8 @@
     "previous": "Previous",
     "submit": "Submit",
     "close": "Close",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "autoRefresh": "Auto-refresh: every 10s"
   },
   "theme": {
     "light": "Light",
