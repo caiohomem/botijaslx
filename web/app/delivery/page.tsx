@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { CreateCustomerForm } from '@/components/CreateCustomerForm';
-import { ordersApi, printJobsApi, cylindersApi } from '@/lib/api';
+import { ordersApi, printJobsApi, cylindersApi, customersApi } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
 import { QrScanner } from '@/components/QrScanner';
 import { LabelPreview, printLabels } from '@/components/LabelPreview';
@@ -98,8 +98,17 @@ export default function DeliveryPage() {
 
     try {
       const newOrder = await ordersApi.create(customer.customerId);
+      const customerData = await customersApi.getCylinders(customer.customerId);
+      const existingOrderCylinders = customerData.cylinders
+        .filter(c => c.orderId === newOrder.orderId)
+        .map(c => ({
+          cylinderId: c.cylinderId,
+          labelToken: c.labelToken,
+          state: c.state,
+        }));
+
       setOrder(newOrder);
-      setCylinders([]);
+      setCylinders(existingOrderCylinders);
       setStep('order');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar pedido');
