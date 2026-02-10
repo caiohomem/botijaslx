@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { CreateCustomerForm } from '@/components/CreateCustomerForm';
-import { ordersApi, printJobsApi, cylindersApi, customersApi } from '@/lib/api';
+import { ordersApi, printJobsApi, cylindersApi, customersApi, historyApi, CustomerCylinder } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
 import { QrScanner } from '@/components/QrScanner';
 import { LabelPreview, printLabels } from '@/components/LabelPreview';
@@ -29,6 +29,12 @@ interface Cylinder {
   state: string;
 }
 
+interface KnownCylinder {
+  cylinderId: string;
+  labelToken: string;
+  lastDeliveredAt: string;
+}
+
 interface PrintPreviewState {
   printJobId: string;
   quantity: number;
@@ -36,12 +42,14 @@ interface PrintPreviewState {
 
 export default function DeliveryPage() {
   const t = useTranslations();
-  const [step, setStep] = useState<'search' | 'create' | 'order' | 'complete'>('search');
+  const [step, setStep] = useState<'identify' | 'create' | 'order' | 'complete'>('identify');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [cylinders, setCylinders] = useState<Cylinder[]>([]);
+  const [knownCylinders, setKnownCylinders] = useState<KnownCylinder[]>([]);
   const [qrToken, setQrToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [addingKnown, setAddingKnown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [labelInputs, setLabelInputs] = useState<Record<string, string>>({});
@@ -51,6 +59,11 @@ export default function DeliveryPage() {
   const [lastPrintPreview, setLastPrintPreview] = useState<PrintPreviewState | null>(null);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
   const creatingOrderRef = useRef(false);
+
+  const showSuccess = (msg: string, duration = 2000) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(null), duration);
+  };
 
   const handlePrintLabels = async () => {
     if (!labelsContainerRef.current) return;
@@ -79,17 +92,36 @@ export default function DeliveryPage() {
         );
       }
 
-      setSuccessMessage(t('delivery.printMarkedAsPrinted'));
-      setTimeout(() => setSuccessMessage(null), 2000);
+      showSuccess(t('delivery.printMarkedAsPrinted'));
     } catch {
       // Printing from browser cannot be fully observed; ignore ack failures on UI.
     }
   };
 
+  // Extract known cylinders (delivered in completed orders, with label)
+  const extractKnownCylinders = (allCylinders: CustomerCylinder[], currentOrderId: string): KnownCylinder[] => {
+    return allCylinders
+      .filter(c =>
+        c.orderStatus === 'Completed' &&
+        c.state === 'Delivered' &&
+        c.labelToken
+      )
+      .map(c => {
+        const deliveredEvent = c.history
+          .filter(h => h.eventType === 'Delivered')
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        return {
+          cylinderId: c.cylinderId,
+          labelToken: c.labelToken!,
+          lastDeliveredAt: deliveredEvent?.timestamp || c.createdAt,
+        };
+      })
+      // Remove duplicates (same labelToken) keeping most recent
+      .filter((c, i, arr) => arr.findIndex(x => x.labelToken === c.labelToken) === i);
+  };
+
   const handleCustomerSelect = async (customer: Customer) => {
-    if (creatingOrderRef.current) {
-      return;
-    }
+    if (creatingOrderRef.current) return;
 
     creatingOrderRef.current = true;
     setSelectedCustomer(customer);
@@ -99,6 +131,8 @@ export default function DeliveryPage() {
     try {
       const newOrder = await ordersApi.create(customer.customerId);
       const customerData = await customersApi.getCylinders(customer.customerId);
+
+      // Cylinders already in this order
       const existingOrderCylinders = customerData.cylinders
         .filter(c => c.orderId === newOrder.orderId)
         .map(c => ({
@@ -107,14 +141,53 @@ export default function DeliveryPage() {
           state: c.state,
         }));
 
+      // Known cylinders from previous completed orders
+      const known = extractKnownCylinders(customerData.cylinders, newOrder.orderId);
+      // Filter out any that are already in the current order
+      const currentIds = new Set(existingOrderCylinders.map(c => c.cylinderId));
+      const filteredKnown = known.filter(c => !currentIds.has(c.cylinderId));
+
       setOrder(newOrder);
       setCylinders(existingOrderCylinders);
+      setKnownCylinders(filteredKnown);
       setStep('order');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar pedido');
     } finally {
       setLoading(false);
       creatingOrderRef.current = false;
+    }
+  };
+
+  // Scan bottle to identify customer (M0b)
+  const handleIdentifyScan = async (token: string) => {
+    if (!token.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const cylinderData = await historyApi.scanCylinder(token.trim());
+
+      if (cylinderData.customerName && cylinderData.customerPhone) {
+        // We need the customerId - search for the customer by phone
+        const searchResult = await customersApi.search(cylinderData.customerPhone);
+        const matched = searchResult.customers.find(
+          c => c.phone === cylinderData.customerPhone
+        );
+
+        if (matched) {
+          showSuccess(t('customer.identifiedViaBottle'), 3000);
+          await handleCustomerSelect(matched);
+          return;
+        }
+      }
+
+      setError(t('customer.notFound'));
+    } catch {
+      setError(t('customer.notFound'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -145,9 +218,10 @@ export default function DeliveryPage() {
     try {
       const cylinder = await ordersApi.scanCylinder(order.orderId, token.trim());
       setCylinders(prev => [...prev, cylinder]);
+      // Remove from known if it was there
+      setKnownCylinders(prev => prev.filter(k => k.labelToken !== token.trim()));
       setQrToken('');
-      setSuccessMessage(t('delivery.cylinderAdded'));
-      setTimeout(() => setSuccessMessage(null), 2000);
+      showSuccess(t('delivery.cylinderAdded'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao escanear botija');
     } finally {
@@ -156,6 +230,47 @@ export default function DeliveryPage() {
   };
 
   const handleScanQR = () => handleScanToken(qrToken);
+
+  // Add a single known cylinder to the order
+  const handleAddKnownCylinder = async (known: KnownCylinder) => {
+    if (!order) return;
+    setError(null);
+
+    try {
+      const cylinder = await ordersApi.scanCylinder(order.orderId, known.labelToken);
+      setCylinders(prev => [...prev, cylinder]);
+      setKnownCylinders(prev => prev.filter(k => k.cylinderId !== known.cylinderId));
+      showSuccess(t('delivery.cylinderAdded'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao adicionar botija');
+    }
+  };
+
+  // Add all known cylinders to the order (M0c)
+  const handleAddAllKnown = async () => {
+    if (!order || knownCylinders.length === 0) return;
+
+    setAddingKnown(true);
+    setError(null);
+    let addedCount = 0;
+
+    for (const known of knownCylinders) {
+      try {
+        const cylinder = await ordersApi.scanCylinder(order.orderId, known.labelToken);
+        setCylinders(prev => [...prev, cylinder]);
+        addedCount++;
+      } catch {
+        // Skip cylinders that fail (might be in another open order)
+      }
+    }
+
+    setKnownCylinders([]);
+    setAddingKnown(false);
+
+    if (addedCount > 0) {
+      showSuccess(t('delivery.knownAdded', { count: addedCount }), 3000);
+    }
+  };
 
   const handlePrintAndCreate = async () => {
     if (!order || !selectedCustomer || printQuantity < 1) return;
@@ -186,8 +301,7 @@ export default function DeliveryPage() {
       const preview = { printJobId: printJob.printJobId, quantity: printJob.quantity };
       setPrintPreview(preview);
       setLastPrintPreview(preview);
-      setSuccessMessage(t('delivery.printJobCreatedAndCylinders', { count: printQuantity }));
-      setTimeout(() => setSuccessMessage(null), 3000);
+      showSuccess(t('delivery.printJobCreatedAndCylinders', { count: printQuantity }), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao imprimir e criar botijas');
     } finally {
@@ -204,20 +318,17 @@ export default function DeliveryPage() {
 
     try {
       const result = await cylindersApi.assignLabel(cylinderId, qrToken);
-      // Atualizar a botija na lista com a nova etiqueta
-      setCylinders(prev => prev.map(c => 
-        c.cylinderId === cylinderId 
+      setCylinders(prev => prev.map(c =>
+        c.cylinderId === cylinderId
           ? { ...c, labelToken: result.labelToken }
           : c
       ));
-      // Limpar input
       setLabelInputs(prev => {
         const newInputs = { ...prev };
         delete newInputs[cylinderId];
         return newInputs;
       });
-      setSuccessMessage(t('delivery.labelAssigned'));
-      setTimeout(() => setSuccessMessage(null), 2000);
+      showSuccess(t('delivery.labelAssigned'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atribuir etiqueta');
     } finally {
@@ -234,52 +345,66 @@ export default function DeliveryPage() {
   };
 
   const handleNewDelivery = () => {
-    setStep('search');
+    setStep('identify');
     setOrder(null);
     setSelectedCustomer(null);
     setCylinders([]);
+    setKnownCylinders([]);
     setError(null);
     setSuccessMessage(null);
     setPrintPreview(null);
     setLastPrintPreview(null);
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+    });
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t('navigation.delivery')}</h1>
 
-      {/* Step 1: Search or Create Customer */}
-      {(step === 'search' || step === 'create') && (
-        <div className="space-y-6">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setStep('search')}
-              className={`px-4 py-2 rounded-lg ${
-                step === 'search'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border hover:bg-accent'
-              }`}
-            >
-              {t('customer.search')}
-            </button>
-            <button
-              onClick={() => setStep('create')}
-              className={`px-4 py-2 rounded-lg ${
-                step === 'create'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border hover:bg-accent'
-              }`}
-            >
-              {t('customer.create')}
-            </button>
-          </div>
+      {/* Step 1: Identify Customer (unified: scan + search + create) */}
+      {(step === 'identify' || step === 'create') && (
+        <div className="space-y-4">
+          {step === 'identify' && (
+            <>
+              {/* Scan bottle to identify customer */}
+              <QrScanner
+                onScan={handleIdentifyScan}
+                label={t('customer.scanToIdentify')}
+              />
 
-          {step === 'search' && <CustomerSearch onSelect={handleCustomerSelect} disabled={loading} />}
+              {/* Typeahead search */}
+              <CustomerSearch
+                onSelect={handleCustomerSelect}
+                onCreateNew={() => setStep('create')}
+                disabled={loading}
+              />
+            </>
+          )}
+
           {step === 'create' && (
             <CreateCustomerForm
               onCreated={handleCustomerCreated}
-              onCancel={() => setStep('search')}
+              onCancel={() => setStep('identify')}
             />
+          )}
+
+          {/* Messages */}
+          {error && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg">
+              {error}
+            </div>
+          )}
+          {successMessage && (
+            <div className="p-3 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg">
+              {successMessage}
+            </div>
           )}
         </div>
       )}
@@ -311,6 +436,60 @@ export default function DeliveryPage() {
           {successMessage && (
             <div className="p-3 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg">
               {successMessage}
+            </div>
+          )}
+
+          {/* Known Cylinders Section (M0c) */}
+          {knownCylinders.length > 0 && (
+            <div className="border-2 border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 border-b border-blue-200 dark:border-blue-800">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                      {t('delivery.knownCylinders')} ({knownCylinders.length})
+                    </h3>
+                    <div className="text-xs text-blue-700 dark:text-blue-300">
+                      {t('delivery.knownCylindersDesc')}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleAddAllKnown}
+                    disabled={addingKnown}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 font-medium text-sm transition-colors"
+                  >
+                    {addingKnown
+                      ? t('delivery.addingKnown')
+                      : t('delivery.addAllKnown', { count: knownCylinders.length })
+                    }
+                  </button>
+                </div>
+              </div>
+              <div className="divide-y">
+                {knownCylinders.map((known) => (
+                  <div
+                    key={known.cylinderId}
+                    className="p-3 flex items-center justify-between hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-mono text-sm">
+                        {known.labelToken.slice(0, 4)}
+                      </div>
+                      <div>
+                        <div className="font-mono text-sm">{known.labelToken}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t('delivery.lastDelivery')}: {formatDate(known.lastDeliveredAt)}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAddKnownCylinder(known)}
+                      className="px-3 py-1.5 border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

@@ -74,7 +74,9 @@
     "phone": "Telefone",
     "create": "Criar Cliente",
     "search": "Pesquisar Cliente",
-    "notFound": "Cliente não encontrado"
+    "notFound": "Cliente não encontrado",
+    "scanToIdentify": "Escanear botija para identificar cliente",
+    "identifiedViaBottle": "Cliente identificado pela botija"
   },
   "order": {
     "title": "Pedido",
@@ -163,7 +165,13 @@
     "newDelivery": "Nova Entrega",
     "scanLabelPlaceholder": "Escanear etiqueta...",
     "assignLabel": "Atribuir",
-    "labelAssigned": "Etiqueta atribuída com sucesso"
+    "labelAssigned": "Etiqueta atribuída com sucesso",
+    "knownCylinders": "Botijas conhecidas",
+    "knownCylindersDesc": "Este cliente tem botijas de visitas anteriores",
+    "addAllKnown": "Adicionar todas ({count})",
+    "addingKnown": "A adicionar...",
+    "lastDelivery": "Ultima entrega",
+    "knownAdded": "{count} botija(s) adicionada(s) ao pedido"
   },
   "dashboard": {
     "title": "Painel",

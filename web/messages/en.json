@@ -74,7 +74,9 @@
     "phone": "Phone",
     "create": "Create Customer",
     "search": "Search Customer",
-    "notFound": "Customer not found"
+    "notFound": "Customer not found",
+    "scanToIdentify": "Scan bottle to identify customer",
+    "identifiedViaBottle": "Customer identified via bottle"
   },
   "order": {
     "title": "Order",
@@ -163,7 +165,13 @@
     "newDelivery": "New Delivery",
     "scanLabelPlaceholder": "Scan label...",
     "assignLabel": "Assign",
-    "labelAssigned": "Label assigned successfully"
+    "labelAssigned": "Label assigned successfully",
+    "knownCylinders": "Known cylinders",
+    "knownCylindersDesc": "This customer has cylinders from previous visits",
+    "addAllKnown": "Add all ({count})",
+    "addingKnown": "Adding...",
+    "lastDelivery": "Last delivery",
+    "knownAdded": "{count} cylinder(s) added to order"
   },
   "dashboard": {
     "title": "Dashboard",
