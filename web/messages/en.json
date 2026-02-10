@@ -98,6 +98,7 @@
     "markReady": "Mark as Ready",
     "status": {
       "received": "Received",
+      "printed": "Printed",
       "ready": "Ready",
       "delivered": "Delivered",
       "problem": "Problem"
@@ -156,7 +157,9 @@
     "withLabel": "With label",
     "needsPrinting": "Need printing",
     "printLabels": "Print {count} Label(s)",
+    "reprintLastLabels": "Reprint Last {count} Label(s)",
     "printJobCreated": "Print job created! Wait for the printer.",
+    "printMarkedAsPrinted": "Print marked as completed",
     "newDelivery": "New Delivery",
     "scanLabelPlaceholder": "Scan label...",
     "assignLabel": "Assign",

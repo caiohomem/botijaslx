@@ -29,6 +29,11 @@ interface Cylinder {
   state: string;
 }
 
+interface PrintPreviewState {
+  printJobId: string;
+  quantity: number;
+}
+
 export default function DeliveryPage() {
   const t = useTranslations();
   const [step, setStep] = useState<'search' | 'create' | 'order' | 'complete'>('search');
@@ -42,14 +47,41 @@ export default function DeliveryPage() {
   const [labelInputs, setLabelInputs] = useState<Record<string, string>>({});
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printQuantity, setPrintQuantity] = useState(1);
-  const [printPreview, setPrintPreview] = useState<{ printJobId: string; quantity: number } | null>(null);
+  const [printPreview, setPrintPreview] = useState<PrintPreviewState | null>(null);
+  const [lastPrintPreview, setLastPrintPreview] = useState<PrintPreviewState | null>(null);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
 
-  const handlePrintLabels = () => {
+  const handlePrintLabels = async () => {
     if (!labelsContainerRef.current) return;
     const canvases = Array.from(labelsContainerRef.current.querySelectorAll('canvas')) as HTMLCanvasElement[];
     if (canvases.length > 0) {
       printLabels(canvases);
+    }
+
+    if (!printPreview) return;
+
+    try {
+      await printJobsApi.ackPrinted(printPreview.printJobId);
+
+      // Fallback: bind printed labels to any still-unlabeled cylinders from this order.
+      const unlabeled = cylinders.filter(c => !c.labelToken);
+      for (let i = 0; i < Math.min(unlabeled.length, printPreview.quantity); i++) {
+        const cylinder = unlabeled[i];
+        const qrToken = `${printPreview.printJobId}-${i + 1}`;
+        const assigned = await cylindersApi.assignLabel(cylinder.cylinderId, qrToken);
+        setCylinders(prev =>
+          prev.map(c =>
+            c.cylinderId === cylinder.cylinderId
+              ? { ...c, labelToken: assigned.labelToken }
+              : c
+          )
+        );
+      }
+
+      setSuccessMessage(t('delivery.printMarkedAsPrinted'));
+      setTimeout(() => setSuccessMessage(null), 2000);
+    } catch {
+      // Printing from browser cannot be fully observed; ignore ack failures on UI.
     }
   };
 
@@ -127,13 +159,17 @@ export default function DeliveryPage() {
       const newCylinders: Cylinder[] = [];
       for (let i = 0; i < printQuantity; i++) {
         const cylinder = await ordersApi.addCylinder(order.orderId);
-        newCylinders.push(cylinder);
+        const qrToken = `${printJob.printJobId}-${i + 1}`;
+        const assigned = await cylindersApi.assignLabel(cylinder.cylinderId, qrToken);
+        newCylinders.push({ ...cylinder, labelToken: assigned.labelToken });
       }
       setCylinders([...cylinders, ...newCylinders]);
 
       setShowPrintDialog(false);
       setPrintQuantity(1);
-      setPrintPreview({ printJobId: printJob.printJobId, quantity: printJob.quantity });
+      const preview = { printJobId: printJob.printJobId, quantity: printJob.quantity };
+      setPrintPreview(preview);
+      setLastPrintPreview(preview);
       setSuccessMessage(t('delivery.printJobCreatedAndCylinders', { count: printQuantity }));
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
@@ -188,6 +224,8 @@ export default function DeliveryPage() {
     setCylinders([]);
     setError(null);
     setSuccessMessage(null);
+    setPrintPreview(null);
+    setLastPrintPreview(null);
   };
 
   return (
@@ -293,6 +331,15 @@ export default function DeliveryPage() {
             >
               {t('delivery.printNewLabels')}
             </button>
+            {lastPrintPreview && (
+              <button
+                onClick={() => setPrintPreview(lastPrintPreview)}
+                disabled={loading}
+                className="w-full px-4 py-3 border rounded-lg hover:bg-accent disabled:opacity-50 font-medium transition-colors"
+              >
+                {t('delivery.reprintLastLabels', { count: lastPrintPreview.quantity })}
+              </button>
+            )}
           </div>
 
           {/* Cylinders List */}
@@ -300,7 +347,12 @@ export default function DeliveryPage() {
             <div className="space-y-3">
               <h3 className="font-semibold">{t('order.cylinders')} ({cylinders.length})</h3>
               <div className="space-y-2">
-                {cylinders.map((cylinder, index) => (
+                {cylinders.map((cylinder, index) => {
+                  const uiStatus = cylinder.state.toLowerCase() === 'received' && cylinder.labelToken
+                    ? 'printed'
+                    : cylinder.state.toLowerCase();
+
+                  return (
                   <div
                     key={cylinder.cylinderId}
                     className={`p-3 border rounded-lg flex items-center gap-3 ${
@@ -321,14 +373,15 @@ export default function DeliveryPage() {
                         {cylinder.labelToken || t('delivery.pendingPrint')}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
+                        {t(`cylinder.status.${uiStatus}`)}
                       </div>
                     </div>
                     <div className={cylinder.labelToken ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
                       {cylinder.labelToken ? '✓' : '🖨️'}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

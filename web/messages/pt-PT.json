@@ -98,6 +98,7 @@
     "markReady": "Marcar como Cheia",
     "status": {
       "received": "Recebida",
+      "printed": "Impressa",
       "ready": "Pronta",
       "delivered": "Entregue",
       "problem": "Problema"
@@ -156,7 +157,9 @@
     "withLabel": "Com etiqueta",
     "needsPrinting": "Precisam imprimir",
     "printLabels": "Imprimir {count} Etiqueta(s)",
+    "reprintLastLabels": "Reimprimir Ultimas {count} Etiqueta(s)",
     "printJobCreated": "Job de impressão criado! Aguarde a impressora.",
+    "printMarkedAsPrinted": "Impressão marcada como concluída",
     "newDelivery": "Nova Entrega",
     "scanLabelPlaceholder": "Escanear etiqueta...",
     "assignLabel": "Atribuir",

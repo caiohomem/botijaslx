@@ -256,6 +256,11 @@ export const printJobsApi = {
         customerPhone: customerPhone || null,
       }),
     }),
+
+  ackPrinted: (printJobId: string) =>
+    apiRequest<PrintJob>(`/api/printjobs/${printJobId}/ack-printed`, {
+      method: 'POST',
+    }),
 };
 
 // Cylinder History

@@ -5,6 +5,7 @@ namespace Botijas.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Route("api/print-jobs")]
 public class PrintJobsController : ControllerBase
 {
     private readonly CreatePrintJobCommandHandler _createHandler;
