@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { pickupApi, PickupOrder } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
+import { playSound } from '@/lib/sounds';
 
 export default function PickupPage() {
   const t = useTranslations();
@@ -74,6 +75,9 @@ export default function PickupPage() {
 
       // All delivered - send thank you WhatsApp
       sendThankYouWhatsApp(order);
+
+      // M10: Play success sound for order completion
+      playSound('complete');
 
       setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
       setExpandedOrder(null);

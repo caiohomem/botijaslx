@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { cylindersApi, pickupApi, FillingQueueItem } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
+import { playSound } from '@/lib/sounds';
 import { QrScanner } from '@/components/QrScanner';
 
 const PROBLEM_TYPES = [
@@ -90,8 +91,12 @@ export default function FillingPage() {
           cylinder.totalCylindersInOrder,
           result.orderId
         );
+        // M10: Play completion sound
+        playSound('complete');
         setSuccessMessage(t('filling.orderCompleteNotified', { name: cylinder.customerName }));
       } else {
+        // M10: Play success sound for individual cylinder
+        playSound('success');
         setSuccessMessage(t('filling.marked'));
       }
 
@@ -127,8 +132,12 @@ export default function FillingPage() {
           customerInfo.totalCylindersInOrder,
           orderId
         );
+        // M10: Play completion sound
+        playSound('complete');
         setSuccessMessage(t('filling.orderCompleteNotified', { name: customerInfo.customerName }));
       } else {
+        // M10: Play success sound for batch
+        playSound('success');
         setSuccessMessage(t('filling.marked'));
       }
 
@@ -154,6 +163,8 @@ export default function FillingPage() {
       );
       
       setCylinders(prev => prev.filter(c => c.cylinderId !== problemModal.cylinderId));
+      // M10: Play warning sound for problem report
+      playSound('warning');
       setSuccessMessage(t('filling.problemReported'));
       setTimeout(() => setSuccessMessage(null), 3000);
       
