@@ -143,6 +143,11 @@ export default function PickupPage() {
       {!loading && orders.length > 0 && (
         <div className="space-y-4">
           {orders.map((order) => (
+            (() => {
+              const undeliveredCount = order.cylinders.filter(c => !c.isDelivered).length;
+              const deliveredCount = order.totalCylinders - undeliveredCount;
+
+              return (
             <div key={order.orderId} className="border rounded-lg overflow-hidden">
               {/* Order Header */}
               <div className="bg-muted/50 p-4 border-b">
@@ -162,7 +167,7 @@ export default function PickupPage() {
 
                   <div className="flex items-center gap-2">
                     <div className="text-sm bg-background px-3 py-1 rounded-full">
-                      {order.totalCylinders} {t('order.cylinders')}
+                      {t('pickup.progress', { delivered: deliveredCount, total: order.totalCylinders })}
                     </div>
 
                     <button
@@ -207,25 +212,29 @@ export default function PickupPage() {
                   </div>
 
                   {/* Single Deliver All Button */}
-                  <div className="p-4 border-t">
-                    <button
-                      onClick={() => handleDeliverAll(order)}
-                      disabled={actionLoading === order.orderId}
-                      className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium text-lg"
-                    >
-                      {actionLoading === order.orderId ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span className="inline-block animate-spin">⟳</span>
-                          {t('common.loading')}
-                        </span>
-                      ) : (
-                        t('pickup.deliverAll', { count: order.totalCylinders })
-                      )}
-                    </button>
-                  </div>
+                  {undeliveredCount > 0 && (
+                    <div className="p-4 border-t">
+                      <button
+                        onClick={() => handleDeliverAll(order)}
+                        disabled={actionLoading === order.orderId}
+                        className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium text-lg"
+                      >
+                        {actionLoading === order.orderId ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="inline-block animate-spin">⟳</span>
+                            {t('common.loading')}
+                          </span>
+                        ) : (
+                          t('pickup.deliverAll', { count: undeliveredCount })
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+              );
+            })()
           ))}
         </div>
       )}
