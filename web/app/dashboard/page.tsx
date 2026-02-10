@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { customersApi, historyApi, reportsApi, CylinderHistory, DashboardStats, CustomerCylindersResult, CustomerCylinder } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
+import { CustomerSearch } from '@/components/CustomerSearch';
 
 type LookupMode = 'customer' | 'cylinder';
 
@@ -229,55 +230,47 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Camera Scanner (cylinder mode only) */}
-        {lookupMode === 'cylinder' && (
-          <QrScanner
-            onScan={(code) => handleSearchValue(code)}
-            label={t('dashboard.scanCamera')}
+        {/* Customer Search - New typeahead (M0) */}
+        {lookupMode === 'customer' && (
+          <CustomerSearch
+            onSelect={(customer) => handleSelectCustomer(customer.customerId)}
+            onCreateNew={() => {}}
+            disabled={loading}
           />
         )}
 
-        {/* Search Input */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder={lookupMode === 'customer' ? t('dashboard.customerSearchPlaceholder') : t('dashboard.scanPlaceholder')}
-            className="flex-1 px-4 py-3 border rounded-lg bg-background text-foreground text-lg"
-          />
-          <button
-            onClick={handleSearch}
-            disabled={!searchInput.trim() || loading}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 font-medium"
-          >
-            {loading ? '...' : t('dashboard.search')}
-          </button>
-        </div>
+        {/* Cylinder Search - Camera Scanner + Manual Input */}
+        {lookupMode === 'cylinder' && (
+          <>
+            <QrScanner
+              onScan={(code) => handleSearchValue(code)}
+              label={t('dashboard.scanCamera')}
+            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder={t('dashboard.scanPlaceholder')}
+                className="flex-1 px-4 py-3 border rounded-lg bg-background text-foreground text-lg"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={!searchInput.trim() || loading}
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 font-medium"
+              >
+                {loading ? '...' : t('dashboard.search')}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Error */}
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive rounded-lg">
           {error}
-        </div>
-      )}
-
-      {/* Customer Search Results */}
-      {customerResults.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="font-semibold">{t('dashboard.selectCustomer')}</h3>
-          {customerResults.map((customer) => (
-            <button
-              key={customer.customerId}
-              onClick={() => handleSelectCustomer(customer.customerId)}
-              className="w-full p-4 border rounded-lg hover:bg-accent text-left"
-            >
-              <div className="font-semibold">{customer.name}</div>
-              <div className="text-sm text-muted-foreground">{customer.phone}</div>
-            </button>
-          ))}
         </div>
       )}
 
