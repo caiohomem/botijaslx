@@ -50,6 +50,7 @@ export default function DeliveryPage() {
   const [printPreview, setPrintPreview] = useState<PrintPreviewState | null>(null);
   const [lastPrintPreview, setLastPrintPreview] = useState<PrintPreviewState | null>(null);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
+  const creatingOrderRef = useRef(false);
 
   const handlePrintLabels = async () => {
     if (!labelsContainerRef.current) return;
@@ -86,6 +87,11 @@ export default function DeliveryPage() {
   };
 
   const handleCustomerSelect = async (customer: Customer) => {
+    if (creatingOrderRef.current) {
+      return;
+    }
+
+    creatingOrderRef.current = true;
     setSelectedCustomer(customer);
     setLoading(true);
     setError(null);
@@ -99,6 +105,7 @@ export default function DeliveryPage() {
       setError(err instanceof Error ? err.message : 'Erro ao criar pedido');
     } finally {
       setLoading(false);
+      creatingOrderRef.current = false;
     }
   };
 
@@ -258,7 +265,7 @@ export default function DeliveryPage() {
             </button>
           </div>
 
-          {step === 'search' && <CustomerSearch onSelect={handleCustomerSelect} />}
+          {step === 'search' && <CustomerSearch onSelect={handleCustomerSelect} disabled={loading} />}
           {step === 'create' && (
             <CreateCustomerForm
               onCreated={handleCustomerCreated}

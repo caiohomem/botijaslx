@@ -26,6 +26,25 @@ public class CreateOrderCommandHandler
             return Result<OrderDto>.Failure("Customer not found");
         }
 
+        // Reuse an existing open order for this customer (idempotent create).
+        var openOrders = await _orderRepository.FindOpenOrdersByCustomerAsync(command.CustomerId, cancellationToken);
+        var existingOpenOrder = openOrders
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefault();
+
+        if (existingOpenOrder != null)
+        {
+            return Result<OrderDto>.Success(new OrderDto
+            {
+                OrderId = existingOpenOrder.OrderId,
+                CustomerId = existingOpenOrder.CustomerId,
+                Status = existingOpenOrder.Status.ToString(),
+                CreatedAt = existingOpenOrder.CreatedAt,
+                CompletedAt = existingOpenOrder.CompletedAt,
+                CylinderCount = existingOpenOrder.Cylinders.Count
+            });
+        }
+
         var order = RefillOrder.Create(command.CustomerId);
         await _orderRepository.AddAsync(order, cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);

@@ -12,9 +12,10 @@ interface Customer {
 
 interface CustomerSearchProps {
   onSelect: (customer: Customer) => void;
+  disabled?: boolean;
 }
 
-export function CustomerSearch({ onSelect }: CustomerSearchProps) {
+export function CustomerSearch({ onSelect, disabled = false }: CustomerSearchProps) {
   const t = useTranslations();
   const [query, setQuery] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -54,7 +55,7 @@ export function CustomerSearch({ onSelect }: CustomerSearchProps) {
         />
         <button
           onClick={handleSearch}
-          disabled={loading}
+          disabled={loading || disabled}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50"
         >
           {loading ? t('common.loading') : t('common.search')}
@@ -74,6 +75,7 @@ export function CustomerSearch({ onSelect }: CustomerSearchProps) {
             <button
               key={customer.customerId}
               onClick={() => onSelect(customer)}
+              disabled={disabled}
               className="w-full p-4 border rounded-lg hover:bg-accent text-left"
             >
               <div className="font-semibold">{customer.name}</div>
