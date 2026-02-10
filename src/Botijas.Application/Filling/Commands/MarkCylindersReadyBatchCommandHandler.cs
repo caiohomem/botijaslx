@@ -1,4 +1,5 @@
 using Botijas.Application.Common;
+using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
 
 namespace Botijas.Application.Filling.Commands;
@@ -7,13 +8,16 @@ public class MarkCylindersReadyBatchCommandHandler
 {
     private readonly IRefillOrderRepository _orderRepository;
     private readonly ICylinderRepository _cylinderRepository;
+    private readonly ICylinderHistoryRepository _historyRepository;
 
     public MarkCylindersReadyBatchCommandHandler(
         IRefillOrderRepository orderRepository,
-        ICylinderRepository cylinderRepository)
+        ICylinderRepository cylinderRepository,
+        ICylinderHistoryRepository historyRepository)
     {
         _orderRepository = orderRepository;
         _cylinderRepository = cylinderRepository;
+        _historyRepository = historyRepository;
     }
 
     public async Task<Result<BatchReadyResult>> Handle(
@@ -42,17 +46,39 @@ public class MarkCylindersReadyBatchCommandHandler
             var cylinder = await _cylinderRepository.FindByIdAsync(cylinderRef.CylinderId, cancellationToken);
             if (cylinder != null)
             {
-                cylinder.MarkReady();
-                markedCount++;
+                try
+                {
+                    cylinder.MarkAsReady();
+                    markedCount++;
+
+                    // Registrar histórico
+                    var historyEntry = CylinderHistoryEntry.Create(
+                        cylinder.CylinderId,
+                        CylinderEventType.MarkedReady,
+                        "Botija marcada como cheia (lote)",
+                        order.OrderId);
+                    await _historyRepository.AddAsync(historyEntry, cancellationToken);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Skip if cylinder cannot be marked as ready
+                }
             }
         }
+
+        // Get updated cylinders for order status check
+        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+
+        // Atualizar status do pedido
+        order.CheckAndUpdateStatus(orderCylinders);
 
         // Save changes
         await _cylinderRepository.SaveChangesAsync(cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);
+        await _historyRepository.SaveChangesAsync(cancellationToken);
 
         // Check if order is now complete (all cylinders ready)
-        var isOrderComplete = order.Cylinders.All(c => c.State.ToString() == "Ready");
+        var isOrderComplete = order.Status.ToString() == "ReadyForPickup";
 
         return Result<BatchReadyResult>.Success(new BatchReadyResult
         {
