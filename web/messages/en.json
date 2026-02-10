@@ -193,7 +193,12 @@
       "lost": "Labels lost",
       "customer_request": "Customer requested",
       "other": "Other"
-    }
+    },
+    "workflowGuide": "Workflow",
+    "step1Scan": "Scan cylinders or add without label",
+    "step2Print": "Print labels for unlabeled cylinders",
+    "step3Assign": "Assign printed labels to cylinders",
+    "step4Finish": "Finish delivery (all cylinders must have labels)"
   },
   "dashboard": {
     "title": "Dashboard",

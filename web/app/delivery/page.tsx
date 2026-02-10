@@ -346,10 +346,18 @@ export default function DeliveryPage() {
   };
 
   const handleFinishDelivery = () => {
+    // M14: Validate completeness before finishing
     if (cylinders.length === 0) {
       setError(t('delivery.noCylinders'));
       return;
     }
+
+    const unlabeledCount = cylinders.filter(c => !c.labelToken).length;
+    if (unlabeledCount > 0) {
+      setError(t('delivery.needsLabel', { count: unlabeledCount }));
+      return;
+    }
+
     setStep('complete');
   };
 
@@ -432,6 +440,33 @@ export default function DeliveryPage() {
               <div className="text-right">
                 <div className="text-2xl font-bold">{cylinders.length}</div>
                 <div className="text-xs text-muted-foreground">{t('order.cylinders')}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* M15: Visual workflow guide */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="text-sm text-amber-900 dark:text-amber-100">
+              <div className="font-semibold mb-2 flex items-center gap-2">
+                <span>📋 {t('delivery.workflowGuide') || 'Workflow'}</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">1</span>
+                  <span>{t('delivery.step1Scan') || 'Scan cylinders or add without label'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">2</span>
+                  <span>{t('delivery.step2Print') || 'Print labels for unlabeled cylinders'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">3</span>
+                  <span>{t('delivery.step3Assign') || 'Assign printed labels to cylinders'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">4</span>
+                  <span>{t('delivery.step4Finish') || 'Finish delivery (all cylinders must have labels)'}</span>
+                </div>
               </div>
             </div>
           </div>

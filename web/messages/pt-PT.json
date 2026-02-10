@@ -193,7 +193,12 @@
       "lost": "Etiquetas perdidas",
       "customer_request": "Cliente pediu reimpressão",
       "other": "Outro"
-    }
+    },
+    "workflowGuide": "Fluxo de Trabalho",
+    "step1Scan": "Escanear botijas ou adicionar sem etiqueta",
+    "step2Print": "Imprimir etiquetas para botijas sem etiqueta",
+    "step3Assign": "Atribuir etiquetas impressas às botijas",
+    "step4Finish": "Finalizar entrega (todas as botijas devem ter etiquetas)"
   },
   "dashboard": {
     "title": "Painel",
