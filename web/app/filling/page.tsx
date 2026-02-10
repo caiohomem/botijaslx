@@ -31,6 +31,14 @@ export default function FillingPage() {
   } | null>(null);
   const [problemType, setProblemType] = useState('');
   const [problemNotes, setProblemNotes] = useState('');
+  const [showProblems, setShowProblems] = useState(false);
+  const [reportedProblems, setReportedProblems] = useState<Array<{
+    cylinderId: string;
+    labelToken?: string;
+    type: string;
+    notes: string;
+    timestamp: string;
+  }>>([]);
 
   const loadQueue = useCallback(async () => {
     try {
@@ -161,13 +169,23 @@ export default function FillingPage() {
         problemType,
         problemNotes
       );
-      
+
       setCylinders(prev => prev.filter(c => c.cylinderId !== problemModal.cylinderId));
       // M10: Play warning sound for problem report
       playSound('warning');
+
+      // M12: Track reported problem for workflow
+      setReportedProblems(prev => [...prev, {
+        cylinderId: problemModal.cylinderId,
+        labelToken: problemModal.labelToken,
+        type: problemType,
+        notes: problemNotes,
+        timestamp: new Date().toISOString()
+      }]);
+
       setSuccessMessage(t('filling.problemReported'));
       setTimeout(() => setSuccessMessage(null), 3000);
-      
+
       // Reset modal
       setProblemModal(null);
       setProblemType('');
@@ -447,6 +465,51 @@ export default function FillingPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* M12: Problem tracking section */}
+      {reportedProblems.length > 0 && (
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowProblems(!showProblems)}
+            className="w-full bg-red-50 dark:bg-red-900/20 p-4 text-left flex justify-between items-center border-b hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              <span className="font-semibold text-red-700 dark:text-red-300">
+                {reportedProblems.length} {t('filling.problem')}(s) Reported
+              </span>
+            </div>
+            <span>{showProblems ? '▼' : '▶'}</span>
+          </button>
+
+          {showProblems && (
+            <div className="divide-y bg-red-50/50 dark:bg-red-900/10">
+              {reportedProblems.map((problem, idx) => (
+                <div key={idx} className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-mono text-sm font-medium">
+                        {problem.labelToken || problem.cylinderId.slice(0, 8)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {new Date(problem.timestamp).toLocaleString('pt-PT')}
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                      {t(`filling.problemTypes.${problem.type}`)}
+                    </div>
+                  </div>
+                  {problem.notes && (
+                    <div className="text-sm text-muted-foreground mt-2 p-2 bg-background rounded border-l-2 border-red-400">
+                      {problem.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
