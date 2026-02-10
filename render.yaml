@@ -12,6 +12,8 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://+:8080
+      - key: CORS__AllowedOrigins
+        value: https://botijaslx.vercel.app
       - key: Database__AutoInitialize
         value: "true"
       - key: ConnectionStrings__Default

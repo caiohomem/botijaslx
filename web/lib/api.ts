@@ -1,7 +1,9 @@
+const PROD_API_BASE_URL = 'https://botijaslx.onrender.com';
+
 const BROWSER_API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:8080';
+  (process.env.NODE_ENV === 'production' ? PROD_API_BASE_URL : 'http://localhost:8080');
 
 const SERVER_API_BASE_URL =
   process.env.INTERNAL_API_BASE ||

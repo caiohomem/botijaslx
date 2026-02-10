@@ -54,11 +54,34 @@ builder.Services.AddScoped<Botijas.Application.Pickup.Commands.DeliverCylinderCo
 builder.Services.AddScoped<Botijas.Application.Pickup.Commands.MarkOrderNotifiedCommandHandler>();
 
 // CORS
+var configuredOrigins = builder.Configuration["CORS__AllowedOrigins"];
+var allowedOrigins = (configuredOrigins ?? string.Empty)
+    .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (allowedOrigins.Length == 0)
+{
+    allowedOrigins = new[]
+    {
+        "http://localhost:3000",
+        "https://botijaslx.vercel.app"
+    };
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        if (builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(configuredOrigins))
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+            return;
+        }
+
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
