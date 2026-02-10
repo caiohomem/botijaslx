@@ -71,11 +71,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.MapHub<PrintHub>("/hubs/print");
 
-// Local/dev setup: apply pending migrations automatically.
-if (app.Environment.IsDevelopment())
+// Database bootstrap: apply migrations (or create schema) automatically on startup.
+var autoInitDb = builder.Configuration.GetValue("Database__AutoInitialize", true);
+if (autoInitDb)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<BotijasDbContext>();
