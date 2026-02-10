@@ -184,7 +184,16 @@
     "addAllKnown": "Adicionar todas ({count})",
     "addingKnown": "A adicionar...",
     "lastDelivery": "Ultima entrega",
-    "knownAdded": "{count} botija(s) adicionada(s) ao pedido"
+    "knownAdded": "{count} botija(s) adicionada(s) ao pedido",
+    "reprintReason": "Motivo da reimpressão",
+    "selectReason": "Selecione o motivo...",
+    "reprintReasons": {
+      "damage": "Etiquetas danificadas",
+      "quality": "Problemas de qualidade de impressão",
+      "lost": "Etiquetas perdidas",
+      "customer_request": "Cliente pediu reimpressão",
+      "other": "Outro"
+    }
   },
   "dashboard": {
     "title": "Painel",

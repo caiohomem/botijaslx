@@ -55,6 +55,7 @@ export default function DeliveryPage() {
   const [labelInputs, setLabelInputs] = useState<Record<string, string>>({});
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [printQuantity, setPrintQuantity] = useState(1);
+  const [printReason, setPrintReason] = useState(''); // M13: Reprint reason
   const [printPreview, setPrintPreview] = useState<PrintPreviewState | null>(null);
   const [lastPrintPreview, setLastPrintPreview] = useState<PrintPreviewState | null>(null);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
@@ -362,6 +363,7 @@ export default function DeliveryPage() {
     setSuccessMessage(null);
     setPrintPreview(null);
     setLastPrintPreview(null);
+    setPrintReason(''); // M13: Reset reprint reason
   };
 
   const formatDate = (dateString: string) => {
@@ -701,9 +703,27 @@ export default function DeliveryPage() {
                 +
               </button>
             </div>
+
+            {/* M13: Reprint reason field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('delivery.reprintReason') || 'Reason for reprint'}</label>
+              <select
+                value={printReason}
+                onChange={(e) => setPrintReason(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg bg-background"
+              >
+                <option value="">{t('delivery.selectReason') || 'Select reason...'}</option>
+                <option value="damage">{t('delivery.reprintReasons.damage') || 'Labels damaged'}</option>
+                <option value="quality">{t('delivery.reprintReasons.quality') || 'Print quality issues'}</option>
+                <option value="lost">{t('delivery.reprintReasons.lost') || 'Labels lost'}</option>
+                <option value="customer_request">{t('delivery.reprintReasons.customer_request') || 'Customer requested'}</option>
+                <option value="other">{t('delivery.reprintReasons.other') || 'Other'}</option>
+              </select>
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => { setShowPrintDialog(false); setPrintQuantity(1); }}
+                onClick={() => { setShowPrintDialog(false); setPrintQuantity(1); setPrintReason(''); }}
                 className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent"
               >
                 {t('common.cancel')}

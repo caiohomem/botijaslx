@@ -184,7 +184,16 @@
     "addAllKnown": "Add all ({count})",
     "addingKnown": "Adding...",
     "lastDelivery": "Last delivery",
-    "knownAdded": "{count} cylinder(s) added to order"
+    "knownAdded": "{count} cylinder(s) added to order",
+    "reprintReason": "Reason for reprint",
+    "selectReason": "Select reason...",
+    "reprintReasons": {
+      "damage": "Labels damaged",
+      "quality": "Print quality issues",
+      "lost": "Labels lost",
+      "customer_request": "Customer requested",
+      "other": "Other"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
