@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { pickupApi, PickupOrder } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
@@ -15,6 +15,7 @@ export default function PickupPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -36,7 +37,13 @@ export default function PickupPage() {
       loadOrders();
     }, 10000);
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      clearInterval(pollInterval);
+      // M9: Cleanup debounce timer on unmount
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, [loadOrders]);
 
   const sendThankYouWhatsApp = async (order: PickupOrder) => {
@@ -116,10 +123,20 @@ export default function PickupPage() {
     return `${waitMinutes}m`;
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    loadOrders();
+  // M9: Debounced live search
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer for debounced search (500ms)
+    debounceTimerRef.current = setTimeout(() => {
+      setLoading(true);
+      // loadOrders will be called via useEffect when searchQuery changes
+    }, 500);
   };
 
   return (
@@ -158,22 +175,26 @@ export default function PickupPage() {
         </div>
       )}
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-2">
+      {/* M9: Live search with debounce */}
+      <div className="relative">
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           placeholder={t('pickup.searchPlaceholder')}
-          className="flex-1 px-4 py-2 border rounded-lg bg-background text-foreground"
+          className="w-full px-4 py-2 border rounded-lg bg-background text-foreground"
+          autoComplete="off"
         />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
-        >
-          {t('common.search')}
-        </button>
-      </form>
+        {searchQuery && (
+          <button
+            onClick={() => handleSearchChange('')}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            title={t('common.close')}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Messages */}
       {error && (
