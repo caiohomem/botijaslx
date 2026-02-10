@@ -15,10 +15,21 @@ function getLabelSettings() {
         widthMm: parsed.labelWidthMm || 50,
         heightMm: parsed.labelHeightMm || 75,
         printerType: (parsed.printerType || 'label') as 'label' | 'a4',
+        storeLink: parsed.storeLink || '',
       };
     }
   } catch {}
-  return { widthMm: 50, heightMm: 75, printerType: 'label' as const };
+  return { widthMm: 50, heightMm: 75, printerType: 'label' as const, storeLink: '' };
+}
+
+// Format phone number with spaces every 3 digits (e.g., 926 060 863)
+function formatPhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  const parts = [];
+  for (let i = 0; i < digits.length; i += 3) {
+    parts.push(digits.substr(i, 3));
+  }
+  return parts.join(' ');
 }
 
 interface LabelPreviewProps {
@@ -27,6 +38,7 @@ interface LabelPreviewProps {
   customerPhone?: string;
   sequentialNumber?: number;
   storeName?: string;
+  storeLink?: string;
 }
 
 export function LabelPreview({
@@ -35,11 +47,13 @@ export function LabelPreview({
   customerPhone,
   sequentialNumber,
   storeName,
+  storeLink,
 }: LabelPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { widthMm, heightMm } = getLabelSettings();
+  const { widthMm, heightMm, storeLink: configStoreLink } = getLabelSettings();
   const W = widthMm * SCALE;
   const H = heightMm * SCALE;
+  const displayStoreLink = storeLink || configStoreLink;
 
   const renderLabel = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -65,21 +79,32 @@ export function LabelPreview({
     const usableW = W - padSide * 2;
 
     // Zone heights (proportional to label height)
-    // Top: store name = 13% of height
+    // Top: store name + link = 16% of height
     // QR: 52% of height
-    // Bottom: text = 35% of height
-    const topZone = Math.round(H * 0.13);
+    // Bottom: text = 32% of height
+    const topZone = Math.round(H * 0.16);
     const qrZone = Math.round(H * 0.52);
     const bottomZone = H - topZone - qrZone;
 
-    // --- TOP: Store name ---
+    // --- TOP: Store name and link ---
     if (storeName) {
-      const fontSize = Math.round(widthMm * 0.07 * SCALE);
+      const nameSize = Math.round(widthMm * 0.07 * SCALE);
+      const linkSize = Math.round(widthMm * 0.045 * SCALE);
+      const topPadding = Math.round(topZone * 0.15);
+
       ctx.fillStyle = '#000000';
-      ctx.font = `bold ${fontSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(storeName, W / 2, topZone / 2, usableW);
+
+      // Store name
+      ctx.font = `bold ${nameSize}px sans-serif`;
+      ctx.fillText(storeName, W / 2, topPadding + nameSize / 2, usableW);
+
+      // Store link (if available)
+      if (displayStoreLink) {
+        ctx.font = `${linkSize}px sans-serif`;
+        ctx.fillText(displayStoreLink, W / 2, topPadding + nameSize + linkSize, usableW);
+      }
     }
 
     // Separator
@@ -158,7 +183,8 @@ export function LabelPreview({
       if (hasPhone) {
         const fontSize = Math.round(widthMm * 0.06 * SCALE);
         ctx.font = `${fontSize}px sans-serif`;
-        ctx.fillText(customerPhone!, W / 2, sep2Y + lineH * slot, usableW);
+        const formattedPhone = formatPhoneNumber(customerPhone!);
+        ctx.fillText(formattedPhone, W / 2, sep2Y + lineH * slot, usableW);
         slot++;
       }
 
@@ -173,7 +199,7 @@ export function LabelPreview({
         );
       }
     }
-  }, [qrContent, customerName, customerPhone, sequentialNumber, storeName, W, H, widthMm]);
+  }, [qrContent, customerName, customerPhone, sequentialNumber, storeName, displayStoreLink, W, H, widthMm]);
 
   useEffect(() => {
     renderLabel();

@@ -794,6 +794,12 @@ export default function DeliveryPage() {
                       return s ? JSON.parse(s).storeName || 'Oficina da Cerveja' : 'Oficina da Cerveja';
                     } catch { return 'Oficina da Cerveja'; }
                   })()}
+                  storeLink={(() => {
+                    try {
+                      const s = localStorage.getItem('botijas_settings');
+                      return s ? JSON.parse(s).storeLink || '' : '';
+                    } catch { return ''; }
+                  })()}
                 />
               ))}
             </div>
