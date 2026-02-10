@@ -25,12 +25,14 @@ interface Order {
 
 interface Cylinder {
   cylinderId: string;
+  sequentialNumber: number;
   labelToken?: string;
   state: string;
 }
 
 interface KnownCylinder {
   cylinderId: string;
+  sequentialNumber: number;
   labelToken: string;
   lastDeliveredAt: string;
 }
@@ -113,6 +115,7 @@ export default function DeliveryPage() {
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
         return {
           cylinderId: c.cylinderId,
+          sequentialNumber: c.sequentialNumber,
           labelToken: c.labelToken!,
           lastDeliveredAt: deliveredEvent?.timestamp || c.createdAt,
         };
@@ -138,6 +141,7 @@ export default function DeliveryPage() {
         .filter(c => c.orderId === newOrder.orderId)
         .map(c => ({
           cylinderId: c.cylinderId,
+          sequentialNumber: c.sequentialNumber,
           labelToken: c.labelToken,
           state: c.state,
         }));
@@ -291,6 +295,7 @@ export default function DeliveryPage() {
       const result = await ordersApi.addCylindersBatch(order.orderId, quantity);
       const newCylinders = result.cylinders.map((c: any) => ({
         cylinderId: c.cylinderId,
+        sequentialNumber: c.sequentialNumber,
         labelToken: c.labelToken,
         state: c.state,
       }));
@@ -516,11 +521,11 @@ export default function DeliveryPage() {
                     className="p-3 flex items-center justify-between hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-mono text-sm">
-                        {known.labelToken.slice(0, 4)}
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-mono text-sm font-bold">
+                        #{known.sequentialNumber}
                       </div>
                       <div>
-                        <div className="font-mono text-sm">{known.labelToken}</div>
+                        <div className="font-mono text-sm">#{String(known.sequentialNumber).padStart(4, '0')}</div>
                         <div className="text-xs text-muted-foreground">
                           {t('delivery.lastDelivery')}: {formatDate(known.lastDeliveredAt)}
                         </div>
@@ -629,12 +634,12 @@ export default function DeliveryPage() {
                         : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-mono text-sm ${
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-mono text-sm font-bold ${
                       cylinder.labelToken
                         ? 'bg-primary/10 text-primary'
                         : 'bg-amber-100 dark:bg-amber-800 text-amber-600 dark:text-amber-400'
                     }`}>
-                      {cylinder.labelToken ? cylinder.labelToken.slice(0, 4) : `#${index + 1}`}
+                      #{cylinder.sequentialNumber}
                     </div>
                     <div className="flex-1">
                       <div className={`text-sm ${cylinder.labelToken ? 'font-mono' : 'text-muted-foreground italic'}`}>

@@ -62,6 +62,7 @@ public class GetCylinderHistoryQueryHandler
         return Result<CylinderHistoryDto>.Success(new CylinderHistoryDto
         {
             CylinderId = cylinder.CylinderId,
+            SequentialNumber = cylinder.SequentialNumber,
             LabelToken = cylinder.LabelToken?.Value,
             State = cylinder.State.ToString(),
             CreatedAt = cylinder.CreatedAt,
@@ -77,6 +78,7 @@ public class GetCylinderHistoryQueryHandler
 public class CylinderHistoryDto
 {
     public Guid CylinderId { get; set; }
+    public long SequentialNumber { get; set; }
     public string? LabelToken { get; set; }
     public string State { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }

@@ -342,12 +342,12 @@ export default function DashboardPage() {
                     className="w-full p-4 flex items-center justify-between hover:bg-muted/30 text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm">
-                        {cylinder.labelToken?.slice(0, 4) || '?'}
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
+                        #{cylinder.sequentialNumber}
                       </div>
                       <div>
                         <div className="font-mono text-sm">
-                          {cylinder.labelToken || cylinder.cylinderId.slice(0, 8)}
+                          #{String(cylinder.sequentialNumber).padStart(4, '0')}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {t(`order.status.${cylinder.orderStatus.toLowerCase()}`)}
@@ -393,8 +393,8 @@ export default function DashboardPage() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <div className="text-sm text-muted-foreground">{t('dashboard.cylinder')}</div>
-                <div className="font-mono text-lg">
-                  {cylinderHistory.labelToken || cylinderHistory.cylinderId.slice(0, 8)}
+                <div className="font-mono text-lg font-bold">
+                  #{String(cylinderHistory.sequentialNumber).padStart(4, '0')}
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStateColor(cylinderHistory.state)}`}>

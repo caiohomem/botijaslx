@@ -44,6 +44,7 @@ public class AddCylindersToOrderBatchCommandHandler
             cylinders.Add(new CylinderDto
             {
                 CylinderId = cylinder.CylinderId,
+                SequentialNumber = cylinder.SequentialNumber,
                 LabelToken = cylinder.LabelToken?.Value,
                 State = cylinder.State.ToString()
             });

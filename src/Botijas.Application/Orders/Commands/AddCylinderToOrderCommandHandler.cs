@@ -57,6 +57,7 @@ public class AddCylinderToOrderCommandHandler
         return Result<CylinderDto>.Success(new CylinderDto
         {
             CylinderId = cylinder.CylinderId,
+            SequentialNumber = cylinder.SequentialNumber,
             LabelToken = cylinder.LabelToken?.Value,
             State = cylinder.State.ToString()
         });

@@ -306,8 +306,8 @@ export default function PickupPage() {
                         key={cylinder.cylinderId}
                         className="p-4 flex items-center gap-3"
                       >
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm">
-                          {cylinder.labelToken?.slice(0, 4) || '?'}
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
+                          #{cylinder.sequentialNumber}
                         </div>
                         <div className="flex-1">
                           <div className="font-mono text-sm">

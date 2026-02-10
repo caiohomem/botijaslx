@@ -50,6 +50,7 @@ public class GetReadyForPickupQueryHandler
             var cylinderDtos = cylinders.Select(c => new PickupCylinderDto
             {
                 CylinderId = c.CylinderId,
+                SequentialNumber = c.SequentialNumber,
                 LabelToken = c.LabelToken?.Value,
                 State = c.State.ToString(),
                 IsDelivered = c.State == CylinderState.Delivered

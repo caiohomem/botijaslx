@@ -16,6 +16,7 @@ public class CustomerCylindersDto
 public class CustomerCylinderDto
 {
     public Guid CylinderId { get; set; }
+    public long SequentialNumber { get; set; }
     public string? LabelToken { get; set; }
     public string State { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
@@ -71,6 +72,7 @@ public class GetCustomerCylindersQueryHandler
                 cylinderDtos.Add(new CustomerCylinderDto
                 {
                     CylinderId = cylinder.CylinderId,
+                    SequentialNumber = cylinder.SequentialNumber,
                     LabelToken = cylinder.LabelToken?.Value,
                     State = cylinder.State.ToString(),
                     CreatedAt = cylinder.CreatedAt,

@@ -58,6 +58,7 @@ export interface CustomerCylinderHistoryItem {
 
 export interface CustomerCylinder {
   cylinderId: string;
+  sequentialNumber: number;
   labelToken?: string;
   state: string;
   createdAt: string;
@@ -90,6 +91,7 @@ export const ordersApi = {
   addCylinder: (orderId: string, cylinderId?: string) =>
     apiRequest<{
       cylinderId: string;
+      sequentialNumber: number;
       labelToken?: string;
       state: string;
     }>(`/api/orders/${orderId}/cylinders`, {
@@ -101,6 +103,7 @@ export const ordersApi = {
     apiRequest<{
       cylinders: Array<{
         cylinderId: string;
+        sequentialNumber: number;
         labelToken?: string;
         state: string;
       }>;
@@ -112,6 +115,7 @@ export const ordersApi = {
   scanCylinder: (orderId: string, qrToken: string) =>
     apiRequest<{
       cylinderId: string;
+      sequentialNumber: number;
       labelToken?: string;
       state: string;
     }>(`/api/orders/${orderId}/cylinders/scan`, {
@@ -123,6 +127,7 @@ export const ordersApi = {
 // Cylinders / Filling
 export interface FillingQueueItem {
   cylinderId: string;
+  sequentialNumber: number;
   labelToken?: string;
   state: string;
   receivedAt: string;
@@ -192,6 +197,7 @@ export const cylindersApi = {
 // Pickup
 export interface PickupCylinder {
   cylinderId: string;
+  sequentialNumber: number;
   labelToken?: string;
   state: string;
   isDelivered: boolean;
@@ -296,6 +302,7 @@ export interface CylinderHistoryItem {
 
 export interface CylinderHistory {
   cylinderId: string;
+  sequentialNumber: number;
   labelToken?: string;
   state: string;
   createdAt: string;
