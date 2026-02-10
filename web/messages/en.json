@@ -11,7 +11,8 @@
     "next": "Next",
     "previous": "Previous",
     "submit": "Submit",
-    "close": "Close"
+    "close": "Close",
+    "confirm": "Confirm"
   },
   "theme": {
     "light": "Light",
@@ -221,6 +222,8 @@
     "scanPlaceholder": "Scan cylinder to deliver...",
     "deliverButton": "Deliver",
     "deliver": "Deliver",
+    "deliverAll": "Deliver {count}",
+    "confirmDeliver": "Are you sure you want to deliver {count} cylinder(s) to {name}?",
     "cylinderDelivered": "Cylinder delivered",
     "orderComplete": "Order completed! All cylinders delivered.",
     "orderCompleteThankYou": "Order delivered to {name}! Thank you WhatsApp sent.",

@@ -14,6 +14,7 @@ export default function PickupPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -62,6 +63,7 @@ export default function PickupPage() {
 
       setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
       setExpandedOrder(null);
+      setConfirmDeliver(null);
       setSuccessMessage(t('pickup.orderCompleteThankYou', { name: order.customerName }));
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
@@ -151,7 +153,7 @@ export default function PickupPage() {
             <div key={order.orderId} className="border rounded-lg overflow-hidden">
               {/* Order Header */}
               <div className="bg-muted/50 p-4 border-b">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-4">
                   <button
                     onClick={() => setExpandedOrder(
                       expandedOrder === order.orderId ? null : order.orderId
@@ -166,9 +168,25 @@ export default function PickupPage() {
                   </button>
 
                   <div className="flex items-center gap-2">
-                    <div className="text-sm bg-background px-3 py-1 rounded-full">
+                    <div className="text-sm bg-background px-3 py-1 rounded-full whitespace-nowrap">
                       {t('pickup.progress', { delivered: deliveredCount, total: order.totalCylinders })}
                     </div>
+
+                    {/* M4: Direct deliver button without expand */}
+                    {undeliveredCount > 0 && (
+                      <button
+                        onClick={() => setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
+                        disabled={actionLoading === order.orderId}
+                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
+                        title={t('pickup.deliverAll', { count: undeliveredCount })}
+                      >
+                        {actionLoading === order.orderId ? (
+                          <span className="inline-block animate-spin">⟳</span>
+                        ) : (
+                          `✓ ${undeliveredCount}`
+                        )}
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setExpandedOrder(
@@ -249,6 +267,51 @@ export default function PickupPage() {
           {loading ? t('common.loading') : t('pickup.refresh')}
         </button>
       </div>
+
+      {/* M4: Delivery Confirmation Modal */}
+      {confirmDeliver && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold">{t('common.confirm')}</h3>
+
+            <div className="text-sm text-muted-foreground">
+              {t('pickup.confirmDeliver', {
+                count: confirmDeliver.count,
+                name: orders.find(o => o.orderId === confirmDeliver.orderId)?.customerName || ''
+              })}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setConfirmDeliver(null)}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  const order = orders.find(o => o.orderId === confirmDeliver.orderId);
+                  if (order) {
+                    handleDeliverAll(order);
+                    setConfirmDeliver(null);
+                  }
+                }}
+                disabled={actionLoading === confirmDeliver.orderId}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+              >
+                {actionLoading === confirmDeliver.orderId ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block animate-spin">⟳</span>
+                    {t('common.loading')}
+                  </span>
+                ) : (
+                  t('pickup.deliver')
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

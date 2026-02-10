@@ -11,7 +11,8 @@
     "next": "Seguinte",
     "previous": "Anterior",
     "submit": "Submeter",
-    "close": "Fechar"
+    "close": "Fechar",
+    "confirm": "Confirmar"
   },
   "theme": {
     "light": "Claro",
@@ -221,6 +222,8 @@
     "scanPlaceholder": "Escanear botija para entregar...",
     "deliverButton": "Entregar",
     "deliver": "Entregar",
+    "deliverAll": "Entregar {count}",
+    "confirmDeliver": "Tem a certeza que quer entregar {count} botija(s) a {name}?",
     "cylinderDelivered": "Botija entregue",
     "orderComplete": "Pedido concluído! Todas as botijas entregues.",
     "orderCompleteThankYou": "Pedido entregue a {name}! WhatsApp de agradecimento enviado.",
