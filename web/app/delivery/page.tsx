@@ -764,7 +764,7 @@ export default function DeliveryPage() {
                 {t('common.cancel')}
               </button>
               <button
-                onClick={handlePrintAndCreate}
+                onClick={() => handlePrintAndCreate(printQuantity)}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium"
               >
