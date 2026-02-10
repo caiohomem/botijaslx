@@ -117,12 +117,18 @@ if (autoInitDb)
     {
         try
         {
-            if (dbContext.Database.GetMigrations().Any())
+            // Check if migrations history table exists
+            var migrationHistoryExists = dbContext.Database.ExecuteSqlRaw(
+                "SELECT 1 FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'") > 0;
+
+            if (migrationHistoryExists && dbContext.Database.GetMigrations().Any())
             {
+                // Migration history exists, apply pending migrations
                 dbContext.Database.Migrate();
             }
             else
             {
+                // No migration history or no migrations defined, ensure schema is created
                 dbContext.Database.EnsureCreated();
             }
 
