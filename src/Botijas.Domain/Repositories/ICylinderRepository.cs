@@ -18,6 +18,7 @@ public interface ICylinderRepository
 public class FillingQueueItem
 {
     public Guid CylinderId { get; set; }
+    public long SequentialNumber { get; set; }
     public string? LabelToken { get; set; }
     public string State { get; set; } = string.Empty;
     public DateTime ReceivedAt { get; set; }

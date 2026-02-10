@@ -14,6 +14,7 @@ public enum CylinderState
 public class Cylinder
 {
     public Guid CylinderId { get; private set; }
+    public long SequentialNumber { get; private set; } // Auto-incrementing sequential ID for display
     public LabelToken? LabelToken { get; private set; }
     public CylinderState State { get; private set; }
     public string? OccurrenceNotes { get; private set; }
@@ -28,17 +29,18 @@ public class Cylinder
         CreatedAt = DateTime.UtcNow;
     }
 
-    private Cylinder(Guid cylinderId, LabelToken? labelToken = null)
+    private Cylinder(Guid cylinderId, long sequentialNumber, LabelToken? labelToken = null)
     {
         CylinderId = cylinderId;
+        SequentialNumber = sequentialNumber;
         LabelToken = labelToken;
         State = CylinderState.Received;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public static Cylinder Create(LabelToken? labelToken = null)
+    public static Cylinder Create(long sequentialNumber, LabelToken? labelToken = null)
     {
-        var cylinder = new Cylinder(Guid.NewGuid(), labelToken);
+        var cylinder = new Cylinder(Guid.NewGuid(), sequentialNumber, labelToken);
         cylinder._domainEvents.Add(new CylinderReceived(cylinder.CylinderId, cylinder.LabelToken?.Value));
         return cylinder;
     }

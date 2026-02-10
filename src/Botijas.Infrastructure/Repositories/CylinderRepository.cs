@@ -104,6 +104,7 @@ public class CylinderRepository : ICylinderRepository
         return results.Select(r => new FillingQueueItem
         {
             CylinderId = r.Cylinder.CylinderId,
+            SequentialNumber = r.Cylinder.SequentialNumber,
             LabelToken = r.Cylinder.LabelToken?.Value,
             State = r.Cylinder.State.ToString(),
             ReceivedAt = r.Cylinder.CreatedAt,
@@ -117,6 +118,19 @@ public class CylinderRepository : ICylinderRepository
 
     public async Task AddAsync(Cylinder cylinder, CancellationToken cancellationToken = default)
     {
+        // The cylinder should already be created by the command handler
+        // If sequential number is 0, generate it now
+        if (cylinder.SequentialNumber == 0)
+        {
+            var maxSequential = await _context.Cylinders
+                .AsNoTracking()
+                .MaxAsync(c => (long?)c.SequentialNumber, cancellationToken) ?? 0;
+
+            // Use reflection to set the SequentialNumber since it's private
+            var property = typeof(Cylinder).GetProperty("SequentialNumber");
+            property?.SetValue(cylinder, maxSequential + 1);
+        }
+
         await _context.Cylinders.AddAsync(cylinder, cancellationToken);
     }
 
