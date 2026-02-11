@@ -104,7 +104,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.MapHub<PrintHub>("/hubs/print");
 
-// Database bootstrap: apply migrations (or create schema) automatically on startup.
+// Database bootstrap: apply pending migrations automatically on startup.
 var autoInitDb = builder.Configuration.GetValue("Database__AutoInitialize", true);
 if (autoInitDb)
 {
@@ -117,21 +117,7 @@ if (autoInitDb)
     {
         try
         {
-            // Check if migrations history table exists
-            var migrationHistoryExists = dbContext.Database.ExecuteSqlRaw(
-                "SELECT 1 FROM information_schema.tables WHERE table_name = '__EFMigrationsHistory'") > 0;
-
-            if (migrationHistoryExists && dbContext.Database.GetMigrations().Any())
-            {
-                // Migration history exists, apply pending migrations
-                dbContext.Database.Migrate();
-            }
-            else
-            {
-                // No migration history or no migrations defined, ensure schema is created
-                dbContext.Database.EnsureCreated();
-            }
-
+            dbContext.Database.Migrate();
             break;
         }
         catch (Exception ex) when (attempt < maxAttempts)
