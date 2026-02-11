@@ -118,17 +118,23 @@ public class CylinderRepository : ICylinderRepository
 
     public async Task AddAsync(Cylinder cylinder, CancellationToken cancellationToken = default)
     {
-        // The cylinder should already be created by the command handler
-        // If sequential number is 0, generate it now
         if (cylinder.SequentialNumber == 0)
         {
-            var maxSequential = await _context.Cylinders
+            // Max from database
+            var maxDb = await _context.Cylinders
                 .AsNoTracking()
                 .MaxAsync(c => (long?)c.SequentialNumber, cancellationToken) ?? 0;
 
-            // Use reflection to set the SequentialNumber since it's private
+            // Max from locally tracked (not yet saved) cylinders
+            var maxLocal = _context.ChangeTracker.Entries<Cylinder>()
+                .Select(e => e.Entity.SequentialNumber)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            var nextSequential = Math.Max(maxDb, maxLocal) + 1;
+
             var property = typeof(Cylinder).GetProperty("SequentialNumber");
-            property?.SetValue(cylinder, maxSequential + 1);
+            property?.SetValue(cylinder, nextSequential);
         }
 
         await _context.Cylinders.AddAsync(cylinder, cancellationToken);
