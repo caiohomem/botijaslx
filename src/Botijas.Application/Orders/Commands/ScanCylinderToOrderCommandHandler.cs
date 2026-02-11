@@ -26,12 +26,25 @@ public class ScanCylinderToOrderCommandHandler
             return Result<CylinderDto>.Failure("Order not found");
         }
 
-        var labelToken = LabelToken.Create(command.QrToken);
-        var cylinder = await _cylinderRepository.FindByLabelTokenAsync(labelToken, cancellationToken);
+        // Try sequential number first (e.g. "1", "0001", "#0001")
+        var cleanInput = command.QrToken.TrimStart('#', '0');
+        Cylinder? cylinder = null;
+
+        if (long.TryParse(cleanInput, out var seqNum) && seqNum > 0)
+        {
+            cylinder = await _cylinderRepository.FindBySequentialNumberAsync(seqNum, cancellationToken);
+        }
+
+        // Fallback: search by label token
+        if (cylinder == null)
+        {
+            var labelToken = LabelToken.Create(command.QrToken);
+            cylinder = await _cylinderRepository.FindByLabelTokenAsync(labelToken, cancellationToken);
+        }
 
         if (cylinder == null)
         {
-            return Result<CylinderDto>.Failure("Cylinder with this QR token not found");
+            return Result<CylinderDto>.Failure("Botija não encontrada");
         }
 
         // Verificar se não está em outro pedido aberto

@@ -77,6 +77,7 @@ public class GetCylinderByTokenQueryHandler
         return Result<CylinderHistoryDto>.Success(new CylinderHistoryDto
         {
             CylinderId = cylinder.CylinderId,
+            SequentialNumber = cylinder.SequentialNumber,
             LabelToken = cylinder.LabelToken?.Value,
             State = cylinder.State.ToString(),
             CreatedAt = cylinder.CreatedAt,
