@@ -27,13 +27,25 @@ public class GetCylinderByTokenQueryHandler
         GetCylinderByTokenQuery query,
         CancellationToken cancellationToken)
     {
-        // Buscar botija por token
-        var labelToken = LabelToken.Create(query.QrToken);
-        var cylinder = await _cylinderRepository.FindByLabelTokenAsync(labelToken, cancellationToken);
-        
+        // Try to find by sequential number first (e.g. "1", "0001", "#0001")
+        var cleanInput = query.QrToken.TrimStart('#', '0');
+        Domain.Entities.Cylinder? cylinder = null;
+
+        if (long.TryParse(cleanInput, out var seqNum) && seqNum > 0)
+        {
+            cylinder = await _cylinderRepository.FindBySequentialNumberAsync(seqNum, cancellationToken);
+        }
+
+        // Fallback: search by label token
         if (cylinder == null)
         {
-            return Result<CylinderHistoryDto>.Failure("Botija não encontrada com este QR");
+            var labelToken = LabelToken.Create(query.QrToken);
+            cylinder = await _cylinderRepository.FindByLabelTokenAsync(labelToken, cancellationToken);
+        }
+
+        if (cylinder == null)
+        {
+            return Result<CylinderHistoryDto>.Failure("Botija não encontrada");
         }
 
         // Buscar histórico

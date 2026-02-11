@@ -310,12 +310,8 @@ export default function PickupPage() {
                           #{cylinder.sequentialNumber}
                         </div>
                         <div className="flex-1">
-                          <div className="font-mono text-sm">
-                            {cylinder.labelToken || (
-                              <span className="text-muted-foreground italic">
-                                {t('pickup.noLabel')}
-                              </span>
-                            )}
+                          <div className="font-mono text-sm font-bold">
+                            #{String(cylinder.sequentialNumber).padStart(4, '0')}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}

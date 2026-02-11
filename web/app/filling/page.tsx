@@ -27,14 +27,14 @@ export default function FillingPage() {
   // Problem modal state
   const [problemModal, setProblemModal] = useState<{
     cylinderId: string;
-    labelToken?: string;
+    sequentialNumber: number;
   } | null>(null);
   const [problemType, setProblemType] = useState('');
   const [problemNotes, setProblemNotes] = useState('');
   const [showProblems, setShowProblems] = useState(false);
   const [reportedProblems, setReportedProblems] = useState<Array<{
     cylinderId: string;
-    labelToken?: string;
+    sequentialNumber: number;
     type: string;
     notes: string;
     timestamp: string;
@@ -177,7 +177,7 @@ export default function FillingPage() {
       // M12: Track reported problem for workflow
       setReportedProblems(prev => [...prev, {
         cylinderId: problemModal.cylinderId,
-        labelToken: problemModal.labelToken,
+        sequentialNumber: problemModal.sequentialNumber,
         type: problemType,
         notes: problemNotes,
         timestamp: new Date().toISOString()
@@ -201,10 +201,11 @@ export default function FillingPage() {
     const trimmed = value.trim();
     if (!trimmed) return;
 
+    const cleanNum = trimmed.replace(/^#?0*/, '');
+    const seqNum = parseInt(cleanNum, 10);
     const cylinder = cylinders.find(
       c => c.labelToken === trimmed ||
-           c.cylinderId === trimmed ||
-           c.cylinderId.startsWith(trimmed)
+           (!isNaN(seqNum) && c.sequentialNumber === seqNum)
     );
 
     if (cylinder) {
@@ -419,12 +420,8 @@ export default function FillingPage() {
                           #{cylinder.sequentialNumber}
                         </div>
                         <div className="flex-1">
-                          <div className="font-mono text-sm">
-                            {cylinder.labelToken || (
-                              <span className="text-muted-foreground italic">
-                                {t('filling.noLabel')}
-                              </span>
-                            )}
+                          <div className="font-mono text-sm font-bold">
+                            #{String(cylinder.sequentialNumber).padStart(4, '0')}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}
@@ -441,7 +438,7 @@ export default function FillingPage() {
                       <button
                         onClick={() => setProblemModal({
                           cylinderId: cylinder.cylinderId,
-                          labelToken: cylinder.labelToken
+                          sequentialNumber: cylinder.sequentialNumber
                         })}
                         disabled={actionLoading === cylinder.cylinderId}
                         className="px-3 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50 transition-colors text-sm"
@@ -490,8 +487,8 @@ export default function FillingPage() {
                 <div key={idx} className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="font-mono text-sm font-medium">
-                        {problem.labelToken || problem.cylinderId.slice(0, 8)}
+                      <div className="font-mono text-sm font-medium font-bold">
+                        #{String(problem.sequentialNumber).padStart(4, '0')}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {new Date(problem.timestamp).toLocaleString('pt-PT')}
@@ -531,7 +528,7 @@ export default function FillingPage() {
             <h3 className="text-lg font-semibold">{t('filling.reportProblem')}</h3>
             
             <div className="text-sm text-muted-foreground">
-              {t('filling.cylinder')}: {problemModal.labelToken || problemModal.cylinderId.slice(0, 8)}
+              {t('filling.cylinder')}: #{String(problemModal.sequentialNumber).padStart(4, '0')}
             </div>
 
             <div className="space-y-2">

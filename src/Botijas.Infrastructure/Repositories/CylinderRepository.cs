@@ -29,6 +29,12 @@ public class CylinderRepository : ICylinderRepository
         return cylinders.FirstOrDefault(c => c.LabelToken != null && c.LabelToken.Value == labelValue);
     }
 
+    public async Task<Cylinder?> FindBySequentialNumberAsync(long sequentialNumber, CancellationToken cancellationToken = default)
+    {
+        return await _context.Cylinders
+            .FirstOrDefaultAsync(c => c.SequentialNumber == sequentialNumber, cancellationToken);
+    }
+
     public async Task<Cylinder?> FindInOpenOrderAsync(Guid cylinderId, CancellationToken cancellationToken = default)
     {
         // Verificar se o cilindro está em algum pedido aberto
