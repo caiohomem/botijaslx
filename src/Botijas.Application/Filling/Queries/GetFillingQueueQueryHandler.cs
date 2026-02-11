@@ -19,6 +19,7 @@ public class GetFillingQueueQueryHandler
         var dtos = items.Select(item => new FillingQueueItemDto
         {
             CylinderId = item.CylinderId,
+            SequentialNumber = item.SequentialNumber,
             LabelToken = item.LabelToken,
             State = item.State,
             ReceivedAt = item.ReceivedAt,

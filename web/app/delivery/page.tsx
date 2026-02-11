@@ -351,15 +351,8 @@ export default function DeliveryPage() {
   };
 
   const handleFinishDelivery = () => {
-    // M14: Validate completeness before finishing
     if (cylinders.length === 0) {
       setError(t('delivery.noCylinders'));
-      return;
-    }
-
-    const unlabeledCount = cylinders.filter(c => !c.labelToken).length;
-    if (unlabeledCount > 0) {
-      setError(t('delivery.needsLabel', { count: unlabeledCount }));
       return;
     }
 
@@ -470,7 +463,7 @@ export default function DeliveryPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">4</span>
-                  <span>{t('delivery.step4Finish') || 'Finish delivery (all cylinders must have labels)'}</span>
+                  <span>{t('delivery.step4Finish') || 'Finish delivery'}</span>
                 </div>
               </div>
             </div>
