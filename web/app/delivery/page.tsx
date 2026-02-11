@@ -642,8 +642,8 @@ export default function DeliveryPage() {
                       #{cylinder.sequentialNumber}
                     </div>
                     <div className="flex-1">
-                      <div className={`text-sm ${cylinder.labelToken ? 'font-mono' : 'text-muted-foreground italic'}`}>
-                        {cylinder.labelToken || t('delivery.pendingPrint')}
+                      <div className="text-sm font-mono font-bold">
+                        #{String(cylinder.sequentialNumber).padStart(4, '0')}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {t(`cylinder.status.${uiStatus}`)}
