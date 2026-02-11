@@ -30,7 +30,7 @@ public class AddCylinderToOrderCommandHandler
         if (command.CylinderId.HasValue)
         {
             // Usar botija existente
-            cylinder = await _cylinderRepository.FindByIdAsync(command.CylinderId.Value, cancellationToken);
+            cylinder = await _cylinderRepository.FindByIdAsync(command.CylinderId.Value, cancellationToken)!;
             if (cylinder == null)
             {
                 return Result<CylinderDto>.Failure("Cylinder not found");

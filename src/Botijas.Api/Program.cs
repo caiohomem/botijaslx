@@ -194,6 +194,5 @@ static string NormalizePostgresConnectionString(string input)
         builder.SslMode = SslMode.Require;
     }
 
-    builder.TrustServerCertificate = true;
     return builder.ConnectionString;
 }
