@@ -40,6 +40,7 @@ interface KnownCylinder {
 interface PrintPreviewState {
   printJobId: string;
   quantity: number;
+  sequentialNumbers: number[];
 }
 
 export default function DeliveryPage() {
@@ -312,7 +313,7 @@ export default function DeliveryPage() {
 
       setShowPrintDialog(false);
       setPrintQuantity(1);
-      const preview = { printJobId: printJob.printJobId, quantity: printJob.quantity };
+      const preview = { printJobId: printJob.printJobId, quantity: printJob.quantity, sequentialNumbers: newCylinders.map((c: Cylinder) => c.sequentialNumber) };
       setPrintPreview(preview);
       setLastPrintPreview(preview);
       showSuccess(t('delivery.printJobCreatedAndCylinders', { count: quantity }), 3000);
@@ -785,7 +786,7 @@ export default function DeliveryPage() {
                   qrContent={`${printPreview.printJobId}-${i + 1}`}
                   customerName={selectedCustomer.name}
                   customerPhone={selectedCustomer.phone}
-                  sequentialNumber={i + 1}
+                  sequentialNumber={printPreview.sequentialNumbers[i] ?? i + 1}
                   storeName={(() => {
                     try {
                       const s = localStorage.getItem('botijas_settings');
