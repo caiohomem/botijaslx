@@ -10,8 +10,10 @@ public interface ICylinderRepository
     Task<Cylinder?> FindBySequentialNumberAsync(long sequentialNumber, CancellationToken cancellationToken = default);
     Task<Cylinder?> FindInOpenOrderAsync(Guid cylinderId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
+    Task<List<Cylinder>> FindByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<List<FillingQueueItem>> GetFillingQueueAsync(CancellationToken cancellationToken = default);
     Task AddAsync(Cylinder cylinder, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Cylinder cylinder, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 

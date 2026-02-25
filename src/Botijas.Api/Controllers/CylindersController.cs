@@ -1,6 +1,7 @@
 using Botijas.Application.Cylinders.Queries;
 using Botijas.Application.Filling.Commands;
 using Botijas.Application.Filling.Queries;
+using Botijas.Api.Handlers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Botijas.Api.Controllers;
@@ -16,6 +17,7 @@ public class CylindersController : ControllerBase
     private readonly AssignLabelCommandHandler _assignLabelHandler;
     private readonly GetCylinderHistoryQueryHandler _getHistoryHandler;
     private readonly GetCylinderByTokenQueryHandler _getByTokenHandler;
+    private readonly DeleteCylinderHandler _deleteCylinderHandler;
 
     public CylindersController(
         GetFillingQueueQueryHandler getFillingQueueHandler,
@@ -24,7 +26,8 @@ public class CylindersController : ControllerBase
         ReportCylinderProblemCommandHandler reportProblemHandler,
         AssignLabelCommandHandler assignLabelHandler,
         GetCylinderHistoryQueryHandler getHistoryHandler,
-        GetCylinderByTokenQueryHandler getByTokenHandler)
+        GetCylinderByTokenQueryHandler getByTokenHandler,
+        DeleteCylinderHandler deleteCylinderHandler)
     {
         _getFillingQueueHandler = getFillingQueueHandler;
         _markReadyHandler = markReadyHandler;
@@ -33,6 +36,7 @@ public class CylindersController : ControllerBase
         _assignLabelHandler = assignLabelHandler;
         _getHistoryHandler = getHistoryHandler;
         _getByTokenHandler = getByTokenHandler;
+        _deleteCylinderHandler = deleteCylinderHandler;
     }
 
     /// <summary>
@@ -159,6 +163,20 @@ public class CylindersController : ControllerBase
         }
 
         return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Elimina uma botija
+    /// </summary>
+    [HttpDelete("{cylinderId}")]
+    public async Task<IActionResult> Delete(Guid cylinderId, CancellationToken cancellationToken)
+    {
+        var result = await _deleteCylinderHandler.Handle(cylinderId, cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return NoContent();
     }
 }
 

@@ -34,6 +34,11 @@ public class Customer
         return customer;
     }
 
+    public void UpdatePhone(PhoneNumber newPhone)
+    {
+        Phone = newPhone ?? throw new ArgumentNullException(nameof(newPhone));
+    }
+
     public void ClearDomainEvents()
     {
         _domainEvents.Clear();

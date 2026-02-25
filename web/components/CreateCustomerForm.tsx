@@ -61,6 +61,7 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
+          maxLength={9}
           className="w-full px-4 py-2 border rounded-lg bg-background text-foreground"
         />
       </div>

@@ -38,6 +38,7 @@
     "filling": "Enchimento",
     "pickup": "Out",
     "dashboard": "Painel",
+    "customers": "Clientes",
     "settings": "Configurações"
   },
   "settings": {
@@ -260,5 +261,21 @@
     "notificationSent": "Notificação enviada",
     "pendingNotifications": "{count} pedido(s) por notificar",
     "whatsappMessage": "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!"
+  },
+  "clientes": {
+    "title": "Clientes",
+    "selectCustomer": "Selecione um cliente para ver detalhes",
+    "editPhone": "Editar",
+    "savePhone": "Guardar",
+    "cancelEdit": "Cancelar",
+    "phoneUpdated": "Telefone atualizado com sucesso",
+    "cylinders": "Botijas do Cliente",
+    "noCylinders": "Nenhuma botija registada",
+    "deleteCylinder": "Eliminar",
+    "confirmDeleteCylinder": "Tem a certeza que quer eliminar a botija #{number}? Esta ação não pode ser desfeita.",
+    "cylinderDeleted": "Botija eliminada com sucesso",
+    "deleteCustomer": "Eliminar Cliente",
+    "confirmDeleteCustomer": "Tem a certeza que quer eliminar o cliente {name}? Esta ação não pode ser desfeita.",
+    "customerDeleted": "Cliente eliminado com sucesso"
   }
 }

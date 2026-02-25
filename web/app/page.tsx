@@ -58,6 +58,18 @@ export default function HomePage() {
             Ver estatísticas e pendências
           </p>
         </Link>
+
+        <Link
+          href="/clientes"
+          className="p-6 border rounded-lg hover:bg-accent transition-colors"
+        >
+          <h2 className="text-xl font-semibold mb-2">
+            {t('navigation.customers')}
+          </h2>
+          <p className="text-muted-foreground">
+            Gerir clientes e botijas
+          </p>
+        </Link>
       </div>
     </div>
   );

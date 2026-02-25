@@ -1,6 +1,7 @@
 using Botijas.Application.Customers;
 using Botijas.Application.Customers.Commands;
 using Botijas.Application.Customers.Queries;
+using Botijas.Api.Handlers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Botijas.Api.Controllers;
@@ -12,15 +13,21 @@ public class CustomersController : ControllerBase
     private readonly CreateCustomerCommandHandler _createHandler;
     private readonly SearchCustomersQueryHandler _searchHandler;
     private readonly GetCustomerCylindersQueryHandler _customerCylindersHandler;
+    private readonly UpdateCustomerPhoneCommandHandler _updatePhoneHandler;
+    private readonly DeleteCustomerHandler _deleteHandler;
 
     public CustomersController(
         CreateCustomerCommandHandler createHandler,
         SearchCustomersQueryHandler searchHandler,
-        GetCustomerCylindersQueryHandler customerCylindersHandler)
+        GetCustomerCylindersQueryHandler customerCylindersHandler,
+        UpdateCustomerPhoneCommandHandler updatePhoneHandler,
+        DeleteCustomerHandler deleteHandler)
     {
         _createHandler = createHandler;
         _searchHandler = searchHandler;
         _customerCylindersHandler = customerCylindersHandler;
+        _updatePhoneHandler = updatePhoneHandler;
+        _deleteHandler = deleteHandler;
     }
 
     [HttpPost]
@@ -64,4 +71,33 @@ public class CustomersController : ControllerBase
             return BadRequest(new { error = result.Error });
         return Ok(result.Value);
     }
+
+    [HttpPut("{id}/phone")]
+    public async Task<IActionResult> UpdatePhone(
+        Guid id,
+        [FromBody] UpdatePhoneRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _updatePhoneHandler.Handle(
+            new UpdateCustomerPhoneCommand(id, request.Phone),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return Ok(result.Value);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _deleteHandler.Handle(id, cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return NoContent();
+    }
 }
+
+public record UpdatePhoneRequest(string Phone);

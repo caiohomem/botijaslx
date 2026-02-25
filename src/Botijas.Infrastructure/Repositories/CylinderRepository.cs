@@ -122,6 +122,23 @@ public class CylinderRepository : ICylinderRepository
         }).ToList();
     }
 
+    public async Task<List<Cylinder>> FindByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
+    {
+        var cylinderIds = await _context.CylinderRefs
+            .Join(_context.Orders,
+                cr => cr.OrderId,
+                o => o.OrderId,
+                (cr, o) => new { cr, o })
+            .Where(x => x.o.CustomerId == customerId)
+            .Select(x => x.cr.CylinderId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return await _context.Cylinders
+            .Where(c => cylinderIds.Contains(c.CylinderId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Cylinder cylinder, CancellationToken cancellationToken = default)
     {
         if (cylinder.SequentialNumber == 0)
@@ -144,6 +161,12 @@ public class CylinderRepository : ICylinderRepository
         }
 
         await _context.Cylinders.AddAsync(cylinder, cancellationToken);
+    }
+
+    public async Task DeleteAsync(Cylinder cylinder, CancellationToken cancellationToken = default)
+    {
+        _context.Cylinders.Remove(cylinder);
+        await Task.CompletedTask;
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)

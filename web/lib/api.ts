@@ -30,6 +30,11 @@ export async function apiRequest<T>(
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 
+  // Handle 204 No Content
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
+
   return response.json();
 }
 
@@ -48,6 +53,20 @@ export const customersApi = {
 
   getCylinders: (customerId: string) =>
     apiRequest<CustomerCylindersResult>(`/api/customers/${customerId}/cylinders`),
+
+  updatePhone: (customerId: string, phone: string) =>
+    apiRequest<{ customerId: string; name: string; phone: string }>(
+      `/api/customers/${customerId}/phone`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ phone }),
+      }
+    ),
+
+  delete: (customerId: string) =>
+    apiRequest<void>(`/api/customers/${customerId}`, {
+      method: 'DELETE',
+    }),
 };
 
 export interface CustomerCylinderHistoryItem {
@@ -191,6 +210,11 @@ export const cylindersApi = {
     apiRequest<AssignLabelResult>(`/api/cylinders/${cylinderId}/assign-label`, {
       method: 'POST',
       body: JSON.stringify({ qrToken }),
+    }),
+
+  delete: (cylinderId: string) =>
+    apiRequest<void>(`/api/cylinders/${cylinderId}`, {
+      method: 'DELETE',
     }),
 };
 

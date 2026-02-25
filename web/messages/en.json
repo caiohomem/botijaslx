@@ -38,6 +38,7 @@
     "filling": "Filling",
     "pickup": "Out",
     "dashboard": "Dashboard",
+    "customers": "Customers",
     "settings": "Settings"
   },
   "settings": {
@@ -260,5 +261,21 @@
     "notificationSent": "Notification sent",
     "pendingNotifications": "{count} order(s) pending notification",
     "whatsappMessage": "Hello {name}! Your {count} CO₂ cylinder(s) are ready for pickup. Visit us when convenient!"
+  },
+  "clientes": {
+    "title": "Customers",
+    "selectCustomer": "Select a customer to view details",
+    "editPhone": "Edit",
+    "savePhone": "Save",
+    "cancelEdit": "Cancel",
+    "phoneUpdated": "Phone updated successfully",
+    "cylinders": "Customer Cylinders",
+    "noCylinders": "No cylinders registered",
+    "deleteCylinder": "Delete",
+    "confirmDeleteCylinder": "Are you sure you want to delete cylinder #{number}? This action cannot be undone.",
+    "cylinderDeleted": "Cylinder deleted successfully",
+    "deleteCustomer": "Delete Customer",
+    "confirmDeleteCustomer": "Are you sure you want to delete customer {name}? This action cannot be undone.",
+    "customerDeleted": "Customer deleted successfully"
   }
 }
