@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { customersApi, cylindersApi, CustomerCylinder } from '@/lib/api';
@@ -9,6 +9,10 @@ interface SelectedCustomer {
   customerId: string;
   name: string;
   phone: string;
+}
+
+interface Settings {
+  maxPhoneDigits?: number;
 }
 
 export default function ClientesPage() {
@@ -20,13 +24,27 @@ export default function ClientesPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Edit name state
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState('');
+  // Edit customer form state
+  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [formData, setFormData] = useState({ name: '', phone: '' });
 
-  // Edit phone state
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [newPhone, setNewPhone] = useState('');
+  // Settings
+  const [maxPhoneDigits, setMaxPhoneDigits] = useState(9);
+
+  useEffect(() => {
+    // Load settings from localStorage
+    const savedSettings = localStorage.getItem('botijas_settings');
+    if (savedSettings) {
+      try {
+        const settings: Settings = JSON.parse(savedSettings);
+        if (settings.maxPhoneDigits) {
+          setMaxPhoneDigits(settings.maxPhoneDigits);
+        }
+      } catch {
+        // Invalid JSON, use defaults
+      }
+    }
+  }, []);
 
   // Delete confirmation states
   const [confirmDeleteCylinder, setConfirmDeleteCylinder] = useState<string | null>(null);
@@ -43,9 +61,7 @@ export default function ClientesPage() {
     setLoading(true);
     setError(null);
     setCylinders([]);
-    setEditingName(false);
-    setNewName('');
-    setEditingPhone(false);
+    setEditingCustomer(false);
     setConfirmDeleteCustomer(false);
     setConfirmDeleteCylinder(null);
     setDeleteError(null);
@@ -60,40 +76,46 @@ export default function ClientesPage() {
     }
   };
 
-  const handleUpdateName = async () => {
-    if (!selectedCustomer || !newName.trim()) return;
-    setActionLoading('name');
+  const handleEditCustomer = () => {
+    if (selectedCustomer) {
+      setFormData({ name: selectedCustomer.name, phone: selectedCustomer.phone });
+      setEditingCustomer(true);
+      setError(null);
+    }
+  };
+
+  const handleSaveCustomer = async () => {
+    if (!selectedCustomer || !formData.name.trim() || !formData.phone.trim()) return;
+
+    setActionLoading('customer');
     setError(null);
 
     try {
-      const updated = await customersApi.updateName(selectedCustomer.customerId, newName.trim());
-      setSelectedCustomer(prev => (prev ? { ...prev, name: updated.name } : null));
-      setEditingName(false);
-      setNewName('');
-      showSuccess(t('clientes.nameUpdated'));
+      // Update name if changed
+      if (formData.name !== selectedCustomer.name) {
+        await customersApi.updateName(selectedCustomer.customerId, formData.name.trim());
+      }
+
+      // Update phone if changed
+      if (formData.phone !== selectedCustomer.phone) {
+        await customersApi.updatePhone(selectedCustomer.customerId, formData.phone.trim());
+      }
+
+      // Refresh customer data
+      setSelectedCustomer(prev => (prev ? { ...prev, name: formData.name, phone: formData.phone } : null));
+      setEditingCustomer(false);
+      showSuccess(t('clientes.customerUpdated'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar nome');
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar cliente');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleUpdatePhone = async () => {
-    if (!selectedCustomer || !newPhone.trim()) return;
-    setActionLoading('phone');
+  const handleCancelEdit = () => {
+    setEditingCustomer(false);
+    setFormData({ name: '', phone: '' });
     setError(null);
-
-    try {
-      const updated = await customersApi.updatePhone(selectedCustomer.customerId, newPhone.trim());
-      setSelectedCustomer(prev => (prev ? { ...prev, phone: updated.phone } : null));
-      setEditingPhone(false);
-      setNewPhone('');
-      showSuccess(t('clientes.phoneUpdated'));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar telefone');
-    } finally {
-      setActionLoading(null);
-    }
   };
 
   const handleDeleteCylinder = async (cylinderId: string) => {
@@ -134,9 +156,7 @@ export default function ClientesPage() {
     setSelectedCustomer(null);
     setCylinders([]);
     setError(null);
-    setEditingName(false);
-    setNewName('');
-    setEditingPhone(false);
+    setEditingCustomer(false);
     setConfirmDeleteCustomer(false);
     setConfirmDeleteCylinder(null);
     setDeleteError(null);
@@ -173,87 +193,37 @@ export default function ClientesPage() {
           <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                {!editingName ? (
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-lg">{selectedCustomer.name}</div>
-                    <button
-                      onClick={() => {
-                        setNewName(selectedCustomer.name);
-                        setEditingName(true);
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      {t('clientes.editName')}
-                    </button>
+                {!editingCustomer ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <div className="font-semibold text-lg">{selectedCustomer.name}</div>
+                        <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="px-2 py-1 border rounded text-sm bg-background"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleUpdateName}
-                      disabled={actionLoading === 'name' || !newName.trim()}
-                      className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50"
-                    >
-                      {actionLoading === 'name' ? '...' : t('clientes.saveName')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingName(false);
-                        setNewName('');
-                      }}
-                      className="px-3 py-1 border rounded text-sm hover:bg-accent"
-                    >
-                      {t('clientes.cancelEdit')}
-                    </button>
-                  </div>
-                )}
-                {!editingPhone ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">
-                      {selectedCustomer.phone}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setNewPhone(selectedCustomer.phone);
-                        setEditingPhone(true);
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      {t('clientes.editPhone')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 mt-2">
-                    <input
-                      type="tel"
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
-                      maxLength={9}
-                      className="px-2 py-1 border rounded text-sm bg-background w-32"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleUpdatePhone}
-                      disabled={actionLoading === 'phone' || !newPhone.trim()}
-                      className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50"
-                    >
-                      {actionLoading === 'phone' ? '...' : t('clientes.savePhone')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingPhone(false);
-                        setNewPhone('');
-                      }}
-                      className="px-3 py-1 border rounded text-sm hover:bg-accent"
-                    >
-                      {t('clientes.cancelEdit')}
-                    </button>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">{t('customer.name')}</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-3 py-2 border rounded text-sm bg-background"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">{t('customer.phone')}</label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        maxLength={maxPhoneDigits}
+                        className="w-full px-3 py-2 border rounded text-sm bg-background"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -264,6 +234,32 @@ export default function ClientesPage() {
                 {t('common.back')}
               </button>
             </div>
+
+            {/* Edit/Save buttons */}
+            {!editingCustomer ? (
+              <button
+                onClick={handleEditCustomer}
+                className="text-sm text-primary hover:underline"
+              >
+                {t('common.edit')}
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveCustomer}
+                  disabled={actionLoading === 'customer' || !formData.name.trim() || !formData.phone.trim()}
+                  className="px-3 py-2 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50"
+                >
+                  {actionLoading === 'customer' ? '...' : t('common.save')}
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-3 py-2 border rounded text-sm hover:bg-accent"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            )}
 
             {/* Delete customer section */}
             {!confirmDeleteCustomer ? (

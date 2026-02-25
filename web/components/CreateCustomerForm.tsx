@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { customersApi } from '@/lib/api';
 
@@ -15,12 +15,32 @@ interface CreateCustomerFormProps {
   onCancel: () => void;
 }
 
+interface Settings {
+  maxPhoneDigits?: number;
+}
+
 export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormProps) {
   const t = useTranslations();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [maxPhoneDigits, setMaxPhoneDigits] = useState(9);
+
+  useEffect(() => {
+    // Load settings from localStorage
+    const savedSettings = localStorage.getItem('botijas_settings');
+    if (savedSettings) {
+      try {
+        const settings: Settings = JSON.parse(savedSettings);
+        if (settings.maxPhoneDigits) {
+          setMaxPhoneDigits(settings.maxPhoneDigits);
+        }
+      } catch {
+        // Invalid JSON, use defaults
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +81,7 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
-          maxLength={9}
+          maxLength={maxPhoneDigits}
           className="w-full px-4 py-2 border rounded-lg bg-background text-foreground"
         />
       </div>

@@ -18,6 +18,7 @@ interface Settings {
   whatsappMode: 'manual' | 'api';
   whatsappApiUrl: string;
   whatsappApiToken: string;
+  maxPhoneDigits: number;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -35,6 +36,7 @@ const DEFAULT_SETTINGS: Settings = {
   whatsappMode: 'manual',
   whatsappApiUrl: '',
   whatsappApiToken: '',
+  maxPhoneDigits: 9,
 };
 
 export default function SettingsPage() {
@@ -125,6 +127,26 @@ export default function SettingsPage() {
             placeholder="https://..."
             className="w-full px-3 py-2 border rounded-lg bg-background"
           />
+        </div>
+      </div>
+
+      {/* Customer Settings */}
+      <div className="p-4 border rounded-lg space-y-4">
+        <h2 className="font-semibold">{t('settings.customerSettings')}</h2>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t('settings.maxPhoneDigits')}</label>
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={settings.maxPhoneDigits}
+            onChange={(e) => setSettings({ ...settings, maxPhoneDigits: Math.max(1, parseInt(e.target.value) || 9) })}
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('settings.maxPhoneDigitsHelp')}
+          </p>
         </div>
       </div>
 
