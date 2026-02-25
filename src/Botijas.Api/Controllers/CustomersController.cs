@@ -14,6 +14,7 @@ public class CustomersController : ControllerBase
     private readonly SearchCustomersQueryHandler _searchHandler;
     private readonly GetCustomerCylindersQueryHandler _customerCylindersHandler;
     private readonly UpdateCustomerPhoneCommandHandler _updatePhoneHandler;
+    private readonly UpdateCustomerNameCommandHandler _updateNameHandler;
     private readonly DeleteCustomerHandler _deleteHandler;
 
     public CustomersController(
@@ -21,12 +22,14 @@ public class CustomersController : ControllerBase
         SearchCustomersQueryHandler searchHandler,
         GetCustomerCylindersQueryHandler customerCylindersHandler,
         UpdateCustomerPhoneCommandHandler updatePhoneHandler,
+        UpdateCustomerNameCommandHandler updateNameHandler,
         DeleteCustomerHandler deleteHandler)
     {
         _createHandler = createHandler;
         _searchHandler = searchHandler;
         _customerCylindersHandler = customerCylindersHandler;
         _updatePhoneHandler = updatePhoneHandler;
+        _updateNameHandler = updateNameHandler;
         _deleteHandler = deleteHandler;
     }
 
@@ -88,6 +91,22 @@ public class CustomersController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPut("{id}/name")]
+    public async Task<IActionResult> UpdateName(
+        Guid id,
+        [FromBody] UpdateNameRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _updateNameHandler.Handle(
+            new UpdateCustomerNameCommand(id, request.Name),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return Ok(result.Value);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
@@ -101,3 +120,4 @@ public class CustomersController : ControllerBase
 }
 
 public record UpdatePhoneRequest(string Phone);
+public record UpdateNameRequest(string Name);

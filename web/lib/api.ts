@@ -63,6 +63,15 @@ export const customersApi = {
       }
     ),
 
+  updateName: (customerId: string, name: string) =>
+    apiRequest<{ customerId: string; name: string; phone: string }>(
+      `/api/customers/${customerId}/name`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      }
+    ),
+
   delete: (customerId: string) =>
     apiRequest<void>(`/api/customers/${customerId}`, {
       method: 'DELETE',

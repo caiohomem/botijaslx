@@ -33,6 +33,7 @@ builder.Services.AddScoped<ICylinderHistoryRepository, CylinderHistoryRepository
 // Application Handlers
 builder.Services.AddScoped<Botijas.Application.Customers.Commands.CreateCustomerCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Customers.Commands.UpdateCustomerPhoneCommandHandler>();
+builder.Services.AddScoped<Botijas.Application.Customers.Commands.UpdateCustomerNameCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Customers.Queries.SearchCustomersQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Customers.Queries.GetCustomerCylindersQueryHandler>();
 builder.Services.AddScoped<Botijas.Api.Handlers.DeleteCustomerHandler>();

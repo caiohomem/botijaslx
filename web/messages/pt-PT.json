@@ -265,9 +265,12 @@
   "clientes": {
     "title": "Clientes",
     "selectCustomer": "Selecione um cliente para ver detalhes",
+    "editName": "Editar",
     "editPhone": "Editar",
+    "saveName": "Guardar",
     "savePhone": "Guardar",
     "cancelEdit": "Cancelar",
+    "nameUpdated": "Nome atualizado com sucesso",
     "phoneUpdated": "Telefone atualizado com sucesso",
     "cylinders": "Botijas do Cliente",
     "noCylinders": "Nenhuma botija registada",

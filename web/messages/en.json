@@ -265,9 +265,12 @@
   "clientes": {
     "title": "Customers",
     "selectCustomer": "Select a customer to view details",
+    "editName": "Edit",
     "editPhone": "Edit",
+    "saveName": "Save",
     "savePhone": "Save",
     "cancelEdit": "Cancel",
+    "nameUpdated": "Name updated successfully",
     "phoneUpdated": "Phone updated successfully",
     "cylinders": "Customer Cylinders",
     "noCylinders": "No cylinders registered",

@@ -20,6 +20,10 @@ export default function ClientesPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Edit name state
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+
   // Edit phone state
   const [editingPhone, setEditingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState('');
@@ -39,6 +43,8 @@ export default function ClientesPage() {
     setLoading(true);
     setError(null);
     setCylinders([]);
+    setEditingName(false);
+    setNewName('');
     setEditingPhone(false);
     setConfirmDeleteCustomer(false);
     setConfirmDeleteCylinder(null);
@@ -51,6 +57,24 @@ export default function ClientesPage() {
       setError(err instanceof Error ? err.message : 'Erro ao carregar botijas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateName = async () => {
+    if (!selectedCustomer || !newName.trim()) return;
+    setActionLoading('name');
+    setError(null);
+
+    try {
+      const updated = await customersApi.updateName(selectedCustomer.customerId, newName.trim());
+      setSelectedCustomer(prev => (prev ? { ...prev, name: updated.name } : null));
+      setEditingName(false);
+      setNewName('');
+      showSuccess(t('clientes.nameUpdated'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar nome');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -110,6 +134,8 @@ export default function ClientesPage() {
     setSelectedCustomer(null);
     setCylinders([]);
     setError(null);
+    setEditingName(false);
+    setNewName('');
     setEditingPhone(false);
     setConfirmDeleteCustomer(false);
     setConfirmDeleteCylinder(null);
@@ -147,7 +173,46 @@ export default function ClientesPage() {
           <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <div className="font-semibold text-lg">{selectedCustomer.name}</div>
+                {!editingName ? (
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-lg">{selectedCustomer.name}</div>
+                    <button
+                      onClick={() => {
+                        setNewName(selectedCustomer.name);
+                        setEditingName(true);
+                      }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {t('clientes.editName')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="px-2 py-1 border rounded text-sm bg-background"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleUpdateName}
+                      disabled={actionLoading === 'name' || !newName.trim()}
+                      className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm disabled:opacity-50"
+                    >
+                      {actionLoading === 'name' ? '...' : t('clientes.saveName')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingName(false);
+                        setNewName('');
+                      }}
+                      className="px-3 py-1 border rounded text-sm hover:bg-accent"
+                    >
+                      {t('clientes.cancelEdit')}
+                    </button>
+                  </div>
+                )}
                 {!editingPhone ? (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm text-muted-foreground">
