@@ -9,7 +9,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(dotnet ef migrations add:*)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(dotnet ef migrations script:*)",
+      "Bash(npm run build:*)",
+      "Bash(tail:*)"
     ]
   }
 }
