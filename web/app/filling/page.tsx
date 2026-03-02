@@ -201,10 +201,11 @@ export default function FillingPage() {
     const trimmed = value.trim();
     if (!trimmed) return;
 
+    const normalizedToken = trimmed.toUpperCase();
     const cleanNum = trimmed.replace(/^#?0*/, '');
     const seqNum = parseInt(cleanNum, 10);
     const cylinder = cylinders.find(
-      c => c.labelToken === trimmed ||
+      c => c.labelToken === normalizedToken ||
            (!isNaN(seqNum) && c.sequentialNumber === seqNum)
     );
 
