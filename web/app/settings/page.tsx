@@ -24,10 +24,6 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const handleReset = () => {
-    setSettings(DEFAULT_APP_SETTINGS);
-  };
-
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
@@ -229,12 +225,6 @@ export default function SettingsPage() {
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button
-          onClick={handleReset}
-          className="px-4 py-2 border rounded-lg hover:bg-accent"
-        >
-          {t('settings.reset')}
-        </button>
         <button
           onClick={handleSave}
           className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
