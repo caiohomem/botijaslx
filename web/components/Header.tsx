@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { LanguageSelector } from './LanguageSelector';
 import { ThemeToggle } from './ThemeToggle';
+import { SETTINGS_UPDATED_EVENT, loadAppSettings } from '@/lib/settings';
 
 const navItems = [
   { href: '/delivery', key: 'delivery' },
@@ -20,28 +21,21 @@ export function Header() {
   const [appTitle, setAppTitle] = useState('');
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('botijas_settings');
-      if (saved) {
-        const settings = JSON.parse(saved);
-        if (settings.appTitle) setAppTitle(settings.appTitle);
+    loadAppSettings().then((settings) => {
+      if (settings.appTitle) {
+        setAppTitle(settings.appTitle);
       }
-    } catch {}
+    });
   }, []);
 
-  // Listen for storage changes (when settings are saved)
   useEffect(() => {
-    const handleStorage = () => {
-      try {
-        const saved = localStorage.getItem('botijas_settings');
-        if (saved) {
-          const settings = JSON.parse(saved);
-          setAppTitle(settings.appTitle || '');
-        }
-      } catch {}
+    const handleSettingsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ appTitle?: string }>;
+      setAppTitle(customEvent.detail?.appTitle || '');
     };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+
+    window.addEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdated);
+    return () => window.removeEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdated);
   }, []);
 
   return (

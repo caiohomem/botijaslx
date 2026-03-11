@@ -16,6 +16,7 @@ public class BotijasDbContext : DbContext
     public DbSet<CylinderRef> CylinderRefs { get; set; }
     public DbSet<PrintJob> PrintJobs { get; set; }
     public DbSet<CylinderHistoryEntry> CylinderHistory { get; set; }
+    public DbSet<AppSettings> AppSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +74,25 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.Status).IsRequired().HasConversion<string>();
             entity.Property(e => e.ErrorMessage).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<AppSettings>(entity =>
+        {
+            entity.HasKey(e => e.AppSettingsId);
+            entity.Property(e => e.StoreName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.StorePhone).HasMaxLength(50);
+            entity.Property(e => e.StoreLink).HasMaxLength(500);
+            entity.Property(e => e.AppTitle).HasMaxLength(200);
+            entity.Property(e => e.WhatsAppMessageTemplate).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.WelcomeMessageTemplate).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.ThankYouMessageTemplate).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.LabelTemplate).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PrinterType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.LabelWidthMm).IsRequired();
+            entity.Property(e => e.LabelHeightMm).IsRequired();
+            entity.Property(e => e.MaxPhoneDigits).IsRequired();
+            entity.Property(e => e.SoundNotificationsDisabled).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
         });
 
         modelBuilder.Entity<CylinderHistoryEntry>(entity =>

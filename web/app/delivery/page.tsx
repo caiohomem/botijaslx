@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { CreateCustomerForm } from '@/components/CreateCustomerForm';
-import { ordersApi, printJobsApi, cylindersApi, customersApi, historyApi, CustomerCylinder } from '@/lib/api';
+import { AppSettings, ordersApi, printJobsApi, cylindersApi, customersApi, historyApi, CustomerCylinder } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
 import { QrScanner } from '@/components/QrScanner';
 import { LabelPreview, printLabels } from '@/components/LabelPreview';
+import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
 
 interface Customer {
   customerId: string;
@@ -61,8 +62,13 @@ export default function DeliveryPage() {
   const [printReason, setPrintReason] = useState(''); // M13: Reprint reason
   const [printPreview, setPrintPreview] = useState<PrintPreviewState | null>(null);
   const [lastPrintPreview, setLastPrintPreview] = useState<PrintPreviewState | null>(null);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
   const creatingOrderRef = useRef(false);
+
+  useEffect(() => {
+    loadAppSettings().then(setSettings);
+  }, []);
 
   const showSuccess = (msg: string, duration = 2000) => {
     setSuccessMessage(msg);
@@ -73,7 +79,7 @@ export default function DeliveryPage() {
     if (!labelsContainerRef.current) return;
     const canvases = Array.from(labelsContainerRef.current.querySelectorAll('canvas')) as HTMLCanvasElement[];
     if (canvases.length > 0) {
-      printLabels(canvases);
+      printLabels(canvases, settings);
     }
 
     if (!printPreview) return;
@@ -199,9 +205,7 @@ export default function DeliveryPage() {
 
   const sendWelcomeWhatsApp = (customer: Customer, whatsappWindow?: Window | null) => {
     try {
-      const savedSettings = localStorage.getItem('botijas_settings');
-      const settings = savedSettings ? JSON.parse(savedSettings) : {};
-      const template = settings.welcomeMessageTemplate || 'Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}';
+      const template = settings.welcomeMessageTemplate || DEFAULT_APP_SETTINGS.welcomeMessageTemplate;
       const storeLink = settings.storeLink || '';
       const message = template.replace('{name}', customer.name).replace('{link}', storeLink);
       sendWhatsApp(customer.phone, message, whatsappWindow);
@@ -787,18 +791,9 @@ export default function DeliveryPage() {
                   customerName={selectedCustomer.name}
                   customerPhone={selectedCustomer.phone}
                   sequentialNumber={printPreview.sequentialNumbers[i] ?? i + 1}
-                  storeName={(() => {
-                    try {
-                      const s = localStorage.getItem('botijas_settings');
-                      return s ? JSON.parse(s).storeName || 'Oficina da Cerveja' : 'Oficina da Cerveja';
-                    } catch { return 'Oficina da Cerveja'; }
-                  })()}
-                  storeLink={(() => {
-                    try {
-                      const s = localStorage.getItem('botijas_settings');
-                      return s ? JSON.parse(s).storeLink || '' : '';
-                    } catch { return ''; }
-                  })()}
+                  storeName={settings.storeName}
+                  storeLink={settings.storeLink}
+                  settings={settings}
                 />
               ))}
             </div>

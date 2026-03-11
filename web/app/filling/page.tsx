@@ -6,6 +6,7 @@ import { cylindersApi, pickupApi, FillingQueueItem } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
 import { playSound } from '@/lib/sounds';
 import { QrScanner } from '@/components/QrScanner';
+import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
 
 const PROBLEM_TYPES = [
   'valve',
@@ -39,6 +40,7 @@ export default function FillingPage() {
     notes: string;
     timestamp: string;
   }>>([]);
+  const [messageTemplate, setMessageTemplate] = useState(DEFAULT_APP_SETTINGS.whatsappMessageTemplate);
 
   const loadQueue = useCallback(async () => {
     try {
@@ -54,6 +56,7 @@ export default function FillingPage() {
 
   useEffect(() => {
     loadQueue();
+    loadAppSettings().then((settings) => setMessageTemplate(settings.whatsappMessageTemplate));
 
     // M5: Auto-refresh with polling every 10 seconds
     const pollInterval = setInterval(() => {
@@ -65,10 +68,7 @@ export default function FillingPage() {
 
   const sendOrderCompleteWhatsApp = async (customerName: string, customerPhone: string, cylinderCount: number, orderId: string) => {
     try {
-      const savedSettings = localStorage.getItem('botijas_settings');
-      const settings = savedSettings ? JSON.parse(savedSettings) : {};
-      const template = settings.whatsappMessageTemplate || 'Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!';
-      const message = template.replace('{name}', customerName).replace('{count}', String(cylinderCount));
+      const message = messageTemplate.replace('{name}', customerName).replace('{count}', String(cylinderCount));
       await sendWhatsApp(customerPhone, message);
 
       // Record notification in history

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { customersApi } from '@/lib/api';
+import { loadAppSettings } from '@/lib/settings';
 
 interface Customer {
   customerId: string;
@@ -15,10 +16,6 @@ interface CreateCustomerFormProps {
   onCancel: () => void;
 }
 
-interface Settings {
-  maxPhoneDigits?: number;
-}
-
 export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormProps) {
   const t = useTranslations();
   const [name, setName] = useState('');
@@ -28,18 +25,7 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
   const [maxPhoneDigits, setMaxPhoneDigits] = useState(9);
 
   useEffect(() => {
-    // Load settings from localStorage
-    const savedSettings = localStorage.getItem('botijas_settings');
-    if (savedSettings) {
-      try {
-        const settings: Settings = JSON.parse(savedSettings);
-        if (settings.maxPhoneDigits) {
-          setMaxPhoneDigits(settings.maxPhoneDigits);
-        }
-      } catch {
-        // Invalid JSON, use defaults
-      }
-    }
+    loadAppSettings().then((settings) => setMaxPhoneDigits(settings.maxPhoneDigits));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { pickupApi, PickupOrder } from '@/lib/api';
 import { sendWhatsApp } from '@/lib/whatsapp';
 import { playSound } from '@/lib/sounds';
+import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
 
 export default function PickupPage() {
   const t = useTranslations();
@@ -17,6 +18,7 @@ export default function PickupPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -32,6 +34,7 @@ export default function PickupPage() {
 
   useEffect(() => {
     loadOrders();
+    loadAppSettings().then((settings) => setThankYouTemplate(settings.thankYouMessageTemplate));
 
     // M5: Auto-refresh with polling every 10 seconds
     const pollInterval = setInterval(() => {
@@ -49,10 +52,7 @@ export default function PickupPage() {
 
   const sendThankYouWhatsApp = async (order: PickupOrder) => {
     try {
-      const savedSettings = localStorage.getItem('botijas_settings');
-      const settings = savedSettings ? JSON.parse(savedSettings) : {};
-      const template = settings.thankYouMessageTemplate || 'Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!';
-      const message = template.replace('{name}', order.customerName).replace('{count}', String(order.totalCylinders));
+      const message = thankYouTemplate.replace('{name}', order.customerName).replace('{count}', String(order.totalCylinders));
       await sendWhatsApp(order.customerPhone, message);
     } catch {
       // Silently fail

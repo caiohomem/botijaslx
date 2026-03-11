@@ -1,4 +1,5 @@
 // M10: Sound notification utility for critical actions
+import { loadAppSettings } from './settings';
 
 type SoundType = 'success' | 'warning' | 'error' | 'complete';
 
@@ -32,10 +33,8 @@ const createBeep = (frequency: number, duration: number, type: 'sine' | 'square'
 
 export const playSound = async (type: SoundType) => {
   try {
-    // Check if user has disabled notifications
-    const settings = localStorage.getItem('botijas_settings');
-    const config = settings ? JSON.parse(settings) : {};
-    if (config.soundNotificationsDisabled) return;
+    const settings = await loadAppSettings();
+    if (settings.soundNotificationsDisabled) return;
 
     switch (type) {
       case 'success':

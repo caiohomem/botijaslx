@@ -4,15 +4,12 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { customersApi, cylindersApi, CustomerCylinder } from '@/lib/api';
+import { loadAppSettings } from '@/lib/settings';
 
 interface SelectedCustomer {
   customerId: string;
   name: string;
   phone: string;
-}
-
-interface Settings {
-  maxPhoneDigits?: number;
 }
 
 export default function ClientesPage() {
@@ -32,18 +29,7 @@ export default function ClientesPage() {
   const [maxPhoneDigits, setMaxPhoneDigits] = useState(9);
 
   useEffect(() => {
-    // Load settings from localStorage
-    const savedSettings = localStorage.getItem('botijas_settings');
-    if (savedSettings) {
-      try {
-        const settings: Settings = JSON.parse(savedSettings);
-        if (settings.maxPhoneDigits) {
-          setMaxPhoneDigits(settings.maxPhoneDigits);
-        }
-      } catch {
-        // Invalid JSON, use defaults
-      }
-    }
+    loadAppSettings().then((settings) => setMaxPhoneDigits(settings.maxPhoneDigits));
   }, []);
 
   // Delete confirmation states

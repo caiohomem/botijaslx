@@ -2,25 +2,13 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import QRCode from 'qrcode';
+import { AppSettings } from '@/lib/api';
+import { DEFAULT_APP_SETTINGS } from '@/lib/settings';
 
 // 12 px/mm = ~300 DPI for sharp thermal print
 const SCALE = 12;
 
-function getLabelSettings() {
-  try {
-    const s = localStorage.getItem('botijas_settings');
-    if (s) {
-      const parsed = JSON.parse(s);
-      return {
-        widthMm: parsed.labelWidthMm || 50,
-        heightMm: parsed.labelHeightMm || 75,
-        printerType: (parsed.printerType || 'label') as 'label' | 'a4',
-        storeLink: parsed.storeLink || '',
-      };
-    }
-  } catch {}
-  return { widthMm: 50, heightMm: 75, printerType: 'label' as const, storeLink: '' };
-}
+type LabelSettings = Pick<AppSettings, 'labelWidthMm' | 'labelHeightMm' | 'printerType' | 'storeLink'>;
 
 // Format phone number with spaces every 3 digits (e.g., 926 060 863)
 function formatPhoneNumber(phone: string): string {
@@ -39,6 +27,7 @@ interface LabelPreviewProps {
   sequentialNumber?: number;
   storeName?: string;
   storeLink?: string;
+  settings?: Partial<LabelSettings>;
 }
 
 export function LabelPreview({
@@ -48,9 +37,12 @@ export function LabelPreview({
   sequentialNumber,
   storeName,
   storeLink,
+  settings,
 }: LabelPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { widthMm, heightMm, storeLink: configStoreLink } = getLabelSettings();
+  const widthMm = settings?.labelWidthMm ?? DEFAULT_APP_SETTINGS.labelWidthMm;
+  const heightMm = settings?.labelHeightMm ?? DEFAULT_APP_SETTINGS.labelHeightMm;
+  const configStoreLink = settings?.storeLink ?? DEFAULT_APP_SETTINGS.storeLink;
   const W = widthMm * SCALE;
   const H = heightMm * SCALE;
   const displayStoreLink = storeLink || configStoreLink;
@@ -219,12 +211,17 @@ export function LabelPreview({
 }
 
 /**
- * Print labels. Reads printer type from settings.
+ * Print labels using persisted settings already loaded by the page.
  * - 'label': One label per page at exact label dimensions (for Zebra GK420T etc.)
  * - 'a4': Grid layout on A4 paper with cut guides
  */
-export function printLabels(canvases: HTMLCanvasElement[]) {
-  const { widthMm, heightMm, printerType } = getLabelSettings();
+export function printLabels(
+  canvases: HTMLCanvasElement[],
+  settings: Partial<Pick<AppSettings, 'labelWidthMm' | 'labelHeightMm' | 'printerType'>> = {}
+) {
+  const widthMm = settings.labelWidthMm ?? DEFAULT_APP_SETTINGS.labelWidthMm;
+  const heightMm = settings.labelHeightMm ?? DEFAULT_APP_SETTINGS.labelHeightMm;
+  const printerType = settings.printerType ?? DEFAULT_APP_SETTINGS.printerType;
   const images = canvases.map((c) => c.toDataURL('image/png'));
 
   if (printerType === 'label') {

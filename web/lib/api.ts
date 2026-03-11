@@ -38,6 +38,23 @@ export async function apiRequest<T>(
   return response.json();
 }
 
+export interface AppSettings {
+  storeName: string;
+  storePhone: string;
+  storeLink: string;
+  appTitle: string;
+  whatsappMessageTemplate: string;
+  welcomeMessageTemplate: string;
+  thankYouMessageTemplate: string;
+  labelTemplate: string;
+  printerType: 'label' | 'a4';
+  labelWidthMm: number;
+  labelHeightMm: number;
+  maxPhoneDigits: number;
+  soundNotificationsDisabled: boolean;
+  updatedAt?: string;
+}
+
 // Customers
 export const customersApi = {
   create: (data: { name: string; phone: string }) =>
@@ -371,4 +388,14 @@ export interface DashboardStats {
 
 export const reportsApi = {
   getStats: () => apiRequest<DashboardStats>('/api/reports/stats'),
+};
+
+export const settingsApi = {
+  get: () => apiRequest<AppSettings>('/api/settings'),
+
+  update: (data: AppSettings) =>
+    apiRequest<AppSettings>('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
