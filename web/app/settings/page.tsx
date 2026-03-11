@@ -134,8 +134,8 @@ export default function SettingsPage() {
         <div className="space-y-2">
           <label className="text-sm font-medium">{t('settings.messageTemplate')}</label>
           <textarea
-            value={settings.whatsappMessageTemplate}
-            onChange={(e) => setSettings({ ...settings, whatsappMessageTemplate: e.target.value })}
+            value={settings.whatsAppMessageTemplate}
+            onChange={(e) => setSettings({ ...settings, whatsAppMessageTemplate: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg bg-background h-24 resize-none"
           />
           <p className="text-xs text-muted-foreground">

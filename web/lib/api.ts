@@ -43,7 +43,7 @@ export interface AppSettings {
   storePhone: string;
   storeLink: string;
   appTitle: string;
-  whatsappMessageTemplate: string;
+  whatsAppMessageTemplate: string;
   welcomeMessageTemplate: string;
   thankYouMessageTemplate: string;
   labelTemplate: string;

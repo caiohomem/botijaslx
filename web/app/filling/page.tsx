@@ -40,7 +40,7 @@ export default function FillingPage() {
     notes: string;
     timestamp: string;
   }>>([]);
-  const [messageTemplate, setMessageTemplate] = useState(DEFAULT_APP_SETTINGS.whatsappMessageTemplate);
+  const [messageTemplate, setMessageTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
 
   const loadQueue = useCallback(async () => {
     try {
@@ -56,7 +56,7 @@ export default function FillingPage() {
 
   useEffect(() => {
     loadQueue();
-    loadAppSettings().then((settings) => setMessageTemplate(settings.whatsappMessageTemplate));
+    loadAppSettings().then((settings) => setMessageTemplate(settings.whatsAppMessageTemplate));
 
     // M5: Auto-refresh with polling every 10 seconds
     const pollInterval = setInterval(() => {
