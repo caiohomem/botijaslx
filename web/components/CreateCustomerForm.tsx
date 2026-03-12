@@ -12,7 +12,7 @@ interface Customer {
 }
 
 interface CreateCustomerFormProps {
-  onCreated: (customer: Customer, whatsappWindow?: Window | null) => void;
+  onCreated: (customer: Customer) => void;
   onCancel: () => void;
 }
 
@@ -33,14 +33,10 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
     setLoading(true);
     setError(null);
 
-    // Open blank window immediately (user gesture context) to avoid popup blocker
-    const whatsappWindow = window.open('', '_blank');
-
     try {
       const customer = await customersApi.create({ name, phone });
-      onCreated(customer, whatsappWindow);
+      onCreated(customer);
     } catch (err) {
-      whatsappWindow?.close();
       setError(err instanceof Error ? err.message : 'Erro ao criar cliente');
     } finally {
       setLoading(false);

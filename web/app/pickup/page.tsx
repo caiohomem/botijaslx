@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { pickupApi, PickupOrder } from '@/lib/api';
-import { sendWhatsApp } from '@/lib/whatsapp';
+import { pickupApi, generateWhatsAppLink, PickupOrder } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
 
@@ -19,6 +18,7 @@ export default function PickupPage() {
   const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
+  const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -34,7 +34,10 @@ export default function PickupPage() {
 
   useEffect(() => {
     loadOrders();
-    loadAppSettings().then((settings) => setThankYouTemplate(settings.thankYouMessageTemplate));
+    loadAppSettings().then((settings) => {
+      setThankYouTemplate(settings.thankYouMessageTemplate);
+      setStoreLink(settings.storeLink);
+    });
 
     // M5: Auto-refresh with polling every 10 seconds
     const pollInterval = setInterval(() => {
@@ -50,13 +53,13 @@ export default function PickupPage() {
     };
   }, [loadOrders]);
 
-  const sendThankYouWhatsApp = async (order: PickupOrder) => {
-    try {
-      const message = thankYouTemplate.replace('{name}', order.customerName).replace('{count}', String(order.totalCylinders));
-      await sendWhatsApp(order.customerPhone, message);
-    } catch {
-      // Silently fail
-    }
+  const openThankYouWhatsApp = (order: PickupOrder) => {
+    const message = thankYouTemplate
+      .replace('{name}', order.customerName)
+      .replace('{count}', String(order.totalCylinders))
+      .replace('{link}', storeLink);
+    const link = generateWhatsAppLink(order.customerPhone, message);
+    window.open(link, '_blank');
   };
 
   const handleDeliverAll = async (order: PickupOrder) => {
@@ -72,9 +75,6 @@ export default function PickupPage() {
       for (const cylinder of undelivered) {
         await pickupApi.deliverCylinder(order.orderId, cylinder.cylinderId);
       }
-
-      // All delivered - send thank you WhatsApp
-      sendThankYouWhatsApp(order);
 
       // M10: Play success sound for order completion
       playSound('complete');
@@ -268,12 +268,21 @@ export default function PickupPage() {
                       {t('pickup.progress', { delivered: deliveredCount, total: order.totalCylinders })}
                     </div>
 
+                    {/* WhatsApp button */}
+                    <button
+                      onClick={() => openThankYouWhatsApp(order)}
+                      className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
+                      title={t('pickup.sendWhatsApp')}
+                    >
+                      {t('pickup.sendWhatsApp')}
+                    </button>
+
                     {/* M4: Direct deliver button without expand */}
                     {undeliveredCount > 0 && (
                       <button
                         onClick={() => setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
                         disabled={actionLoading === order.orderId}
-                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
+                        className="px-3 py-1 text-sm bg-primary hover:opacity-90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
                         title={t('pickup.deliverAll', { count: undeliveredCount })}
                       >
                         {actionLoading === order.orderId ? (

@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { CreateCustomerForm } from '@/components/CreateCustomerForm';
-import { AppSettings, ordersApi, printJobsApi, cylindersApi, customersApi, historyApi, CustomerCylinder } from '@/lib/api';
-import { sendWhatsApp } from '@/lib/whatsapp';
+import { AppSettings, ordersApi, printJobsApi, cylindersApi, customersApi, historyApi, generateWhatsAppLink, CustomerCylinder } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
 import { LabelPreview, printLabels } from '@/components/LabelPreview';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
@@ -203,19 +202,15 @@ export default function DeliveryPage() {
     }
   };
 
-  const sendWelcomeWhatsApp = (customer: Customer, whatsappWindow?: Window | null) => {
-    try {
-      const template = settings.welcomeMessageTemplate || DEFAULT_APP_SETTINGS.welcomeMessageTemplate;
-      const storeLink = settings.storeLink || '';
-      const message = template.replace('{name}', customer.name).replace('{link}', storeLink);
-      sendWhatsApp(customer.phone, message, whatsappWindow);
-    } catch {
-      whatsappWindow?.close();
-    }
+  const openWelcomeWhatsApp = (customer: Customer) => {
+    const template = settings.welcomeMessageTemplate || DEFAULT_APP_SETTINGS.welcomeMessageTemplate;
+    const link = settings.storeLink || '';
+    const message = template.replace('{name}', customer.name).replace('{link}', link);
+    const waLink = generateWhatsAppLink(customer.phone, message);
+    window.open(waLink, '_blank');
   };
 
-  const handleCustomerCreated = async (customer: Customer, whatsappWindow?: Window | null) => {
-    sendWelcomeWhatsApp(customer, whatsappWindow);
+  const handleCustomerCreated = async (customer: Customer) => {
     await handleCustomerSelect(customer);
   };
 
@@ -440,9 +435,19 @@ export default function DeliveryPage() {
                 <h2 className="font-semibold text-lg">{selectedCustomer?.name}</h2>
                 <div className="text-sm text-muted-foreground">{selectedCustomer?.phone}</div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold">{cylinders.length}</div>
-                <div className="text-xs text-muted-foreground">{t('order.cylinders')}</div>
+              <div className="flex items-center gap-3">
+                {selectedCustomer && (
+                  <button
+                    onClick={() => openWelcomeWhatsApp(selectedCustomer)}
+                    className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
+                  >
+                    {t('pickup.sendWhatsApp')}
+                  </button>
+                )}
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{cylinders.length}</div>
+                  <div className="text-xs text-muted-foreground">{t('order.cylinders')}</div>
+                </div>
               </div>
             </div>
           </div>

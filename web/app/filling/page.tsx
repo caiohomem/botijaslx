@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { cylindersApi, pickupApi, FillingQueueItem } from '@/lib/api';
-import { sendWhatsApp } from '@/lib/whatsapp';
+import { cylindersApi, pickupApi, generateWhatsAppLink, FillingQueueItem } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
 import { QrScanner } from '@/components/QrScanner';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
@@ -41,6 +40,13 @@ export default function FillingPage() {
     timestamp: string;
   }>>([]);
   const [messageTemplate, setMessageTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
+  const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
+  const [completedOrders, setCompletedOrders] = useState<Array<{
+    orderId: string;
+    customerName: string;
+    customerPhone: string;
+    cylinderCount: number;
+  }>>([]);
 
   const loadQueue = useCallback(async () => {
     try {
@@ -56,7 +62,10 @@ export default function FillingPage() {
 
   useEffect(() => {
     loadQueue();
-    loadAppSettings().then((settings) => setMessageTemplate(settings.whatsAppMessageTemplate));
+    loadAppSettings().then((settings) => {
+      setMessageTemplate(settings.whatsAppMessageTemplate);
+      setStoreLink(settings.storeLink);
+    });
 
     // M5: Auto-refresh with polling every 10 seconds
     const pollInterval = setInterval(() => {
@@ -66,16 +75,19 @@ export default function FillingPage() {
     return () => clearInterval(pollInterval);
   }, [loadQueue]);
 
-  const sendOrderCompleteWhatsApp = async (customerName: string, customerPhone: string, cylinderCount: number, orderId: string) => {
-    try {
-      const message = messageTemplate.replace('{name}', customerName).replace('{count}', String(cylinderCount));
-      await sendWhatsApp(customerPhone, message);
+  const openWhatsApp = (customerName: string, customerPhone: string, cylinderCount: number, orderId: string) => {
+    const message = messageTemplate
+      .replace('{name}', customerName)
+      .replace('{count}', String(cylinderCount))
+      .replace('{link}', storeLink);
+    const link = generateWhatsAppLink(customerPhone, message);
+    window.open(link, '_blank');
 
-      // Record notification in history
-      pickupApi.markNotified(orderId).catch(() => {});
-    } catch {
-      // Silently fail
-    }
+    // Record notification in history
+    pickupApi.markNotified(orderId).catch(() => {});
+
+    // Remove from completed orders list
+    setCompletedOrders(prev => prev.filter(o => o.orderId !== orderId));
   };
 
   const handleMarkReady = async (cylinderId: string) => {
@@ -92,16 +104,16 @@ export default function FillingPage() {
       setCylinders(prev => prev.filter(c => c.cylinderId !== cylinderId));
 
       if (result.isOrderComplete && cylinder) {
-        // All cylinders filled - notify customer via WhatsApp
-        sendOrderCompleteWhatsApp(
-          cylinder.customerName,
-          cylinder.customerPhone,
-          cylinder.totalCylindersInOrder,
-          result.orderId
-        );
+        // All cylinders filled - track for manual WhatsApp notification
+        setCompletedOrders(prev => [...prev, {
+          orderId: result.orderId,
+          customerName: cylinder.customerName,
+          customerPhone: cylinder.customerPhone,
+          cylinderCount: cylinder.totalCylindersInOrder,
+        }]);
         // M10: Play completion sound
         playSound('complete');
-        setSuccessMessage(t('filling.orderCompleteNotified', { name: cylinder.customerName }));
+        setSuccessMessage(t('filling.orderComplete', { name: cylinder.customerName }));
       } else {
         // M10: Play success sound for individual cylinder
         playSound('success');
@@ -125,24 +137,24 @@ export default function FillingPage() {
     try {
       const result = await cylindersApi.markReadyBatch(orderId);
 
-      // Remove all cylinders from this order from the list
-      setCylinders(prev => prev.filter(c => c.orderId !== orderId));
-
-      // Get customer info from remaining cylinders (for notification)
+      // Get customer info before removing cylinders from list
       const cylindersInOrder = cylinders.filter(c => c.orderId === orderId);
       const customerInfo = cylindersInOrder[0];
 
+      // Remove all cylinders from this order from the list
+      setCylinders(prev => prev.filter(c => c.orderId !== orderId));
+
       if (result.isOrderComplete && customerInfo) {
-        // All cylinders filled - notify customer via WhatsApp
-        sendOrderCompleteWhatsApp(
-          customerInfo.customerName,
-          customerInfo.customerPhone,
-          customerInfo.totalCylindersInOrder,
-          orderId
-        );
+        // All cylinders filled - track for manual WhatsApp notification
+        setCompletedOrders(prev => [...prev, {
+          orderId,
+          customerName: customerInfo.customerName,
+          customerPhone: customerInfo.customerPhone,
+          cylinderCount: customerInfo.totalCylindersInOrder,
+        }]);
         // M10: Play completion sound
         playSound('complete');
-        setSuccessMessage(t('filling.orderCompleteNotified', { name: customerInfo.customerName }));
+        setSuccessMessage(t('filling.orderComplete', { name: customerInfo.customerName }));
       } else {
         // M10: Play success sound for batch
         playSound('success');
@@ -348,6 +360,28 @@ export default function FillingPage() {
       {successMessage && (
         <div className="p-3 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg">
           {successMessage}
+        </div>
+      )}
+
+      {/* Completed orders - manual WhatsApp notification */}
+      {completedOrders.length > 0 && (
+        <div className="space-y-2">
+          {completedOrders.map((order) => (
+            <div key={order.orderId} className="p-4 border-2 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center justify-between gap-4">
+              <div>
+                <div className="font-semibold text-green-800 dark:text-green-200">{order.customerName}</div>
+                <div className="text-sm text-green-600 dark:text-green-400">
+                  {order.cylinderCount} {t('order.cylinders')} — {t('filling.orderComplete', { name: '' }).replace(/ $/, '').trim()}
+                </div>
+              </div>
+              <button
+                onClick={() => openWhatsApp(order.customerName, order.customerPhone, order.cylinderCount, order.orderId)}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium whitespace-nowrap transition-colors"
+              >
+                {t('pickup.sendWhatsApp')}
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
