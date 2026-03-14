@@ -1,10 +1,19 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { loadAppSettings } from '@/lib/settings';
 
 export default function HomePage() {
   const t = useTranslations();
+  const [debugEnabled, setDebugEnabled] = useState(false);
+
+  useEffect(() => {
+    loadAppSettings().then((settings) => {
+      setDebugEnabled(settings.debugEnabled);
+    });
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -70,6 +79,20 @@ export default function HomePage() {
             Gerir clientes e botijas
           </p>
         </Link>
+
+        {debugEnabled ? (
+          <Link
+            href="/debug"
+            className="p-6 border rounded-lg hover:bg-accent transition-colors"
+          >
+            <h2 className="text-xl font-semibold mb-2">
+              {t('navigation.debug')}
+            </h2>
+            <p className="text-muted-foreground">
+              Ver registos por cliente e apagar linhas
+            </p>
+          </Link>
+        ) : null}
       </div>
     </div>
   );

@@ -91,26 +91,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Customer Settings */}
-      <div className="p-4 border rounded-lg space-y-4">
-        <h2 className="font-semibold">{t('settings.customerSettings')}</h2>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">{t('settings.maxPhoneDigits')}</label>
-          <input
-            type="number"
-            min="1"
-            max="20"
-            value={settings.maxPhoneDigits}
-            onChange={(e) => setSettings({ ...settings, maxPhoneDigits: Math.max(1, parseInt(e.target.value) || 9) })}
-            className="w-full px-3 py-2 border rounded-lg bg-background"
-          />
-          <p className="text-xs text-muted-foreground">
-            {t('settings.maxPhoneDigitsHelp')}
-          </p>
-        </div>
-      </div>
-
       {/* WhatsApp */}
       <div className="p-4 border rounded-lg space-y-4">
         <h2 className="font-semibold">{t('settings.whatsappSettings')}</h2>
@@ -210,17 +190,19 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">{t('settings.labelTemplate')}</label>
-          <select
-            value={settings.labelTemplate}
-            onChange={(e) => setSettings({ ...settings, labelTemplate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg bg-background"
-          >
-            <option value="default">{t('settings.labelTemplates.default')}</option>
-            <option value="compact">{t('settings.labelTemplates.compact')}</option>
-            <option value="large">{t('settings.labelTemplates.large')}</option>
-          </select>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.debugEnabled}
+              onChange={(e) => setSettings({ ...settings, debugEnabled: e.target.checked })}
+            />
+            <span className="text-sm font-medium">{t('settings.debugEnabled')}</span>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            {t('settings.debugEnabledHelp')}
+          </p>
         </div>
+
       </div>
 
       {/* Actions */}

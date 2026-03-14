@@ -14,7 +14,6 @@ public class BotijasDbContext : DbContext
     public DbSet<RefillOrder> Orders { get; set; }
     public DbSet<Cylinder> Cylinders { get; set; }
     public DbSet<CylinderRef> CylinderRefs { get; set; }
-    public DbSet<PrintJob> PrintJobs { get; set; }
     public DbSet<CylinderHistoryEntry> CylinderHistory { get; set; }
     public DbSet<AppSettings> AppSettings { get; set; }
 
@@ -30,6 +29,7 @@ public class BotijasDbContext : DbContext
                 v => v.Value,
                 v => PhoneNumber.Create(v)
             ).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.PhoneType).IsRequired().HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.CreatedAt).IsRequired();
 
             entity.HasIndex(e => e.Phone).IsUnique();
@@ -65,17 +65,6 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.State).IsRequired().HasConversion<string>();
         });
 
-        modelBuilder.Entity<PrintJob>(entity =>
-        {
-            entity.HasKey(e => e.PrintJobId);
-            entity.Property(e => e.StoreId).IsRequired();
-            entity.Property(e => e.Quantity).IsRequired();
-            entity.Property(e => e.TemplateId).HasMaxLength(100);
-            entity.Property(e => e.Status).IsRequired().HasConversion<string>();
-            entity.Property(e => e.ErrorMessage).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).IsRequired();
-        });
-
         modelBuilder.Entity<AppSettings>(entity =>
         {
             entity.HasKey(e => e.AppSettingsId);
@@ -86,11 +75,10 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.WhatsAppMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.WelcomeMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.ThankYouMessageTemplate).IsRequired().HasMaxLength(1000);
-            entity.Property(e => e.LabelTemplate).IsRequired().HasMaxLength(100);
             entity.Property(e => e.PrinterType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.LabelWidthMm).IsRequired();
             entity.Property(e => e.LabelHeightMm).IsRequired();
-            entity.Property(e => e.MaxPhoneDigits).IsRequired();
+            entity.Property(e => e.DebugEnabled).IsRequired();
             entity.Property(e => e.SoundNotificationsDisabled).IsRequired();
             entity.Property(e => e.UpdatedAt).IsRequired();
         });

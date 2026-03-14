@@ -1,4 +1,5 @@
 using Botijas.Application.Cylinders.Queries;
+using Botijas.Application.Cylinders.Commands;
 using Botijas.Application.Filling.Commands;
 using Botijas.Application.Filling.Queries;
 using Botijas.Api.Handlers;
@@ -18,6 +19,7 @@ public class CylindersController : ControllerBase
     private readonly GetCylinderHistoryQueryHandler _getHistoryHandler;
     private readonly GetCylinderByTokenQueryHandler _getByTokenHandler;
     private readonly DeleteCylinderHandler _deleteCylinderHandler;
+    private readonly UndoCylinderHistoryActionCommandHandler _undoHistoryActionHandler;
 
     public CylindersController(
         GetFillingQueueQueryHandler getFillingQueueHandler,
@@ -27,7 +29,8 @@ public class CylindersController : ControllerBase
         AssignLabelCommandHandler assignLabelHandler,
         GetCylinderHistoryQueryHandler getHistoryHandler,
         GetCylinderByTokenQueryHandler getByTokenHandler,
-        DeleteCylinderHandler deleteCylinderHandler)
+        DeleteCylinderHandler deleteCylinderHandler,
+        UndoCylinderHistoryActionCommandHandler undoHistoryActionHandler)
     {
         _getFillingQueueHandler = getFillingQueueHandler;
         _markReadyHandler = markReadyHandler;
@@ -37,6 +40,7 @@ public class CylindersController : ControllerBase
         _getHistoryHandler = getHistoryHandler;
         _getByTokenHandler = getByTokenHandler;
         _deleteCylinderHandler = deleteCylinderHandler;
+        _undoHistoryActionHandler = undoHistoryActionHandler;
     }
 
     /// <summary>
@@ -148,6 +152,28 @@ public class CylindersController : ControllerBase
     }
 
     /// <summary>
+    /// Desfaz a ação mais recente do histórico de uma botija, mantendo registo de auditoria
+    /// </summary>
+    [HttpPost("{cylinderId}/history/{historyEntryId}/undo")]
+    public async Task<IActionResult> UndoHistoryAction(
+        Guid cylinderId,
+        Guid historyEntryId,
+        [FromBody] UndoHistoryActionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _undoHistoryActionHandler.Handle(
+            new UndoCylinderHistoryActionCommand(cylinderId, historyEntryId, request.Comment),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
     /// Busca botija por QR token
     /// </summary>
     [HttpGet("scan/{qrToken}")]
@@ -183,3 +209,4 @@ public class CylindersController : ControllerBase
 public record ReportProblemRequest(string Type, string Notes);
 public record AssignLabelRequest(string QrToken);
 public record MarkOrderBatchRequest(Guid OrderId);
+public record UndoHistoryActionRequest(string Comment);

@@ -68,6 +68,7 @@ public class GetCylinderByTokenQueryHandler
 
         var historyItems = history.Select(h => new CylinderHistoryItemDto
         {
+            Id = h.Id,
             EventType = h.EventType.ToString(),
             Details = h.Details,
             OrderId = h.OrderId,

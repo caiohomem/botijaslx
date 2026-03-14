@@ -10,6 +10,7 @@ public class CustomerCylindersDto
     public Guid CustomerId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
+    public string PhoneType { get; set; } = string.Empty;
     public List<CustomerCylinderDto> Cylinders { get; set; } = new();
 }
 
@@ -27,6 +28,7 @@ public class CustomerCylinderDto
 
 public class CustomerCylinderHistoryItemDto
 {
+    public Guid Id { get; set; }
     public string EventType { get; set; } = string.Empty;
     public string? Details { get; set; }
     public DateTime Timestamp { get; set; }
@@ -57,35 +59,36 @@ public class GetCustomerCylindersQueryHandler
         if (customer == null)
             return Result<CustomerCylindersDto>.Failure("Cliente não encontrado");
 
-        var orders = await _orderRepository.FindAllByCustomerAsync(query.CustomerId, cancellationToken);
-
         var cylinderDtos = new List<CustomerCylinderDto>();
+        var cylinders = await _cylinderRepository.FindByCustomerIdAsync(query.CustomerId, cancellationToken);
+        var currentOrders = await _orderRepository.FindCurrentCylinderOrdersByCustomerAsync(query.CustomerId, cancellationToken);
+        var currentOrdersByCylinderId = currentOrders.ToDictionary(x => x.CylinderId);
 
-        foreach (var order in orders)
+        foreach (var cylinder in cylinders.OrderBy(c => c.SequentialNumber))
         {
-            var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-
-            foreach (var cylinder in cylinders)
+            var history = await _historyRepository.GetByCylinderIdAsync(cylinder.CylinderId, cancellationToken);
+            if (!currentOrdersByCylinderId.TryGetValue(cylinder.CylinderId, out var currentOrder))
             {
-                var history = await _historyRepository.GetByCylinderIdAsync(cylinder.CylinderId, cancellationToken);
-
-                cylinderDtos.Add(new CustomerCylinderDto
-                {
-                    CylinderId = cylinder.CylinderId,
-                    SequentialNumber = cylinder.SequentialNumber,
-                    LabelToken = cylinder.LabelToken?.Value,
-                    State = cylinder.State.ToString(),
-                    CreatedAt = cylinder.CreatedAt,
-                    OrderId = order.OrderId,
-                    OrderStatus = order.Status.ToString(),
-                    History = history.Select(h => new CustomerCylinderHistoryItemDto
-                    {
-                        EventType = h.EventType.ToString(),
-                        Details = h.Details,
-                        Timestamp = h.Timestamp
-                    }).ToList()
-                });
+                continue;
             }
+
+            cylinderDtos.Add(new CustomerCylinderDto
+            {
+                CylinderId = cylinder.CylinderId,
+                SequentialNumber = cylinder.SequentialNumber,
+                LabelToken = cylinder.LabelToken?.Value,
+                State = cylinder.State.ToString(),
+                CreatedAt = cylinder.CreatedAt,
+                OrderId = currentOrder.OrderId,
+                OrderStatus = currentOrder.OrderStatus.ToString(),
+                History = history.Select(h => new CustomerCylinderHistoryItemDto
+                {
+                    Id = h.Id,
+                    EventType = h.EventType.ToString(),
+                    Details = h.Details,
+                    Timestamp = h.Timestamp
+                }).ToList()
+            });
         }
 
         var dto = new CustomerCylindersDto
@@ -93,6 +96,7 @@ public class GetCustomerCylindersQueryHandler
             CustomerId = customer.CustomerId,
             Name = customer.Name,
             Phone = customer.Phone.Value,
+            PhoneType = customer.PhoneType.ToString(),
             Cylinders = cylinderDtos
         };
 

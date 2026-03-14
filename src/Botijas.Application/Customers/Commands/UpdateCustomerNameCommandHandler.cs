@@ -33,7 +33,8 @@ public class UpdateCustomerNameCommandHandler
             {
                 CustomerId = customer.CustomerId,
                 Name = customer.Name,
-                Phone = customer.Phone.Value
+                Phone = customer.Phone.Value,
+                PhoneType = customer.PhoneType.ToString()
             });
         }
         catch (ArgumentException ex)

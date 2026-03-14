@@ -19,23 +19,29 @@ public class UpdateCustomerPhoneCommandHandler
     {
         try
         {
-            // Max-9 digits validation at command level (not in value object, to protect read path)
-            var digits = new string(command.Phone.Where(char.IsDigit).ToArray());
-            if (digits.Length > 9)
-                return Result<CustomerDto>.Failure("Phone number must have at most 9 digits");
+            if (!CustomerPhoneTypeParser.TryParse(command.PhoneType, out var phoneType))
+            {
+                return Result<CustomerDto>.Failure("Invalid phone type");
+            }
 
             var customer = await _customerRepository.FindByIdAsync(command.CustomerId, cancellationToken);
             if (customer == null)
                 return Result<CustomerDto>.Failure("Cliente não encontrado");
 
             var phone = PhoneNumber.Create(command.Phone);
+            var digits = phone.Value;
+            if (phoneType == Domain.Entities.CustomerPhoneType.PT && digits.Length != 9)
+                return Result<CustomerDto>.Failure("PT phone number must have exactly 9 digits");
+
+            if (phoneType == Domain.Entities.CustomerPhoneType.International && digits.Length > 14)
+                return Result<CustomerDto>.Failure("International phone number must have at most 14 digits");
 
             // Check uniqueness - ensure no OTHER customer has this phone
             var existing = await _customerRepository.FindByPhoneAsync(phone, cancellationToken);
             if (existing != null && existing.CustomerId != command.CustomerId)
                 return Result<CustomerDto>.Failure("Customer with this phone already exists");
 
-            customer.UpdatePhone(phone);
+            customer.UpdatePhone(phone, phoneType);
             await _customerRepository.UpdateAsync(customer, cancellationToken);
             await _customerRepository.SaveChangesAsync(cancellationToken);
 
@@ -43,7 +49,8 @@ public class UpdateCustomerPhoneCommandHandler
             {
                 CustomerId = customer.CustomerId,
                 Name = customer.Name,
-                Phone = customer.Phone.Value
+                Phone = customer.Phone.Value,
+                PhoneType = customer.PhoneType.ToString()
             });
         }
         catch (ArgumentException ex)

@@ -53,6 +53,7 @@ public class GetCylinderHistoryQueryHandler
 
         var historyItems = history.Select(h => new CylinderHistoryItemDto
         {
+            Id = h.Id,
             EventType = h.EventType.ToString(),
             Details = h.Details,
             OrderId = h.OrderId,
@@ -91,6 +92,7 @@ public class CylinderHistoryDto
 
 public class CylinderHistoryItemDto
 {
+    public Guid Id { get; set; }
     public string EventType { get; set; } = string.Empty;
     public string? Details { get; set; }
     public Guid? OrderId { get; set; }

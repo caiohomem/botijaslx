@@ -1,3 +1,5 @@
+import { formatPhoneForWhatsAppByType, PhoneMode } from './phone';
+
 const PROD_API_BASE_URL = 'https://botijaslx.onrender.com';
 
 const BROWSER_API_BASE_URL =
@@ -46,42 +48,41 @@ export interface AppSettings {
   whatsAppMessageTemplate: string;
   welcomeMessageTemplate: string;
   thankYouMessageTemplate: string;
-  labelTemplate: string;
   printerType: 'label' | 'a4';
   labelWidthMm: number;
   labelHeightMm: number;
-  maxPhoneDigits: number;
+  debugEnabled: boolean;
   soundNotificationsDisabled: boolean;
   updatedAt?: string;
 }
 
 // Customers
 export const customersApi = {
-  create: (data: { name: string; phone: string }) =>
-    apiRequest<{ customerId: string; name: string; phone: string }>('/api/customers', {
+  create: (data: { name: string; phone: string; phoneType: string }) =>
+    apiRequest<{ customerId: string; name: string; phone: string; phoneType: string }>('/api/customers', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   search: (query?: string) =>
-    apiRequest<{ customers: Array<{ customerId: string; name: string; phone: string }> }>(
+    apiRequest<{ customers: Array<{ customerId: string; name: string; phone: string; phoneType: string }> }>(
       `/api/customers${query ? `?query=${encodeURIComponent(query)}` : ''}`
     ),
 
   getCylinders: (customerId: string) =>
     apiRequest<CustomerCylindersResult>(`/api/customers/${customerId}/cylinders`),
 
-  updatePhone: (customerId: string, phone: string) =>
-    apiRequest<{ customerId: string; name: string; phone: string }>(
+  updatePhone: (customerId: string, phone: string, phoneType: string) =>
+    apiRequest<{ customerId: string; name: string; phone: string; phoneType: string }>(
       `/api/customers/${customerId}/phone`,
       {
         method: 'PUT',
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, phoneType }),
       }
     ),
 
   updateName: (customerId: string, name: string) =>
-    apiRequest<{ customerId: string; name: string; phone: string }>(
+    apiRequest<{ customerId: string; name: string; phone: string; phoneType: string }>(
       `/api/customers/${customerId}/name`,
       {
         method: 'PUT',
@@ -96,6 +97,7 @@ export const customersApi = {
 };
 
 export interface CustomerCylinderHistoryItem {
+  id: string;
   eventType: string;
   details?: string;
   timestamp: string;
@@ -116,6 +118,7 @@ export interface CustomerCylindersResult {
   customerId: string;
   name: string;
   phone: string;
+  phoneType: string;
   cylinders: CustomerCylinder[];
 }
 
@@ -179,6 +182,7 @@ export interface FillingQueueItem {
   orderId: string;
   customerName: string;
   customerPhone: string;
+  customerPhoneType: string;
   totalCylindersInOrder: number;
   readyCylindersInOrder: number;
 }
@@ -242,6 +246,18 @@ export const cylindersApi = {
     apiRequest<void>(`/api/cylinders/${cylinderId}`, {
       method: 'DELETE',
     }),
+
+  undoHistoryAction: (cylinderId: string, historyEntryId: string, comment: string) =>
+    apiRequest<{
+      cylinderId: string;
+      state: string;
+      orderId?: string;
+      orderStatus?: string;
+      undoneEventType: string;
+    }>(`/api/cylinders/${cylinderId}/history/${historyEntryId}/undo`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }),
 };
 
 // Pickup
@@ -258,6 +274,7 @@ export interface PickupOrder {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  customerPhoneType: string;
   status: string;
   createdAt: string;
   notifiedAt?: string;
@@ -302,48 +319,15 @@ export const pickupApi = {
 };
 
 // WhatsApp helper
-export const generateWhatsAppLink = (phone: string, message: string): string => {
-  // Remove non-digits and ensure proper format
-  const cleanPhone = phone.replace(/\D/g, '');
+export const generateWhatsAppLink = (phone: string, message: string, phoneType: PhoneMode = 'pt'): string => {
+  const cleanPhone = formatPhoneForWhatsAppByType(phone, phoneType);
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 };
 
-// Print Jobs
-export interface PrintJob {
-  printJobId: string;
-  status: string;
-  quantity: number;
-  createdAt: string;
-}
-
-export const printJobsApi = {
-  create: (
-    quantity: number, 
-    customerName?: string,
-    customerPhone?: string,
-    storeId?: string, 
-    templateId?: string
-  ) =>
-    apiRequest<PrintJob>('/api/printjobs', {
-      method: 'POST',
-      body: JSON.stringify({
-        storeId: storeId || '00000000-0000-0000-0000-000000000001',
-        quantity,
-        templateId: templateId || null,
-        customerName: customerName || null,
-        customerPhone: customerPhone || null,
-      }),
-    }),
-
-  ackPrinted: (printJobId: string) =>
-    apiRequest<PrintJob>(`/api/printjobs/${printJobId}/ack-printed`, {
-      method: 'POST',
-    }),
-};
-
 // Cylinder History
 export interface CylinderHistoryItem {
+  id: string;
   eventType: string;
   details?: string;
   orderId?: string;
@@ -397,5 +381,118 @@ export const settingsApi = {
     apiRequest<AppSettings>('/api/settings', {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+};
+
+export interface DebugCustomerSnapshot {
+  exportedAt?: string;
+  customer?: {
+    customerId: string;
+    name: string;
+    phone: string;
+    phoneType?: string;
+    createdAt: string;
+  };
+  customers?: Array<{
+    customerId: string;
+    name: string;
+    phone: string;
+    phoneType?: string;
+    createdAt: string;
+  }>;
+  orders: Array<{
+    orderId: string;
+    customerId: string;
+    status: string;
+    createdAt: string;
+    completedAt?: string;
+    notifiedAt?: string;
+  }>;
+  cylinderRefs: Array<{
+    orderId: string;
+    cylinderId: string;
+    state: string;
+  }>;
+  cylinders: Array<{
+    cylinderId: string;
+    sequentialNumber: number;
+    labelToken?: string;
+    state: string;
+    occurrenceNotes?: string;
+    createdAt: string;
+  }>;
+  cylinderHistory: Array<{
+    id: string;
+    cylinderId: string;
+    eventType: string;
+    details?: string;
+    orderId?: string;
+    timestamp: string;
+  }>;
+  printJobs?: Array<{
+    printJobId: string;
+    storeId: string;
+    quantity: number;
+    templateId?: string;
+    status: string;
+    errorMessage?: string;
+    createdAt: string;
+    completedAt?: string;
+  }>;
+  appSettings?: Array<{
+    appSettingsId: string;
+    storeName: string;
+    storePhone: string;
+    storeLink: string;
+    appTitle: string;
+    whatsAppMessageTemplate: string;
+    welcomeMessageTemplate: string;
+    thankYouMessageTemplate: string;
+    printerType: string;
+    labelWidthMm: number;
+    labelHeightMm: number;
+    debugEnabled: boolean;
+    soundNotificationsDisabled: boolean;
+    updatedAt: string;
+  }>;
+  omittedTables: string[];
+}
+
+export const debugApi = {
+  getFullSnapshot: () =>
+    apiRequest<DebugCustomerSnapshot>('/api/debug/all'),
+
+  getCustomerSnapshot: (customerId: string) =>
+    apiRequest<DebugCustomerSnapshot>(`/api/debug/customer/${customerId}`),
+
+  deleteCustomer: (customerId: string) =>
+    apiRequest<void>(`/api/debug/customers/${customerId}`, { method: 'DELETE' }),
+
+  deleteOrder: (orderId: string) =>
+    apiRequest<void>(`/api/debug/orders/${orderId}`, { method: 'DELETE' }),
+
+  deleteCylinderRef: (orderId: string, cylinderId: string) =>
+    apiRequest<void>(`/api/debug/cylinder-refs/${orderId}/${cylinderId}`, { method: 'DELETE' }),
+
+  deleteCylinder: (cylinderId: string) =>
+    apiRequest<void>(`/api/debug/cylinders/${cylinderId}`, { method: 'DELETE' }),
+
+  deleteCylinderHistory: (historyId: string) =>
+    apiRequest<void>(`/api/debug/cylinder-history/${historyId}`, { method: 'DELETE' }),
+
+  exportDatabase: async () => {
+    const response = await fetch(`${getApiBaseUrl()}/api/debug/export`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json() as Promise<DebugCustomerSnapshot>;
+  },
+
+  importDatabase: (snapshot: DebugCustomerSnapshot) =>
+    apiRequest<{ importedAt: string; customers: number; orders: number; cylinders: number }>('/api/debug/import', {
+      method: 'POST',
+      body: JSON.stringify(snapshot),
     }),
 };

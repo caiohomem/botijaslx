@@ -3,6 +3,7 @@ using System;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Botijas.Infrastructure.Migrations
 {
     [DbContext(typeof(BotijasDbContext))]
-    partial class BotijasDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314160154_AddCustomerPhoneType")]
+    partial class AddCustomerPhoneType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -33,13 +36,18 @@ namespace Botijas.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<bool>("DebugEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("LabelHeightMm")
                         .HasColumnType("integer");
 
+                    b.Property<string>("LabelTemplate")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<int>("LabelWidthMm")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxPhoneDigits")
                         .HasColumnType("integer");
 
                     b.Property<string>("PrinterType")
@@ -196,6 +204,41 @@ namespace Botijas.Infrastructure.Migrations
                     b.HasKey("OrderId", "CylinderId");
 
                     b.ToTable("CylinderRefs");
+                });
+
+            modelBuilder.Entity("Botijas.Domain.Entities.PrintJob", b =>
+                {
+                    b.Property<Guid>("PrintJobId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TemplateId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("PrintJobId");
+
+                    b.ToTable("PrintJobs");
                 });
 
             modelBuilder.Entity("Botijas.Domain.Entities.RefillOrder", b =>

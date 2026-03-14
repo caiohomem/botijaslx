@@ -89,6 +89,36 @@ public class Cylinder
         OccurrenceNotes = notes;
     }
 
+    public void ReceiveForRefill()
+    {
+        if (State == CylinderState.Ready)
+        {
+            throw new InvalidOperationException("Cannot receive cylinder for refill while it is marked as Ready");
+        }
+
+        State = CylinderState.Received;
+        OccurrenceNotes = null;
+        _domainEvents.Add(new CylinderReceived(CylinderId, LabelToken?.Value));
+    }
+
+    public void RevertToReceived()
+    {
+        State = CylinderState.Received;
+        OccurrenceNotes = null;
+    }
+
+    public void RevertToReady()
+    {
+        State = CylinderState.Ready;
+        OccurrenceNotes = null;
+    }
+
+    public void RevertToProblem(string? notes)
+    {
+        State = CylinderState.Problem;
+        OccurrenceNotes = notes;
+    }
+
     public void ClearDomainEvents()
     {
         _domainEvents.Clear();

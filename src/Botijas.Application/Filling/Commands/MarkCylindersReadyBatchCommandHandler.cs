@@ -30,8 +30,8 @@ public class MarkCylindersReadyBatchCommandHandler
             return Result<BatchReadyResult>.Failure("Order not found");
         }
 
-        // Get all cylinders in this order that are not yet ready
-        var cylinderRefs = order.Cylinders.Where(c => c.State.ToString() != "Ready").ToList();
+        // Get all cylinders in this order that are not yet ready in the order context.
+        var cylinderRefs = order.Cylinders.Where(c => c.State != CylinderState.Ready).ToList();
 
         if (cylinderRefs.Count == 0)
         {
@@ -48,16 +48,18 @@ public class MarkCylindersReadyBatchCommandHandler
             {
                 try
                 {
-                    cylinder.MarkAsReady();
-                    markedCount++;
+                    if (cylinder.State != CylinderState.Ready)
+                    {
+                        cylinder.MarkAsReady();
+                        markedCount++;
 
-                    // Registrar histórico
-                    var historyEntry = CylinderHistoryEntry.Create(
-                        cylinder.CylinderId,
-                        CylinderEventType.MarkedReady,
-                        "Botija marcada como cheia (lote)",
-                        order.OrderId);
-                    await _historyRepository.AddAsync(historyEntry, cancellationToken);
+                        var historyEntry = CylinderHistoryEntry.Create(
+                            cylinder.CylinderId,
+                            CylinderEventType.MarkedReady,
+                            "Botija marcada como cheia (lote)",
+                            order.OrderId);
+                        await _historyRepository.AddAsync(historyEntry, cancellationToken);
+                    }
                 }
                 catch (InvalidOperationException)
                 {
@@ -69,8 +71,8 @@ public class MarkCylindersReadyBatchCommandHandler
         // Get updated cylinders for order status check
         var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
 
-        // Atualizar status do pedido
-        order.CheckAndUpdateStatus(orderCylinders);
+        // Sincronizar refs e recalcular status do pedido.
+        order.RecalculateStatus(orderCylinders);
 
         // Save changes
         await _cylinderRepository.SaveChangesAsync(cancellationToken);

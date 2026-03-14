@@ -49,11 +49,10 @@ public class SettingsController : ControllerBase
             whatsAppMessageTemplate: request.WhatsAppMessageTemplate.Trim(),
             welcomeMessageTemplate: request.WelcomeMessageTemplate.Trim(),
             thankYouMessageTemplate: request.ThankYouMessageTemplate.Trim(),
-            labelTemplate: request.LabelTemplate.Trim(),
             printerType: NormalizePrinterType(request.PrinterType),
             labelWidthMm: Math.Clamp(request.LabelWidthMm, 10, 200),
             labelHeightMm: Math.Clamp(request.LabelHeightMm, 10, 200),
-            maxPhoneDigits: Math.Clamp(request.MaxPhoneDigits, 1, 20),
+            debugEnabled: request.DebugEnabled,
             soundNotificationsDisabled: request.SoundNotificationsDisabled);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -70,11 +69,10 @@ public class SettingsController : ControllerBase
             settings.WhatsAppMessageTemplate,
             settings.WelcomeMessageTemplate,
             settings.ThankYouMessageTemplate,
-            settings.LabelTemplate,
             settings.PrinterType,
             settings.LabelWidthMm,
             settings.LabelHeightMm,
-            settings.MaxPhoneDigits,
+            settings.DebugEnabled,
             settings.SoundNotificationsDisabled,
             settings.UpdatedAt);
     }
@@ -93,11 +91,10 @@ public record UpdateAppSettingsRequest(
     string WhatsAppMessageTemplate,
     string WelcomeMessageTemplate,
     string ThankYouMessageTemplate,
-    string LabelTemplate,
     string PrinterType,
     int LabelWidthMm,
     int LabelHeightMm,
-    int MaxPhoneDigits,
+    bool DebugEnabled,
     bool SoundNotificationsDisabled);
 
 public record AppSettingsResponse(
@@ -108,10 +105,9 @@ public record AppSettingsResponse(
     string WhatsAppMessageTemplate,
     string WelcomeMessageTemplate,
     string ThankYouMessageTemplate,
-    string LabelTemplate,
     string PrinterType,
     int LabelWidthMm,
     int LabelHeightMm,
-    int MaxPhoneDigits,
+    bool DebugEnabled,
     bool SoundNotificationsDisabled,
     DateTime UpdatedAt);

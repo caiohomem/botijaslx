@@ -6,6 +6,7 @@ public class PickupOrderDto
     public Guid CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
+    public string CustomerPhoneType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? NotifiedAt { get; set; }

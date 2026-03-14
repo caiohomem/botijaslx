@@ -12,11 +12,10 @@ public class AppSettings
     public string WhatsAppMessageTemplate { get; private set; }
     public string WelcomeMessageTemplate { get; private set; }
     public string ThankYouMessageTemplate { get; private set; }
-    public string LabelTemplate { get; private set; }
     public string PrinterType { get; private set; }
     public int LabelWidthMm { get; private set; }
     public int LabelHeightMm { get; private set; }
-    public int MaxPhoneDigits { get; private set; }
+    public bool DebugEnabled { get; private set; }
     public bool SoundNotificationsDisabled { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -29,11 +28,10 @@ public class AppSettings
         WhatsAppMessageTemplate = "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!";
         WelcomeMessageTemplate = "Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}";
         ThankYouMessageTemplate = "Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!";
-        LabelTemplate = "default";
         PrinterType = "label";
         LabelWidthMm = 50;
         LabelHeightMm = 75;
-        MaxPhoneDigits = 9;
+        DebugEnabled = false;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -53,11 +51,10 @@ public class AppSettings
         string whatsAppMessageTemplate,
         string welcomeMessageTemplate,
         string thankYouMessageTemplate,
-        string labelTemplate,
         string printerType,
         int labelWidthMm,
         int labelHeightMm,
-        int maxPhoneDigits,
+        bool debugEnabled,
         bool soundNotificationsDisabled)
     {
         StoreName = storeName;
@@ -67,11 +64,10 @@ public class AppSettings
         WhatsAppMessageTemplate = whatsAppMessageTemplate;
         WelcomeMessageTemplate = welcomeMessageTemplate;
         ThankYouMessageTemplate = thankYouMessageTemplate;
-        LabelTemplate = labelTemplate;
         PrinterType = printerType;
         LabelWidthMm = labelWidthMm;
         LabelHeightMm = labelHeightMm;
-        MaxPhoneDigits = maxPhoneDigits;
+        DebugEnabled = debugEnabled;
         SoundNotificationsDisabled = soundNotificationsDisabled;
         UpdatedAt = DateTime.UtcNow;
     }

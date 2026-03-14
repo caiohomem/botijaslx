@@ -82,7 +82,7 @@ public class CustomersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _updatePhoneHandler.Handle(
-            new UpdateCustomerPhoneCommand(id, request.Phone),
+            new UpdateCustomerPhoneCommand(id, request.Phone, request.PhoneType),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -119,5 +119,5 @@ public class CustomersController : ControllerBase
     }
 }
 
-public record UpdatePhoneRequest(string Phone);
+public record UpdatePhoneRequest(string Phone, string PhoneType);
 public record UpdateNameRequest(string Name);

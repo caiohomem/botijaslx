@@ -3,18 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
+import { CreateCustomerForm } from '@/components/CreateCustomerForm';
 import { customersApi, cylindersApi, CustomerCylinder } from '@/lib/api';
-import { loadAppSettings } from '@/lib/settings';
+import { clampPhoneDigits, detectPhoneMode, getPhoneMaxDigits, PhoneMode } from '@/lib/phone';
 
 interface SelectedCustomer {
   customerId: string;
   name: string;
   phone: string;
+  phoneType: string;
 }
 
 export default function ClientesPage() {
   const t = useTranslations();
   const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [cylinders, setCylinders] = useState<CustomerCylinder[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -24,13 +27,12 @@ export default function ClientesPage() {
   // Edit customer form state
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '' });
-
-  // Settings
-  const [maxPhoneDigits, setMaxPhoneDigits] = useState(9);
+  const [phoneMode, setPhoneMode] = useState<PhoneMode>('pt');
+  const maxPhoneDigits = getPhoneMaxDigits(phoneMode);
 
   useEffect(() => {
-    loadAppSettings().then((settings) => setMaxPhoneDigits(settings.maxPhoneDigits));
-  }, []);
+    setFormData((current) => ({ ...current, phone: clampPhoneDigits(current.phone, phoneMode) }));
+  }, [phoneMode]);
 
   // Delete confirmation states
   const [confirmDeleteCylinder, setConfirmDeleteCylinder] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export default function ClientesPage() {
   };
 
   const handleSelectCustomer = async (customer: SelectedCustomer) => {
+    setShowCreateForm(false);
     setSelectedCustomer(customer);
     setLoading(true);
     setError(null);
@@ -64,7 +67,11 @@ export default function ClientesPage() {
 
   const handleEditCustomer = () => {
     if (selectedCustomer) {
+      const detectedMode = selectedCustomer.phoneType?.toLowerCase() === 'international'
+        ? 'international'
+        : detectPhoneMode(selectedCustomer.phone);
       setFormData({ name: selectedCustomer.name, phone: selectedCustomer.phone });
+      setPhoneMode(detectedMode);
       setEditingCustomer(true);
       setError(null);
     }
@@ -84,11 +91,11 @@ export default function ClientesPage() {
 
       // Update phone if changed
       if (formData.phone !== selectedCustomer.phone) {
-        await customersApi.updatePhone(selectedCustomer.customerId, formData.phone.trim());
+        await customersApi.updatePhone(selectedCustomer.customerId, formData.phone.trim(), phoneMode);
       }
 
       // Refresh customer data
-      setSelectedCustomer(prev => (prev ? { ...prev, name: formData.name, phone: formData.phone } : null));
+      setSelectedCustomer(prev => (prev ? { ...prev, name: formData.name, phone: formData.phone, phoneType: phoneMode } : null));
       setEditingCustomer(false);
       showSuccess(t('clientes.customerUpdated'));
     } catch (err) {
@@ -140,6 +147,7 @@ export default function ClientesPage() {
 
   const handleClear = () => {
     setSelectedCustomer(null);
+    setShowCreateForm(false);
     setCylinders([]);
     setError(null);
     setEditingCustomer(false);
@@ -155,10 +163,25 @@ export default function ClientesPage() {
       {/* Search Area */}
       {!selectedCustomer && (
         <div className="space-y-4">
-          <CustomerSearch
-            onSelect={handleSelectCustomer}
-            disabled={loading}
-          />
+          {!showCreateForm ? (
+            <>
+              <CustomerSearch
+                onSelect={handleSelectCustomer}
+                disabled={loading}
+              />
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+              >
+                {t('customer.create')}
+              </button>
+            </>
+          ) : (
+            <CreateCustomerForm
+              onCreated={handleSelectCustomer}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          )}
           {error && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>
           )}
@@ -202,12 +225,29 @@ export default function ClientesPage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">{t('customer.phone')}</label>
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => setPhoneMode('pt')}
+                          className={`px-3 py-2 border rounded text-xs ${phoneMode === 'pt' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                        >
+                          PT 🇵🇹
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPhoneMode('international')}
+                          className={`px-3 py-2 border rounded text-xs ${phoneMode === 'international' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+                        >
+                          {t('customer.international')}
+                        </button>
+                      </div>
                       <input
                         type="tel"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, phone: clampPhoneDigits(e.target.value, phoneMode) })}
                         maxLength={maxPhoneDigits}
                         className="w-full px-3 py-2 border rounded text-sm bg-background"
+                        placeholder={phoneMode === 'pt' ? '912345678' : '351912345678'}
                       />
                     </div>
                   </div>

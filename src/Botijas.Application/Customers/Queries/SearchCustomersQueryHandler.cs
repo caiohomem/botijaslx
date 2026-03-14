@@ -20,7 +20,8 @@ public class SearchCustomersQueryHandler
         {
             CustomerId = c.CustomerId,
             Name = c.Name,
-            Phone = c.Phone.Value
+            Phone = c.Phone.Value,
+            PhoneType = c.PhoneType.ToString()
         }).ToList();
 
         return Result<List<CustomerDto>>.Success(dtos);

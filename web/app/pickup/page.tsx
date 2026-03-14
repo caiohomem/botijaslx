@@ -58,7 +58,11 @@ export default function PickupPage() {
       .replace('{name}', order.customerName)
       .replace('{count}', String(order.totalCylinders))
       .replace('{link}', storeLink);
-    const link = generateWhatsAppLink(order.customerPhone, message);
+    const link = generateWhatsAppLink(
+      order.customerPhone,
+      message,
+      order.customerPhoneType === 'International' ? 'international' : 'pt'
+    );
     window.open(link, '_blank');
   };
 

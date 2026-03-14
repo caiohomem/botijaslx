@@ -18,7 +18,22 @@ public class CreateCustomerCommandHandler
     {
         try
         {
+            if (!CustomerPhoneTypeParser.TryParse(command.PhoneType, out var phoneType))
+            {
+                return Result<CustomerDto>.Failure("Invalid phone type");
+            }
+
             var phone = PhoneNumber.Create(command.Phone);
+            var digits = phone.Value;
+            if (phoneType == CustomerPhoneType.PT && digits.Length != 9)
+            {
+                return Result<CustomerDto>.Failure("PT phone number must have exactly 9 digits");
+            }
+
+            if (phoneType == CustomerPhoneType.International && digits.Length > 14)
+            {
+                return Result<CustomerDto>.Failure("International phone number must have at most 14 digits");
+            }
             
             // Verificar se já existe cliente com esse telefone
             var existing = await _customerRepository.FindByPhoneAsync(phone, cancellationToken);
@@ -27,7 +42,7 @@ public class CreateCustomerCommandHandler
                 return Result<CustomerDto>.Failure("Customer with this phone already exists");
             }
 
-            var customer = Customer.Create(command.Name, phone);
+            var customer = Customer.Create(command.Name, phone, phoneType);
             await _customerRepository.AddAsync(customer, cancellationToken);
             await _customerRepository.SaveChangesAsync(cancellationToken);
 
@@ -35,7 +50,8 @@ public class CreateCustomerCommandHandler
             {
                 CustomerId = customer.CustomerId,
                 Name = customer.Name,
-                Phone = customer.Phone.Value
+                Phone = customer.Phone.Value,
+                PhoneType = customer.PhoneType.ToString()
             });
         }
         catch (ArgumentException ex)

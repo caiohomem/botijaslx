@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { CreateCustomerForm } from '@/components/CreateCustomerForm';
-import { AppSettings, ordersApi, printJobsApi, cylindersApi, customersApi, historyApi, generateWhatsAppLink, CustomerCylinder } from '@/lib/api';
+import { AppSettings, ordersApi, cylindersApi, customersApi, historyApi, generateWhatsAppLink, CustomerCylinder } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
 import { LabelPreview, printLabels } from '@/components/LabelPreview';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
@@ -13,6 +13,7 @@ interface Customer {
   customerId: string;
   name: string;
   phone: string;
+  phoneType: string;
 }
 
 interface Order {
@@ -28,31 +29,67 @@ interface Cylinder {
   sequentialNumber: number;
   labelToken?: string;
   state: string;
+  isDraftNew?: boolean;
 }
 
-interface KnownCylinder {
+interface CustomerCylinderListItem {
   cylinderId: string;
   sequentialNumber: number;
-  labelToken: string;
-  lastDeliveredAt: string;
+  labelToken?: string;
+  state: string;
+  orderStatus: string;
+  orderId: string;
+  lastEventAt: string;
+  availableForEntry: boolean;
+}
+
+interface CustomerOrderHistoryItem {
+  orderId: string;
+  orderStatus: string;
+  createdAt: string;
+  cylinderCount: number;
+  deliveredCount: number;
 }
 
 interface PrintPreviewState {
-  printJobId: string;
-  quantity: number;
-  sequentialNumbers: number[];
+  labels: Array<{
+    qrContent: string;
+    sequentialNumber: number;
+  }>;
+}
+
+function getCustomerCylinderSortKey(cylinder: CustomerCylinder): number {
+  const latestHistoryTimestamp = cylinder.history
+    .map((item) => new Date(item.timestamp).getTime())
+    .filter((value) => !Number.isNaN(value))
+    .sort((a, b) => b - a)[0];
+
+  return latestHistoryTimestamp ?? new Date(cylinder.createdAt).getTime();
+}
+
+function getUniqueCustomerCylinders(allCylinders: CustomerCylinder[]): CustomerCylinder[] {
+  const unique = new Map<string, CustomerCylinder>();
+
+  for (const cylinder of allCylinders) {
+    const existing = unique.get(cylinder.cylinderId);
+    if (!existing || getCustomerCylinderSortKey(cylinder) > getCustomerCylinderSortKey(existing)) {
+      unique.set(cylinder.cylinderId, cylinder);
+    }
+  }
+
+  return Array.from(unique.values());
 }
 
 export default function DeliveryPage() {
   const t = useTranslations();
-  const [step, setStep] = useState<'identify' | 'create' | 'order' | 'complete'>('identify');
+  const [step, setStep] = useState<'identify' | 'create' | 'order'>('identify');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [cylinders, setCylinders] = useState<Cylinder[]>([]);
-  const [knownCylinders, setKnownCylinders] = useState<KnownCylinder[]>([]);
+  const [customerCylinders, setCustomerCylinders] = useState<CustomerCylinderListItem[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrderHistoryItem[]>([]);
   const [qrToken, setQrToken] = useState('');
   const [loading, setLoading] = useState(false);
-  const [addingKnown, setAddingKnown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [labelInputs, setLabelInputs] = useState<Record<string, string>>({});
@@ -60,14 +97,17 @@ export default function DeliveryPage() {
   const [printQuantity, setPrintQuantity] = useState(1);
   const [printReason, setPrintReason] = useState(''); // M13: Reprint reason
   const [printPreview, setPrintPreview] = useState<PrintPreviewState | null>(null);
-  const [lastPrintPreview, setLastPrintPreview] = useState<PrintPreviewState | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
-  const creatingOrderRef = useRef(false);
 
   useEffect(() => {
     loadAppSettings().then(setSettings);
   }, []);
+
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
 
   const showSuccess = (msg: string, duration = 2000) => {
     setSuccessMessage(msg);
@@ -81,92 +121,75 @@ export default function DeliveryPage() {
       printLabels(canvases, settings);
     }
 
-    if (!printPreview) return;
-
     try {
-      await printJobsApi.ackPrinted(printPreview.printJobId);
-
-      // Fallback: bind printed labels to any still-unlabeled cylinders from this order.
-      const unlabeled = cylinders.filter(c => !c.labelToken);
-      for (let i = 0; i < Math.min(unlabeled.length, printPreview.quantity); i++) {
-        const cylinder = unlabeled[i];
-        const qrToken = `${printPreview.printJobId}-${i + 1}`;
-        const assigned = await cylindersApi.assignLabel(cylinder.cylinderId, qrToken);
-        setCylinders(prev =>
-          prev.map(c =>
-            c.cylinderId === cylinder.cylinderId
-              ? { ...c, labelToken: assigned.labelToken }
-              : c
-          )
-        );
-      }
-
       showSuccess(t('delivery.printMarkedAsPrinted'));
     } catch {
       // Printing from browser cannot be fully observed; ignore ack failures on UI.
     }
   };
 
-  // Extract known cylinders (delivered in completed orders, with label)
-  const extractKnownCylinders = (allCylinders: CustomerCylinder[], currentOrderId: string): KnownCylinder[] => {
-    return allCylinders
-      .filter(c =>
-        c.orderStatus === 'Completed' &&
-        c.state === 'Delivered' &&
-        c.labelToken
-      )
-      .map(c => {
-        const deliveredEvent = c.history
-          .filter(h => h.eventType === 'Delivered')
+  const mapCustomerCylinders = (allCylinders: CustomerCylinder[]): CustomerCylinderListItem[] => {
+    return getUniqueCustomerCylinders(allCylinders)
+      .map((cylinder) => {
+        const latestHistory = [...cylinder.history]
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
         return {
-          cylinderId: c.cylinderId,
-          sequentialNumber: c.sequentialNumber,
-          labelToken: c.labelToken!,
-          lastDeliveredAt: deliveredEvent?.timestamp || c.createdAt,
+          cylinderId: cylinder.cylinderId,
+          sequentialNumber: cylinder.sequentialNumber,
+          labelToken: cylinder.labelToken,
+          state: cylinder.state,
+          orderStatus: cylinder.orderStatus,
+          orderId: cylinder.orderId,
+          lastEventAt: latestHistory?.timestamp || cylinder.createdAt,
+          availableForEntry: cylinder.state === 'Delivered',
         };
       })
-      // Remove duplicates (same labelToken) keeping most recent
-      .filter((c, i, arr) => arr.findIndex(x => x.labelToken === c.labelToken) === i);
+      .sort((a, b) => a.sequentialNumber - b.sequentialNumber);
+  };
+
+  const mapCustomerOrders = (allCylinders: CustomerCylinder[]): CustomerOrderHistoryItem[] => {
+    const grouped = new Map<string, CustomerOrderHistoryItem>();
+
+    for (const cylinder of getUniqueCustomerCylinders(allCylinders)) {
+      const existing = grouped.get(cylinder.orderId);
+      if (existing) {
+        existing.cylinderCount += 1;
+        if (cylinder.state === 'Delivered') {
+          existing.deliveredCount += 1;
+        }
+        continue;
+      }
+
+      grouped.set(cylinder.orderId, {
+        orderId: cylinder.orderId,
+        orderStatus: cylinder.orderStatus,
+        createdAt: cylinder.createdAt,
+        cylinderCount: 1,
+        deliveredCount: cylinder.state === 'Delivered' ? 1 : 0,
+      });
+    }
+
+    return Array.from(grouped.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   };
 
   const handleCustomerSelect = async (customer: Customer) => {
-    if (creatingOrderRef.current) return;
-
-    creatingOrderRef.current = true;
     setSelectedCustomer(customer);
     setLoading(true);
     setError(null);
 
     try {
-      const newOrder = await ordersApi.create(customer.customerId);
       const customerData = await customersApi.getCylinders(customer.customerId);
-
-      // Cylinders already in this order
-      const existingOrderCylinders = customerData.cylinders
-        .filter(c => c.orderId === newOrder.orderId)
-        .map(c => ({
-          cylinderId: c.cylinderId,
-          sequentialNumber: c.sequentialNumber,
-          labelToken: c.labelToken,
-          state: c.state,
-        }));
-
-      // Known cylinders from previous completed orders
-      const known = extractKnownCylinders(customerData.cylinders, newOrder.orderId);
-      // Filter out any that are already in the current order
-      const currentIds = new Set(existingOrderCylinders.map(c => c.cylinderId));
-      const filteredKnown = known.filter(c => !currentIds.has(c.cylinderId));
-
-      setOrder(newOrder);
-      setCylinders(existingOrderCylinders);
-      setKnownCylinders(filteredKnown);
+      setOrder(null);
+      setCylinders([]);
+      setCustomerCylinders(mapCustomerCylinders(customerData.cylinders));
+      setCustomerOrders(mapCustomerOrders(customerData.cylinders));
       setStep('order');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar pedido');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar botijas do cliente');
     } finally {
       setLoading(false);
-      creatingOrderRef.current = false;
     }
   };
 
@@ -206,7 +229,7 @@ export default function DeliveryPage() {
     const template = settings.welcomeMessageTemplate || DEFAULT_APP_SETTINGS.welcomeMessageTemplate;
     const link = settings.storeLink || '';
     const message = template.replace('{name}', customer.name).replace('{link}', link);
-    const waLink = generateWhatsAppLink(customer.phone, message);
+    const waLink = generateWhatsAppLink(customer.phone, message, customer.phoneType === 'International' ? 'international' : 'pt');
     window.open(waLink, '_blank');
   };
 
@@ -214,19 +237,48 @@ export default function DeliveryPage() {
     await handleCustomerSelect(customer);
   };
 
+  const addCylinderToDraft = (cylinder: { cylinderId: string; sequentialNumber: number; labelToken?: string }) => {
+    setError(null);
+
+    setCylinders(prev => {
+      if (prev.some(c => c.cylinderId === cylinder.cylinderId)) {
+        return prev;
+      }
+
+      return [...prev, {
+        cylinderId: cylinder.cylinderId,
+        sequentialNumber: cylinder.sequentialNumber,
+        labelToken: cylinder.labelToken,
+        state: 'Delivered',
+      }];
+    });
+
+    showSuccess(t('delivery.cylinderAdded'));
+  };
+
   const handleScanToken = async (token: string) => {
-    if (!order || !token.trim()) return;
+    if (!selectedCustomer || !token.trim()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const cylinder = await ordersApi.scanCylinder(order.orderId, token.trim());
-      setCylinders(prev => [...prev, cylinder]);
-      // Remove from known if it was there
-      setKnownCylinders(prev => prev.filter(k => k.labelToken !== token.trim()));
+      const cylinderData = await historyApi.scanCylinder(token.trim());
+      const customerCylinder = customerCylinders.find(c =>
+        c.cylinderId === cylinderData.cylinderId ||
+        c.labelToken === token.trim()
+      );
+
+      if (!customerCylinder || !customerCylinder.availableForEntry) {
+        throw new Error('Botija não está disponível para entrada neste cliente');
+      }
+
+      addCylinderToDraft({
+        cylinderId: customerCylinder.cylinderId,
+        sequentialNumber: customerCylinder.sequentialNumber,
+        labelToken: customerCylinder.labelToken,
+      });
       setQrToken('');
-      showSuccess(t('delivery.cylinderAdded'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao escanear botija');
     } finally {
@@ -236,91 +288,24 @@ export default function DeliveryPage() {
 
   const handleScanQR = () => handleScanToken(qrToken);
 
-  // Add a single known cylinder to the order
-  const handleAddKnownCylinder = async (known: KnownCylinder) => {
-    if (!order) return;
-    setError(null);
+  const handleAddNewDrafts = (quantity: number) => {
+    if (quantity < 1) return;
 
-    try {
-      const cylinder = await ordersApi.scanCylinder(order.orderId, known.labelToken);
-      setCylinders(prev => [...prev, cylinder]);
-      setKnownCylinders(prev => prev.filter(k => k.cylinderId !== known.cylinderId));
-      showSuccess(t('delivery.cylinderAdded'));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao adicionar botija');
-    }
+    const drafts = Array.from({ length: quantity }, (_, index) => ({
+      cylinderId: `draft-new-${Date.now()}-${index}`,
+      sequentialNumber: 0,
+      state: 'Received',
+      isDraftNew: true,
+    }));
+
+    setCylinders(prev => [...prev, ...drafts]);
+    setShowPrintDialog(false);
+    setPrintQuantity(1);
+    showSuccess(t('delivery.cylinderAddedNoLabel'), 3000);
   };
 
-  // Add all known cylinders to the order (M0c)
-  const handleAddAllKnown = async () => {
-    if (!order || knownCylinders.length === 0) return;
-
-    setAddingKnown(true);
-    setError(null);
-    let addedCount = 0;
-
-    for (const known of knownCylinders) {
-      try {
-        const cylinder = await ordersApi.scanCylinder(order.orderId, known.labelToken);
-        setCylinders(prev => [...prev, cylinder]);
-        addedCount++;
-      } catch {
-        // Skip cylinders that fail (might be in another open order)
-      }
-    }
-
-    setKnownCylinders([]);
-    setAddingKnown(false);
-
-    if (addedCount > 0) {
-      showSuccess(t('delivery.knownAdded', { count: addedCount }), 3000);
-    }
-  };
-
-  const handlePrintAndCreate = async (quantity: number) => {
-    if (!order || !selectedCustomer || quantity < 1) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Create print job with customer info
-      const printJob = await printJobsApi.create(
-        quantity,
-        selectedCustomer.name,
-        selectedCustomer.phone
-      );
-
-      // Create N cylinders in batch (M1)
-      const result = await ordersApi.addCylindersBatch(order.orderId, quantity);
-      const newCylinders = result.cylinders.map((c: any) => ({
-        cylinderId: c.cylinderId,
-        sequentialNumber: c.sequentialNumber,
-        labelToken: c.labelToken,
-        state: c.state,
-      }));
-
-      // Assign QR codes to cylinders
-      for (let i = 0; i < newCylinders.length; i++) {
-        const cylinder = newCylinders[i];
-        const qrToken = `${printJob.printJobId}-${i + 1}`;
-        const assigned = await cylindersApi.assignLabel(cylinder.cylinderId, qrToken);
-        cylinder.labelToken = assigned.labelToken;
-      }
-
-      setCylinders([...cylinders, ...newCylinders]);
-
-      setShowPrintDialog(false);
-      setPrintQuantity(1);
-      const preview = { printJobId: printJob.printJobId, quantity: printJob.quantity, sequentialNumbers: newCylinders.map((c: Cylinder) => c.sequentialNumber) };
-      setPrintPreview(preview);
-      setLastPrintPreview(preview);
-      showSuccess(t('delivery.printJobCreatedAndCylinders', { count: quantity }), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao imprimir e criar botijas');
-    } finally {
-      setLoading(false);
-    }
+  const handleRemoveDraftCylinder = (cylinderId: string) => {
+    setCylinders(prev => prev.filter(c => c.cylinderId !== cylinderId));
   };
 
   const handleAssignLabel = async (cylinderId: string) => {
@@ -350,13 +335,15 @@ export default function DeliveryPage() {
     }
   };
 
-  const handleFinishDelivery = () => {
-    if (cylinders.length === 0) {
-      setError(t('delivery.noCylinders'));
-      return;
-    }
+  const handleReprintCylinder = (cylinder: Cylinder) => {
+    if (!cylinder.labelToken || cylinder.isDraftNew) return;
 
-    setStep('complete');
+    setPrintPreview({
+      labels: [{
+        qrContent: cylinder.labelToken,
+        sequentialNumber: cylinder.sequentialNumber,
+      }],
+    });
   };
 
   const handleNewDelivery = () => {
@@ -364,12 +351,67 @@ export default function DeliveryPage() {
     setOrder(null);
     setSelectedCustomer(null);
     setCylinders([]);
-    setKnownCylinders([]);
+    setCustomerCylinders([]);
+    setCustomerOrders([]);
     setError(null);
     setSuccessMessage(null);
     setPrintPreview(null);
-    setLastPrintPreview(null);
     setPrintReason(''); // M13: Reset reprint reason
+  };
+
+  const handleCloseOrder = async () => {
+    if (!selectedCustomer) return;
+    if (cylinders.length === 0) {
+      setError(t('delivery.noCylinders'));
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const newOrder = await ordersApi.create(selectedCustomer.customerId);
+      const finalizedCylinders: Cylinder[] = [];
+
+      for (const cylinder of cylinders.filter(c => !c.isDraftNew)) {
+        const added = await ordersApi.addCylinder(newOrder.orderId, cylinder.cylinderId);
+        finalizedCylinders.push({ ...added });
+      }
+
+      const newDraftCount = cylinders.filter(c => c.isDraftNew).length;
+      if (newDraftCount > 0) {
+        const result = await ordersApi.addCylindersBatch(newOrder.orderId, newDraftCount);
+        const newCylinders = result.cylinders.map((c: any) => ({
+          cylinderId: c.cylinderId,
+          sequentialNumber: c.sequentialNumber,
+          labelToken: c.labelToken,
+          state: c.state,
+        }));
+
+        for (let i = 0; i < newCylinders.length; i++) {
+          const createdCylinder = newCylinders[i];
+          const qrCode = `${newOrder.orderId}-${i + 1}`;
+          const assigned = await cylindersApi.assignLabel(createdCylinder.cylinderId, qrCode);
+          createdCylinder.labelToken = assigned.labelToken;
+        }
+
+        finalizedCylinders.push(...newCylinders);
+        setPrintPreview({
+          labels: newCylinders.map((c: Cylinder, index: number) => ({
+            qrContent: `${newOrder.orderId}-${index + 1}`,
+            sequentialNumber: c.sequentialNumber,
+          })),
+        });
+      }
+
+      setOrder(newOrder);
+      setCylinders(finalizedCylinders);
+      showSuccess(tr('delivery.orderClosed', 'Pedido fechado'), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao fechar pedido');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -426,7 +468,7 @@ export default function DeliveryPage() {
       )}
 
       {/* Step 2: Add Cylinders to Order */}
-      {step === 'order' && order && (
+      {step === 'order' && (
         <div className="space-y-6">
           {/* Order Header */}
           <div className="p-4 border rounded-lg bg-muted/30">
@@ -452,33 +494,6 @@ export default function DeliveryPage() {
             </div>
           </div>
 
-          {/* M15: Visual workflow guide */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-            <div className="text-sm text-amber-900 dark:text-amber-100">
-              <div className="font-semibold mb-2 flex items-center gap-2">
-                <span>📋 {t('delivery.workflowGuide') || 'Workflow'}</span>
-              </div>
-              <div className="space-y-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">1</span>
-                  <span>{t('delivery.step1Scan') || 'Scan cylinders or add without label'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">2</span>
-                  <span>{t('delivery.step2Print') || 'Print labels for unlabeled cylinders'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">3</span>
-                  <span>{t('delivery.step3Assign') || 'Assign printed labels to cylinders'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-300 dark:bg-amber-700 text-amber-900 dark:text-amber-100 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">4</span>
-                  <span>{t('delivery.step4Finish') || 'Finish delivery'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Messages */}
           {error && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-lg">
@@ -492,61 +507,110 @@ export default function DeliveryPage() {
             </div>
           )}
 
-          {/* Known Cylinders Section (M0c) */}
-          {knownCylinders.length > 0 && (
-            <div className="border-2 border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
-              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 border-b border-blue-200 dark:border-blue-800">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                      {t('delivery.knownCylinders')} ({knownCylinders.length})
-                    </h3>
-                    <div className="text-xs text-blue-700 dark:text-blue-300">
-                      {t('delivery.knownCylindersDesc')}
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleAddAllKnown}
-                    disabled={addingKnown}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 font-medium text-sm transition-colors"
-                  >
-                    {addingKnown
-                      ? t('delivery.addingKnown')
-                      : t('delivery.addAllKnown', { count: knownCylinders.length })
-                    }
-                  </button>
+          {!order && customerOrders.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-semibold">
+                  {tr('delivery.customerOrderHistory', 'Histórico de pedidos')} ({customerOrders.length})
+                </h3>
+                <div className="text-sm text-muted-foreground">
+                  {tr('delivery.customerOrderHistoryHelp', 'Resumo dos pedidos anteriores deste cliente')}
                 </div>
               </div>
-              <div className="divide-y">
-                {knownCylinders.map((known) => (
-                  <div
-                    key={known.cylinderId}
-                    className="p-3 flex items-center justify-between hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-mono text-sm font-bold">
-                        #{known.sequentialNumber}
-                      </div>
+              <div className="space-y-2">
+                {customerOrders.map((customerOrder) => (
+                  <div key={customerOrder.orderId} className="p-3 border rounded-lg bg-muted/20">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="font-mono text-sm">#{String(known.sequentialNumber).padStart(4, '0')}</div>
+                        <div className="font-mono text-sm font-bold">
+                          #{customerOrder.orderId.slice(0, 8)}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {t('delivery.lastDelivery')}: {formatDate(known.lastDeliveredAt)}
+                          {formatDate(customerOrder.createdAt)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">
+                          {t(`order.status.${customerOrder.orderStatus.toLowerCase()}`)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {customerOrder.deliveredCount}/{customerOrder.cylinderCount} {t('order.cylinders')}
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleAddKnownCylinder(known)}
-                      className="px-3 py-1.5 border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      +
-                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Scan Input */}
+          {!order && customerCylinders.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-semibold">
+                  {tr('delivery.customerCylinders', 'Botijas do cliente')} ({customerCylinders.length})
+                </h3>
+                <div className="text-sm text-muted-foreground">
+                  {tr('delivery.customerCylindersHelp', 'Selecione as botijas entregues que quer dar entrada neste pedido')}
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {customerCylinders.map((cylinder) => {
+                  const selected = cylinders.some(c => c.cylinderId === cylinder.cylinderId);
+                  const available = cylinder.availableForEntry;
+                  const label = available
+                    ? tr('delivery.availableForEntry', 'Disponível para entrada')
+                    : tr('delivery.notAvailableForEntry', 'Indisponível');
+
+                  return (
+                    <button
+                      key={cylinder.cylinderId}
+                      type="button"
+                      onClick={() => available && addCylinderToDraft({
+                        cylinderId: cylinder.cylinderId,
+                        sequentialNumber: cylinder.sequentialNumber,
+                        labelToken: cylinder.labelToken,
+                      })}
+                      disabled={!available || selected || loading}
+                      className={`p-3 border rounded-lg text-left transition-colors ${
+                        selected
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                          : available
+                            ? 'hover:bg-accent border-blue-200 dark:border-blue-800'
+                            : 'opacity-60 border-muted bg-muted/20 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-mono font-bold">
+                            #{String(cylinder.sequentialNumber).padStart(4, '0')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
+                          </div>
+                        </div>
+                        <div className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          selected
+                            ? 'bg-green-600 text-white'
+                            : available
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {selected ? tr('delivery.selectedForOrder', 'Selecionada') : label}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {tr('delivery.lastMovement', 'Último movimento')}: {formatDate(cylinder.lastEventAt)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {!order && (
           <div className="space-y-3">
             <QrScanner
               onScan={(code) => handleScanToken(code)}
@@ -575,27 +639,34 @@ export default function DeliveryPage() {
             {/* Quick print buttons (M2) */}
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-muted-foreground">{t('delivery.quickPrint')}</h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <button
-                  onClick={() => handlePrintAndCreate(1)}
+                  onClick={() => handleAddNewDrafts(1)}
                   disabled={loading}
                   className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
                 >
                   1 {t('order.cylinders')}
                 </button>
                 <button
-                  onClick={() => handlePrintAndCreate(3)}
+                  onClick={() => handleAddNewDrafts(2)}
+                  disabled={loading}
+                  className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
+                >
+                  2 {t('order.cylinders')}
+                </button>
+                <button
+                  onClick={() => handleAddNewDrafts(3)}
                   disabled={loading}
                   className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
                 >
                   3 {t('order.cylinders')}
                 </button>
                 <button
-                  onClick={() => handlePrintAndCreate(5)}
+                  onClick={() => handleAddNewDrafts(4)}
                   disabled={loading}
                   className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium transition-colors text-sm"
                 >
-                  5 {t('order.cylinders')}
+                  4 {t('order.cylinders')}
                 </button>
               </div>
               <button
@@ -606,17 +677,8 @@ export default function DeliveryPage() {
                 {t('delivery.customizeQuantity')}
               </button>
             </div>
-
-            {lastPrintPreview && (
-              <button
-                onClick={() => setPrintPreview(lastPrintPreview)}
-                disabled={loading}
-                className="w-full px-4 py-3 border rounded-lg hover:bg-accent disabled:opacity-50 font-medium transition-colors"
-              >
-                {t('delivery.reprintLastLabels', { count: lastPrintPreview.quantity })}
-              </button>
-            )}
           </div>
+          )}
 
           {/* Cylinders List */}
           {cylinders.length > 0 && (
@@ -646,15 +708,37 @@ export default function DeliveryPage() {
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-mono font-bold">
-                        #{String(cylinder.sequentialNumber).padStart(4, '0')}
+                        {cylinder.isDraftNew
+                          ? tr('delivery.newCylinderDraft', 'Nova botija')
+                          : `#${String(cylinder.sequentialNumber).padStart(4, '0')}`}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {t(`cylinder.status.${uiStatus}`)}
+                        {cylinder.isDraftNew
+                          ? tr('delivery.pendingPrint', 'Aguardando impressão')
+                          : t(`cylinder.status.${uiStatus}`)}
                       </div>
                     </div>
                     <div className={cylinder.labelToken ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
                       {cylinder.labelToken ? '✓' : '🖨️'}
                     </div>
+                    {!order && (
+                      <button
+                        onClick={() => handleRemoveDraftCylinder(cylinder.cylinderId)}
+                        disabled={loading}
+                        className="px-3 py-1.5 border border-red-500 text-red-500 rounded-lg hover:bg-red-500/10 disabled:opacity-50 text-sm font-medium transition-colors"
+                      >
+                        X
+                      </button>
+                    )}
+                    {order && cylinder.labelToken && (
+                      <button
+                        onClick={() => handleReprintCylinder(cylinder)}
+                        disabled={loading}
+                        className="px-3 py-1.5 border rounded-lg hover:bg-accent disabled:opacity-50 text-sm font-medium transition-colors"
+                      >
+                        {t('delivery.reprintLabel')}
+                      </button>
+                    )}
                   </div>
                   );
                 })}
@@ -664,58 +748,22 @@ export default function DeliveryPage() {
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t">
+            {!order && (
+              <button
+                onClick={handleCloseOrder}
+                disabled={loading || cylinders.length === 0}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 font-medium"
+              >
+                {tr('delivery.closeOrder', 'Fechar Pedido')}
+              </button>
+            )}
             <button
               onClick={handleNewDelivery}
               className="px-4 py-2 border rounded-lg hover:bg-accent"
             >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleFinishDelivery}
-              disabled={cylinders.length === 0}
-              className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 font-medium"
-            >
-              {t('delivery.finish')} ({cylinders.length} {t('order.cylinders')})
+              {t('common.back')}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Step 3: Complete */}
-      {step === 'complete' && (
-        <div className="space-y-6">
-          <div className="text-center py-8 border-2 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div className="text-4xl mb-4">✅</div>
-            <h2 className="text-xl font-semibold mb-2">{t('delivery.success')}</h2>
-            <div className="text-muted-foreground">
-              {t('delivery.successDetail', {
-                count: cylinders.length,
-                customer: selectedCustomer?.name
-              })}
-            </div>
-          </div>
-
-          {/* Summary */}
-          <div className="p-4 border rounded-lg">
-            <h3 className="font-semibold mb-3">{t('delivery.summary')}</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('customer.title')}</span>
-                <span>{selectedCustomer?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('order.cylinders')}</span>
-                <span>{cylinders.length}</span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={handleNewDelivery}
-            className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 font-medium"
-          >
-            {t('delivery.newDelivery')}
-          </button>
         </div>
       )}
 
@@ -772,7 +820,7 @@ export default function DeliveryPage() {
                 {t('common.cancel')}
               </button>
               <button
-                onClick={() => handlePrintAndCreate(printQuantity)}
+                onClick={() => handleAddNewDrafts(printQuantity)}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50 font-medium"
               >
@@ -789,13 +837,13 @@ export default function DeliveryPage() {
           <div className="bg-background rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <h3 className="text-lg font-semibold">{t('delivery.labelPreview')}</h3>
             <div ref={labelsContainerRef} className="space-y-4 flex flex-col items-center">
-              {Array.from({ length: printPreview.quantity }, (_, i) => (
+              {Array.from({ length: printPreview.labels.length }, (_, i) => (
                 <LabelPreview
                   key={i}
-                  qrContent={`${printPreview.printJobId}-${i + 1}`}
+                  qrContent={printPreview.labels[i]?.qrContent ?? ''}
                   customerName={selectedCustomer.name}
                   customerPhone={selectedCustomer.phone}
-                  sequentialNumber={printPreview.sequentialNumbers[i] ?? i + 1}
+                  sequentialNumber={printPreview.labels[i]?.sequentialNumber ?? i + 1}
                   storeName={settings.storeName}
                   storeLink={settings.storeLink}
                   settings={settings}
@@ -813,7 +861,7 @@ export default function DeliveryPage() {
                 onClick={handlePrintLabels}
                 className="flex-1 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
               >
-                🖨️ {t('delivery.printLabels', { count: printPreview.quantity })}
+                🖨️ {t('delivery.printLabels', { count: printPreview.labels.length })}
               </button>
             </div>
           </div>

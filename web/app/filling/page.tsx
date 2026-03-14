@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { cylindersApi, pickupApi, generateWhatsAppLink, FillingQueueItem } from '@/lib/api';
+import { cylindersApi, pickupApi, historyApi, generateWhatsAppLink, FillingQueueItem } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
 import { QrScanner } from '@/components/QrScanner';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
@@ -45,6 +45,7 @@ export default function FillingPage() {
     orderId: string;
     customerName: string;
     customerPhone: string;
+    customerPhoneType: string;
     cylinderCount: number;
   }>>([]);
 
@@ -66,21 +67,18 @@ export default function FillingPage() {
       setMessageTemplate(settings.whatsAppMessageTemplate);
       setStoreLink(settings.storeLink);
     });
-
-    // M5: Auto-refresh with polling every 10 seconds
-    const pollInterval = setInterval(() => {
-      loadQueue();
-    }, 10000);
-
-    return () => clearInterval(pollInterval);
   }, [loadQueue]);
 
-  const openWhatsApp = (customerName: string, customerPhone: string, cylinderCount: number, orderId: string) => {
+  const openWhatsApp = (customerName: string, customerPhone: string, customerPhoneType: string, cylinderCount: number, orderId: string) => {
     const message = messageTemplate
       .replace('{name}', customerName)
       .replace('{count}', String(cylinderCount))
       .replace('{link}', storeLink);
-    const link = generateWhatsAppLink(customerPhone, message);
+    const link = generateWhatsAppLink(
+      customerPhone,
+      message,
+      customerPhoneType === 'International' ? 'international' : 'pt'
+    );
     window.open(link, '_blank');
 
     // Record notification in history
@@ -109,6 +107,7 @@ export default function FillingPage() {
           orderId: result.orderId,
           customerName: cylinder.customerName,
           customerPhone: cylinder.customerPhone,
+          customerPhoneType: cylinder.customerPhoneType,
           cylinderCount: cylinder.totalCylindersInOrder,
         }]);
         // M10: Play completion sound
@@ -123,47 +122,6 @@ export default function FillingPage() {
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao marcar botija');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // M3: Mark all cylinders in order as ready
-  const handleMarkAllReady = async (orderId: string, count: number) => {
-    const batchKey = `${orderId}_batch`;
-    setActionLoading(batchKey);
-    setError(null);
-
-    try {
-      const result = await cylindersApi.markReadyBatch(orderId);
-
-      // Get customer info before removing cylinders from list
-      const cylindersInOrder = cylinders.filter(c => c.orderId === orderId);
-      const customerInfo = cylindersInOrder[0];
-
-      // Remove all cylinders from this order from the list
-      setCylinders(prev => prev.filter(c => c.orderId !== orderId));
-
-      if (result.isOrderComplete && customerInfo) {
-        // All cylinders filled - track for manual WhatsApp notification
-        setCompletedOrders(prev => [...prev, {
-          orderId,
-          customerName: customerInfo.customerName,
-          customerPhone: customerInfo.customerPhone,
-          cylinderCount: customerInfo.totalCylindersInOrder,
-        }]);
-        // M10: Play completion sound
-        playSound('complete');
-        setSuccessMessage(t('filling.orderComplete', { name: customerInfo.customerName }));
-      } else {
-        // M10: Play success sound for batch
-        playSound('success');
-        setSuccessMessage(t('filling.marked'));
-      }
-
-      setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao marcar botijas');
     } finally {
       setActionLoading(null);
     }
@@ -209,7 +167,16 @@ export default function FillingPage() {
     }
   };
 
-  const handleScanValue = (value: string) => {
+  const formatCylinderStatus = (state: string) => {
+    return t(`cylinder.status.${state.toLowerCase()}`);
+  };
+
+  const formatOrderStatus = (status?: string) => {
+    if (!status) return '';
+    return t(`order.status.${status.toLowerCase()}`);
+  };
+
+  const handleScanValue = async (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return;
 
@@ -222,15 +189,35 @@ export default function FillingPage() {
     );
 
     if (cylinder) {
-      handleMarkReady(cylinder.cylinderId);
+      await handleMarkReady(cylinder.cylinderId);
       setScanInput('');
     } else {
-      setError(t('filling.notFound'));
+      try {
+        const cylinderData = await historyApi.scanCylinder(trimmed);
+        const cylinderLabel = `#${String(cylinderData.sequentialNumber).padStart(4, '0')}`;
+        const stateLabel = formatCylinderStatus(cylinderData.state);
+        const orderStatusLabel = formatOrderStatus(cylinderData.currentOrderStatus);
+
+        const message = cylinderData.currentOrderStatus
+          ? t('filling.notInQueueWithStatusAndOrder', {
+              cylinder: cylinderLabel,
+              state: stateLabel,
+              orderStatus: orderStatusLabel,
+            })
+          : t('filling.notInQueueWithStatus', {
+              cylinder: cylinderLabel,
+              state: stateLabel,
+            });
+
+        setError(message);
+      } catch {
+        setError(t('filling.notFound'));
+      }
       setTimeout(() => setError(null), 3000);
     }
   };
 
-  const handleScan = () => handleScanValue(scanInput);
+  const handleScan = async () => handleScanValue(scanInput);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -294,11 +281,13 @@ export default function FillingPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">{t('filling.title')}</h1>
-        {/* M5: Auto-refresh indicator */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          {t('common.autoRefresh') || 'Auto-refresh: every 10s'}
-        </div>
+        <button
+          onClick={() => { setLoading(true); loadQueue(); }}
+          disabled={loading}
+          className="px-4 py-2 border rounded-lg hover:bg-accent disabled:opacity-50"
+        >
+          {loading ? t('common.loading') : t('filling.refresh')}
+        </button>
       </div>
 
       {/* M7: KPI Counters */}
@@ -375,7 +364,7 @@ export default function FillingPage() {
                 </div>
               </div>
               <button
-                onClick={() => openWhatsApp(order.customerName, order.customerPhone, order.cylinderCount, order.orderId)}
+                onClick={() => openWhatsApp(order.customerName, order.customerPhone, order.customerPhoneType, order.cylinderCount, order.orderId)}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium whitespace-nowrap transition-colors"
               >
                 {t('pickup.sendWhatsApp')}
@@ -420,21 +409,6 @@ export default function FillingPage() {
                         total: group.totalCylindersInOrder
                       })}
                     </div>
-                    {/* M3: Mark all ready button */}
-                    {group.cylinders.some(c => c.cylinderId && !c.cylinderId.endsWith('_ready')) && (
-                      <button
-                        onClick={() => handleMarkAllReady(group.orderId, group.cylinders.filter(c => c.cylinderId && !c.cylinderId.endsWith('_ready')).length)}
-                        disabled={actionLoading === `${group.orderId}_batch`}
-                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
-                        title={t('filling.markAllReady', { count: group.cylinders.length - group.readyCylindersInOrder })}
-                      >
-                        {actionLoading === `${group.orderId}_batch` ? (
-                          <span className="inline-block animate-spin">⟳</span>
-                        ) : (
-                          `✓ ${group.cylinders.length - group.readyCylindersInOrder}`
-                        )}
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -544,18 +518,6 @@ export default function FillingPage() {
           )}
         </div>
       )}
-
-      {/* Refresh Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={() => { setLoading(true); loadQueue(); }}
-          disabled={loading}
-          className="px-4 py-2 border rounded-lg hover:bg-accent disabled:opacity-50"
-        >
-          {loading ? t('common.loading') : t('filling.refresh')}
-        </button>
-      </div>
-
       {/* Problem Modal */}
       {problemModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

@@ -25,7 +25,15 @@ public class RefillOrderRepository : IRefillOrderRepository
     {
         var orderId = await _context.CylinderRefs
             .Where(cr => cr.CylinderId == cylinderId)
-            .Select(cr => cr.OrderId)
+            .Join(
+                _context.Orders,
+                cr => cr.OrderId,
+                o => o.OrderId,
+                (cr, o) => new { o.OrderId, o.Status, o.CreatedAt })
+            .OrderBy(x => x.Status == RefillOrderStatus.Open ? 0 :
+                          x.Status == RefillOrderStatus.ReadyForPickup ? 1 : 2)
+            .ThenByDescending(x => x.CreatedAt)
+            .Select(x => x.OrderId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (orderId == Guid.Empty)
@@ -34,6 +42,34 @@ public class RefillOrderRepository : IRefillOrderRepository
         }
 
         return await FindByIdAsync(orderId, cancellationToken);
+    }
+
+    public async Task<List<CurrentCylinderOrderInfo>> FindCurrentCylinderOrdersByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
+    {
+        var links = await _context.CylinderRefs
+            .Join(
+                _context.Orders,
+                cr => cr.OrderId,
+                o => o.OrderId,
+                (cr, o) => new { cr, o })
+            .Where(x => x.o.CustomerId == customerId)
+            .Select(x => new CurrentCylinderOrderInfo
+                {
+                    CylinderId = x.cr.CylinderId,
+                    OrderId = x.o.OrderId,
+                    OrderStatus = x.o.Status,
+                    OrderCreatedAt = x.o.CreatedAt
+                })
+            .ToListAsync(cancellationToken);
+
+        return links
+            .GroupBy(x => x.CylinderId)
+            .Select(g => g
+                .OrderBy(x => x.OrderStatus == RefillOrderStatus.Open ? 0 :
+                              x.OrderStatus == RefillOrderStatus.ReadyForPickup ? 1 : 2)
+                .ThenByDescending(x => x.OrderCreatedAt)
+                .First())
+            .ToList();
     }
 
     public async Task<List<RefillOrder>> FindOpenOrdersByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)

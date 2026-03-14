@@ -62,6 +62,7 @@ public class GetReadyForPickupQueryHandler
                 CustomerId = order.CustomerId,
                 CustomerName = customer.Name,
                 CustomerPhone = customer.Phone.Value,
+                CustomerPhoneType = customer.PhoneType.ToString(),
                 Status = order.Status.ToString(),
                 CreatedAt = order.CreatedAt,
                 NotifiedAt = order.NotifiedAt,

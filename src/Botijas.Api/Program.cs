@@ -1,5 +1,4 @@
 using Botijas.Domain.Repositories;
-using Botijas.Infrastructure.Hubs;
 using Botijas.Infrastructure.Data;
 using Botijas.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSignalR();
 
 // Database
 var rawConnectionString = builder.Configuration.GetConnectionString("Default")
@@ -27,7 +25,6 @@ builder.Services.AddDbContext<BotijasDbContext>(options =>
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IRefillOrderRepository, RefillOrderRepository>();
 builder.Services.AddScoped<ICylinderRepository, CylinderRepository>();
-builder.Services.AddScoped<IPrintJobRepository, PrintJobRepository>();
 builder.Services.AddScoped<ICylinderHistoryRepository, CylinderHistoryRepository>();
 
 // Application Handlers
@@ -42,11 +39,6 @@ builder.Services.AddScoped<Botijas.Application.Orders.Commands.CreateOrderComman
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.AddCylinderToOrderCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.AddCylindersToOrderBatchCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.ScanCylinderToOrderCommandHandler>();
-// Simulated print dispatcher (auto-acks as printed; swap for SignalRPrintJobDispatcher when real printer is connected)
-builder.Services.AddScoped<Botijas.Application.PrintJobs.IPrintJobDispatcher, Botijas.Infrastructure.PrintJobs.SimulatedPrintJobDispatcher>();
-builder.Services.AddScoped<Botijas.Application.PrintJobs.Commands.CreatePrintJobCommandHandler>();
-builder.Services.AddScoped<Botijas.Application.PrintJobs.Commands.AckPrintJobPrintedCommandHandler>();
-builder.Services.AddScoped<Botijas.Application.PrintJobs.Commands.AckPrintJobFailedCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Queries.GetFillingQueueQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.MarkCylinderReadyCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.MarkCylindersReadyBatchCommandHandler>();
@@ -54,6 +46,7 @@ builder.Services.AddScoped<Botijas.Application.Filling.Commands.ReportCylinderPr
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.AssignLabelCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Cylinders.Queries.GetCylinderHistoryQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Cylinders.Queries.GetCylinderByTokenQueryHandler>();
+builder.Services.AddScoped<Botijas.Application.Cylinders.Commands.UndoCylinderHistoryActionCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Reports.Queries.IDashboardStatsQuery, Botijas.Infrastructure.Queries.DashboardStatsQuery>();
 builder.Services.AddScoped<Botijas.Application.Pickup.Queries.GetReadyForPickupQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Pickup.Commands.DeliverCylinderCommandHandler>();
@@ -106,7 +99,6 @@ app.UseCors();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
-app.MapHub<PrintHub>("/hubs/print");
 
 // Database bootstrap: apply pending migrations automatically on startup.
 var autoInitDb = builder.Configuration.GetValue("Database__AutoInitialize", true);

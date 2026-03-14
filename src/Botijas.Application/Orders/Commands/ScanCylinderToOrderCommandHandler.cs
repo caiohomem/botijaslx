@@ -9,13 +9,16 @@ public class ScanCylinderToOrderCommandHandler
 {
     private readonly IRefillOrderRepository _orderRepository;
     private readonly ICylinderRepository _cylinderRepository;
+    private readonly ICylinderHistoryRepository _historyRepository;
 
     public ScanCylinderToOrderCommandHandler(
         IRefillOrderRepository orderRepository,
-        ICylinderRepository cylinderRepository)
+        ICylinderRepository cylinderRepository,
+        ICylinderHistoryRepository historyRepository)
     {
         _orderRepository = orderRepository;
         _cylinderRepository = cylinderRepository;
+        _historyRepository = historyRepository;
     }
 
     public async Task<Result<CylinderDto>> Handle(ScanCylinderToOrderCommand command, CancellationToken cancellationToken)
@@ -54,8 +57,26 @@ public class ScanCylinderToOrderCommandHandler
             return Result<CylinderDto>.Failure("Cylinder is already in another open order");
         }
 
+        try
+        {
+            cylinder.ReceiveForRefill();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result<CylinderDto>.Failure(ex.Message);
+        }
+
         order.AddCylinder(cylinder);
+        await _historyRepository.AddAsync(
+            CylinderHistoryEntry.Create(
+                cylinder.CylinderId,
+                CylinderEventType.Received,
+                "Botija recebida para enchimento",
+                order.OrderId),
+            cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);
+        await _cylinderRepository.SaveChangesAsync(cancellationToken);
+        await _historyRepository.SaveChangesAsync(cancellationToken);
 
         return Result<CylinderDto>.Success(new CylinderDto
         {

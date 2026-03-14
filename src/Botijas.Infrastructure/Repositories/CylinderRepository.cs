@@ -69,15 +69,16 @@ public class CylinderRepository : ICylinderRepository
 
     public async Task<List<FillingQueueItem>> GetFillingQueueAsync(CancellationToken cancellationToken = default)
     {
-        // Buscar botijas em estado Received que estão em pedidos Open
-        var query = from cylinder in _context.Cylinders
-                    join cylinderRef in _context.CylinderRefs on cylinder.CylinderId equals cylinderRef.CylinderId
+        // A fila de enchimento deve refletir o estado da botija dentro do pedido aberto atual.
+        var query = from cylinderRef in _context.CylinderRefs
+                    join cylinder in _context.Cylinders on cylinderRef.CylinderId equals cylinder.CylinderId
                     join order in _context.Orders on cylinderRef.OrderId equals order.OrderId
                     join customer in _context.Customers on order.CustomerId equals customer.CustomerId
-                    where cylinder.State == CylinderState.Received && order.Status == RefillOrderStatus.Open
-                    orderby cylinder.CreatedAt ascending
+                    where cylinderRef.State == CylinderState.Received && order.Status == RefillOrderStatus.Open
+                    orderby order.CreatedAt ascending, cylinder.SequentialNumber ascending
                     select new
                     {
+                        CylinderRef = cylinderRef,
                         Cylinder = cylinder,
                         Order = order,
                         Customer = customer
@@ -93,10 +94,9 @@ public class CylinderRepository : ICylinderRepository
 
         // Buscar contagem de botijas prontas por pedido
         var orderIds = orderGroups.Keys.ToList();
-        var readyCounts = await _context.Cylinders
-            .Join(_context.CylinderRefs, c => c.CylinderId, cr => cr.CylinderId, (c, cr) => new { c, cr })
-            .Where(x => orderIds.Contains(x.cr.OrderId) && x.c.State == CylinderState.Ready)
-            .GroupBy(x => x.cr.OrderId)
+        var readyCounts = await _context.CylinderRefs
+            .Where(cr => orderIds.Contains(cr.OrderId) && cr.State == CylinderState.Ready)
+            .GroupBy(cr => cr.OrderId)
             .Select(g => new { OrderId = g.Key, ReadyCount = g.Count() })
             .ToDictionaryAsync(x => x.OrderId, x => x.ReadyCount, cancellationToken);
 
@@ -108,17 +108,18 @@ public class CylinderRepository : ICylinderRepository
             .ToDictionaryAsync(x => x.OrderId, x => x.TotalCount, cancellationToken);
 
         return results.Select(r => new FillingQueueItem
-        {
-            CylinderId = r.Cylinder.CylinderId,
-            SequentialNumber = r.Cylinder.SequentialNumber,
-            LabelToken = r.Cylinder.LabelToken?.Value,
-            State = r.Cylinder.State.ToString(),
-            ReceivedAt = r.Cylinder.CreatedAt,
-            OrderId = r.Order.OrderId,
-            CustomerName = r.Customer.Name,
-            CustomerPhone = r.Customer.Phone.Value,
-            TotalCylindersInOrder = totalCounts.GetValueOrDefault(r.Order.OrderId, 0),
-            ReadyCylindersInOrder = readyCounts.GetValueOrDefault(r.Order.OrderId, 0)
+            {
+                CylinderId = r.Cylinder.CylinderId,
+                SequentialNumber = r.Cylinder.SequentialNumber,
+                LabelToken = r.Cylinder.LabelToken?.Value,
+                State = r.CylinderRef.State.ToString(),
+                ReceivedAt = r.Cylinder.CreatedAt,
+                OrderId = r.Order.OrderId,
+                CustomerName = r.Customer.Name,
+                CustomerPhone = r.Customer.Phone.Value,
+                CustomerPhoneType = r.Customer.PhoneType.ToString(),
+                TotalCylindersInOrder = totalCounts.GetValueOrDefault(r.Order.OrderId, 0),
+                ReadyCylindersInOrder = readyCounts.GetValueOrDefault(r.Order.OrderId, 0)
         }).ToList();
     }
 

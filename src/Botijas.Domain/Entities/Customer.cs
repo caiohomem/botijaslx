@@ -3,11 +3,18 @@ using Botijas.Domain.ValueObjects;
 
 namespace Botijas.Domain.Entities;
 
+public enum CustomerPhoneType
+{
+    PT,
+    International
+}
+
 public class Customer
 {
     public Guid CustomerId { get; private set; }
     public string Name { get; private set; }
     public PhoneNumber Phone { get; private set; }
+    public CustomerPhoneType PhoneType { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
     private readonly List<IDomainEvent> _domainEvents = new();
@@ -17,26 +24,29 @@ public class Customer
     {
         Name = string.Empty;
         Phone = PhoneNumber.Create("000000000");
+        PhoneType = CustomerPhoneType.PT;
     }
 
-    private Customer(Guid customerId, string name, PhoneNumber phone)
+    private Customer(Guid customerId, string name, PhoneNumber phone, CustomerPhoneType phoneType)
     {
         CustomerId = customerId;
         Name = name ?? throw new ArgumentNullException(nameof(name));
         Phone = phone ?? throw new ArgumentNullException(nameof(phone));
+        PhoneType = phoneType;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public static Customer Create(string name, PhoneNumber phone)
+    public static Customer Create(string name, PhoneNumber phone, CustomerPhoneType phoneType)
     {
-        var customer = new Customer(Guid.NewGuid(), name, phone);
+        var customer = new Customer(Guid.NewGuid(), name, phone, phoneType);
         customer._domainEvents.Add(new CustomerCreated(customer.CustomerId, customer.Name, customer.Phone.Value));
         return customer;
     }
 
-    public void UpdatePhone(PhoneNumber newPhone)
+    public void UpdatePhone(PhoneNumber newPhone, CustomerPhoneType phoneType)
     {
         Phone = newPhone ?? throw new ArgumentNullException(nameof(newPhone));
+        PhoneType = phoneType;
     }
 
     public void UpdateName(string newName)

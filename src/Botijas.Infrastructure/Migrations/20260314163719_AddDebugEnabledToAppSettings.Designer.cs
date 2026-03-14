@@ -3,6 +3,7 @@ using System;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Botijas.Infrastructure.Migrations
 {
     [DbContext(typeof(BotijasDbContext))]
-    partial class BotijasDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260314163719_AddDebugEnabledToAppSettings")]
+    partial class AddDebugEnabledToAppSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

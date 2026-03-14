@@ -13,25 +13,30 @@ const navItems = [
   { href: '/filling', key: 'filling' },
   { href: '/pickup', key: 'pickup' },
   { href: '/dashboard', key: 'dashboard' },
+  { href: '/clientes', key: 'customers' },
+  { href: '/debug', key: 'debug' },
 ];
 
 export function Header() {
   const t = useTranslations();
   const pathname = usePathname();
   const [appTitle, setAppTitle] = useState('');
+  const [debugEnabled, setDebugEnabled] = useState(false);
 
   useEffect(() => {
     loadAppSettings().then((settings) => {
       if (settings.appTitle) {
         setAppTitle(settings.appTitle);
       }
+      setDebugEnabled(settings.debugEnabled);
     });
   }, []);
 
   useEffect(() => {
     const handleSettingsUpdated = (event: Event) => {
-      const customEvent = event as CustomEvent<{ appTitle?: string }>;
+      const customEvent = event as CustomEvent<{ appTitle?: string; debugEnabled?: boolean }>;
       setAppTitle(customEvent.detail?.appTitle || '');
+      setDebugEnabled(Boolean(customEvent.detail?.debugEnabled));
     };
 
     window.addEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdated);
@@ -55,7 +60,7 @@ export function Header() {
           </div>
         </div>
         <nav className="flex gap-1 mt-3 -mb-3 overflow-x-auto">
-          {navItems.map((item) => (
+          {navItems.filter((item) => item.key !== 'debug' || debugEnabled).map((item) => (
             <Link
               key={item.href}
               href={item.href}

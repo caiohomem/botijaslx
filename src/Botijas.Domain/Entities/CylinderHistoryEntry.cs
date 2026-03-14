@@ -6,7 +6,8 @@ public enum CylinderEventType
     LabelAssigned,
     MarkedReady,
     Delivered,
-    ProblemReported
+    ProblemReported,
+    ActionUndone
 }
 
 public class CylinderHistoryEntry

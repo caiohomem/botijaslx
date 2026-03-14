@@ -59,26 +59,10 @@ public class DeliverCylinderCommandHandler
             return Result<DeliverCylinderResultDto>.Failure(ex.Message);
         }
 
-        // Buscar todas as botijas do pedido para verificar se está completo
+        // Buscar todas as botijas do pedido e recalcular o estado real do pedido,
+        // sincronizando também o espelho em CylinderRefs.
         var allCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-        var allDelivered = allCylinders.All(c => c.State == CylinderState.Delivered);
-
-        // Atualizar status do pedido baseado nas botijas entregues
-        // Precisamos atualizar o estado no CylinderRef também
-        order.CheckAndUpdateStatus(allCylinders);
-        
-        // Se todas entregues, completar o pedido
-        if (allDelivered)
-        {
-            try
-            {
-                order.Complete();
-            }
-            catch (InvalidOperationException)
-            {
-                // Pedido já foi completado ou não está no estado correto
-            }
-        }
+        order.RecalculateStatus(allCylinders);
 
         // Registrar histórico
         var historyEntry = CylinderHistoryEntry.Create(

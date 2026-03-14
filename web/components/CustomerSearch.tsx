@@ -8,6 +8,7 @@ interface Customer {
   customerId: string;
   name: string;
   phone: string;
+  phoneType: string;
 }
 
 interface CustomerSearchProps {

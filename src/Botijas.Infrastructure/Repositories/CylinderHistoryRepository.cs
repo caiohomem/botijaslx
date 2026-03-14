@@ -24,6 +24,20 @@ public class CylinderHistoryRepository : ICylinderHistoryRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<CylinderHistoryEntry?> FindByIdAsync(Guid historyEntryId, CancellationToken cancellationToken = default)
+    {
+        return await _context.CylinderHistory
+            .FirstOrDefaultAsync(h => h.Id == historyEntryId, cancellationToken);
+    }
+
+    public async Task<CylinderHistoryEntry?> GetLatestByCylinderIdAsync(Guid cylinderId, CancellationToken cancellationToken = default)
+    {
+        return await _context.CylinderHistory
+            .Where(h => h.CylinderId == cylinderId)
+            .OrderByDescending(h => h.Timestamp)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task AddAsync(CylinderHistoryEntry entry, CancellationToken cancellationToken = default)
     {
         await _context.CylinderHistory.AddAsync(entry, cancellationToken);

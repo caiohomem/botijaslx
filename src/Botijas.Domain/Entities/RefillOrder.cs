@@ -87,6 +87,42 @@ public class RefillOrder
         }
     }
 
+    public void RecalculateStatus(IEnumerable<Cylinder> cylinders)
+    {
+        var cylinderDict = cylinders.ToDictionary(c => c.CylinderId);
+        foreach (var cylinderRef in _cylinders)
+        {
+            if (cylinderDict.TryGetValue(cylinderRef.CylinderId, out var cylinder))
+            {
+                cylinderRef.State = cylinder.State;
+            }
+        }
+
+        var allDelivered = _cylinders.Count > 0 &&
+                          _cylinders.All(c => c.State == CylinderState.Delivered);
+
+        if (allDelivered)
+        {
+            Status = RefillOrderStatus.Completed;
+            CompletedAt ??= DateTime.UtcNow;
+            return;
+        }
+
+        var readyForPickup = _cylinders.Count > 0 &&
+                             _cylinders.All(c => c.State is CylinderState.Ready or CylinderState.Delivered);
+
+        if (readyForPickup)
+        {
+            Status = RefillOrderStatus.ReadyForPickup;
+            CompletedAt = null;
+            return;
+        }
+
+        Status = RefillOrderStatus.Open;
+        CompletedAt = null;
+        NotifiedAt = null;
+    }
+
     public void Complete()
     {
         if (Status != RefillOrderStatus.ReadyForPickup)

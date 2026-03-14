@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { customersApi, historyApi, reportsApi, CylinderHistory, DashboardStats, CustomerCylindersResult, CustomerCylinder } from '@/lib/api';
+import { customersApi, historyApi, reportsApi, cylindersApi, CylinderHistory, DashboardStats, CustomerCylindersResult } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
 import { CustomerSearch } from '@/components/CustomerSearch';
 
@@ -21,6 +21,9 @@ export default function DashboardPage() {
   const [customerResults, setCustomerResults] = useState<Array<{ customerId: string; name: string; phone: string }>>([]);
   const [selectedCustomerCylinders, setSelectedCustomerCylinders] = useState<CustomerCylindersResult | null>(null);
   const [expandedCylinder, setExpandedCylinder] = useState<string | null>(null);
+  const [undoModal, setUndoModal] = useState<{ cylinderId: string; historyEntryId: string; eventType: string } | null>(null);
+  const [undoComment, setUndoComment] = useState('');
+  const [undoLoading, setUndoLoading] = useState(false);
 
   // Cylinder lookup state
   const [cylinderHistory, setCylinderHistory] = useState<CylinderHistory | null>(null);
@@ -149,7 +152,39 @@ export default function DashboardPage() {
       case 'MarkedReady': return '✅';
       case 'Delivered': return '📦';
       case 'ProblemReported': return '⚠️';
+      case 'ActionUndone': return '↩️';
       default: return '•';
+    }
+  };
+
+  const refreshCurrentView = async () => {
+    if (cylinderHistory) {
+      const refreshed = await historyApi.getByCylinderId(cylinderHistory.cylinderId);
+      setCylinderHistory(refreshed);
+      return;
+    }
+
+    if (selectedCustomerCylinders) {
+      const refreshed = await customersApi.getCylinders(selectedCustomerCylinders.customerId);
+      setSelectedCustomerCylinders(refreshed);
+    }
+  };
+
+  const handleUndoAction = async () => {
+    if (!undoModal || !undoComment.trim()) return;
+
+    setUndoLoading(true);
+    setError(null);
+
+    try {
+      await cylindersApi.undoHistoryAction(undoModal.cylinderId, undoModal.historyEntryId, undoComment.trim());
+      await refreshCurrentView();
+      setUndoModal(null);
+      setUndoComment('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('dashboard.undoFailed'));
+    } finally {
+      setUndoLoading(false);
     }
   };
 
@@ -369,6 +404,10 @@ export default function DashboardPage() {
                       formatDate={formatDate}
                       getEventIcon={getEventIcon}
                       t={t}
+                      onUndoAction={(historyEntryId, eventType) => {
+                        setUndoModal({ cylinderId: cylinder.cylinderId, historyEntryId, eventType });
+                        setUndoComment('');
+                      }}
                     />
                   )}
                 </div>
@@ -432,6 +471,10 @@ export default function DashboardPage() {
               getEventIcon={getEventIcon}
               t={t}
               inline
+              onUndoAction={(historyEntryId, eventType) => {
+                setUndoModal({ cylinderId: cylinderHistory.cylinderId, historyEntryId, eventType });
+                setUndoComment('');
+              }}
             />
           </div>
 
@@ -451,6 +494,44 @@ export default function DashboardPage() {
           <div>{t('dashboard.scanToStart')}</div>
         </div>
       )}
+
+      {undoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold">{t('dashboard.undoTitle')}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t('dashboard.undoDescription', { action: t(`dashboard.events.${undoModal.eventType}`) })}
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('dashboard.undoComment')}</label>
+              <textarea
+                value={undoComment}
+                onChange={(e) => setUndoComment(e.target.value)}
+                placeholder={t('dashboard.undoCommentPlaceholder')}
+                className="w-full px-3 py-2 border rounded-lg bg-background h-24 resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setUndoModal(null);
+                  setUndoComment('');
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleUndoAction}
+                disabled={!undoComment.trim() || undoLoading}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
+              >
+                {undoLoading ? t('common.loading') : t('dashboard.deleteAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -462,12 +543,14 @@ function CylinderTimeline({
   getEventIcon,
   t,
   inline = false,
+  onUndoAction,
 }: {
-  history: Array<{ eventType: string; details?: string; timestamp: string }>;
+  history: Array<{ id: string; eventType: string; details?: string; timestamp: string }>;
   formatDate: (d: string) => string;
   getEventIcon: (e: string) => string;
   t: (key: string) => string;
   inline?: boolean;
+  onUndoAction?: (historyEntryId: string, eventType: string) => void;
 }) {
   if (history.length === 0) {
     return (
@@ -477,19 +560,47 @@ function CylinderTimeline({
     );
   }
 
+  const undoneIds = new Set(
+    history
+      .filter((item) => item.eventType === 'ActionUndone')
+      .map((item) => extractUndoneHistoryEntryId(item.details))
+      .filter((value): value is string => Boolean(value))
+  );
+
+  const latestUndoableActiveId = history.find((item) =>
+    item.eventType !== 'ActionUndone' &&
+    !undoneIds.has(item.id) &&
+    ['Delivered', 'MarkedReady', 'ProblemReported'].includes(item.eventType)
+  )?.id;
+
   return (
     <div className={`space-y-3 ${!inline ? 'px-4 pb-4 border-t bg-muted/20' : ''}`}>
       {!inline ? null : null}
-      {history.map((item, index) => (
-        <div key={index} className={`flex gap-3 ${!inline && index === 0 ? 'pt-4' : ''}`}>
+      {history.map((item, index) => {
+        const canUndo =
+          item.id === latestUndoableActiveId &&
+          !!onUndoAction;
+
+        return (
+        <div key={item.id} className={`flex gap-3 ${!inline && index === 0 ? 'pt-4' : ''}`}>
           <div className="text-xl">{getEventIcon(item.eventType)}</div>
           <div className="flex-1">
-            <div className="font-medium">
-              {t(`dashboard.events.${item.eventType}`)}
+            <div className="flex items-start justify-between gap-3">
+              <div className="font-medium">
+                {t(`dashboard.events.${item.eventType}`)}
+              </div>
+              {canUndo && (
+                <button
+                  onClick={() => onUndoAction?.(item.id, item.eventType)}
+                  className="px-2 py-1 border rounded-lg text-xs font-medium hover:bg-accent whitespace-nowrap"
+                >
+                  {t('dashboard.deleteAction')}
+                </button>
+              )}
             </div>
             {item.details && (
               <div className="text-sm text-muted-foreground">
-                {item.details}
+                {formatHistoryDetails(item, t)}
               </div>
             )}
             <div className="text-xs text-muted-foreground">
@@ -497,9 +608,39 @@ function CylinderTimeline({
             </div>
           </div>
         </div>
-      ))}
+      )})}
     </div>
   );
+}
+
+function extractUndoneHistoryEntryId(details?: string): string | null {
+  if (!details) return null;
+
+  const match = details.match(/\|\|UNDO:([0-9a-fA-F-]{36})\|\|/);
+  return match?.[1] ?? null;
+}
+
+function cleanHistoryDetails(details?: string): string {
+  if (!details) return '';
+  return details.replace(/\s*\|\|UNDO:[0-9a-fA-F-]{36}\|\|/, '').trim();
+}
+
+function formatHistoryDetails(
+  item: { eventType: string; details?: string },
+  t: (key: string) => string
+): string {
+  const details = cleanHistoryDetails(item.details);
+
+  if (item.eventType !== 'ActionUndone' || !details) {
+    return details;
+  }
+
+  return details
+    .replace('Delivered', t('dashboard.events.Delivered'))
+    .replace('MarkedReady', t('dashboard.events.MarkedReady'))
+    .replace('ProblemReported', t('dashboard.events.ProblemReported'))
+    .replace('LabelAssigned', t('dashboard.events.LabelAssigned'))
+    .replace('Received', t('dashboard.events.Received'));
 }
 
 // Stat Card Component

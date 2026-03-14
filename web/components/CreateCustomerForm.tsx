@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { customersApi } from '@/lib/api';
-import { loadAppSettings } from '@/lib/settings';
+import { clampPhoneDigits, getPhoneMaxDigits, PhoneMode } from '@/lib/phone';
 
 interface Customer {
   customerId: string;
   name: string;
   phone: string;
+  phoneType: string;
 }
 
 interface CreateCustomerFormProps {
@@ -20,13 +21,14 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
   const t = useTranslations();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneMode, setPhoneMode] = useState<PhoneMode>('pt');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [maxPhoneDigits, setMaxPhoneDigits] = useState(9);
+  const maxPhoneDigits = getPhoneMaxDigits(phoneMode);
 
   useEffect(() => {
-    loadAppSettings().then((settings) => setMaxPhoneDigits(settings.maxPhoneDigits));
-  }, []);
+    setPhone((current) => clampPhoneDigits(current, phoneMode));
+  }, [phoneMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +36,7 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
     setError(null);
 
     try {
-      const customer = await customersApi.create({ name, phone });
+      const customer = await customersApi.create({ name, phone, phoneType: phoneMode });
       onCreated(customer);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar cliente');
@@ -58,13 +60,30 @@ export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormPr
 
       <div>
         <label className="block text-sm font-medium mb-1">{t('customer.phone')}</label>
+        <div className="flex gap-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setPhoneMode('pt')}
+            className={`px-3 py-2 border rounded-lg text-sm ${phoneMode === 'pt' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+          >
+            PT 🇵🇹
+          </button>
+          <button
+            type="button"
+            onClick={() => setPhoneMode('international')}
+            className={`px-3 py-2 border rounded-lg text-sm ${phoneMode === 'international' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+          >
+            {t('customer.international')}
+          </button>
+        </div>
         <input
           type="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(clampPhoneDigits(e.target.value, phoneMode))}
           required
           maxLength={maxPhoneDigits}
           className="w-full px-4 py-2 border rounded-lg bg-background text-foreground"
+          placeholder={phoneMode === 'pt' ? '912345678' : '351912345678'}
         />
       </div>
 

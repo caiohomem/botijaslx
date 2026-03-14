@@ -10,11 +10,10 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   whatsAppMessageTemplate: 'Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!',
   welcomeMessageTemplate: 'Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}',
   thankYouMessageTemplate: 'Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!',
-  labelTemplate: 'default',
   printerType: 'label',
   labelWidthMm: 50,
   labelHeightMm: 75,
-  maxPhoneDigits: 9,
+  debugEnabled: false,
   soundNotificationsDisabled: false,
   updatedAt: '',
 };

@@ -36,29 +36,35 @@ public class MarkCylinderReadyCommandHandler
             return Result<FillingResultDto>.Failure("Pedido não encontrado para esta botija");
         }
 
-        // Marcar como pronta
-        try
+        var wasAlreadyReady = cylinder.State == CylinderState.Ready;
+
+        if (!wasAlreadyReady)
         {
-            cylinder.MarkAsReady();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Result<FillingResultDto>.Failure(ex.Message);
+            try
+            {
+                cylinder.MarkAsReady();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result<FillingResultDto>.Failure(ex.Message);
+            }
         }
 
         // Buscar todos os cilindros do pedido para verificar se está completo
         var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
         
-        // Atualizar status do pedido
-        order.CheckAndUpdateStatus(orderCylinders);
+        // Sincronizar refs e recalcular status do pedido com base no estado real dos cilindros.
+        order.RecalculateStatus(orderCylinders);
 
-        // Registrar histórico
-        var historyEntry = CylinderHistoryEntry.Create(
-            cylinder.CylinderId,
-            CylinderEventType.MarkedReady,
-            "Botija marcada como cheia",
-            order.OrderId);
-        await _historyRepository.AddAsync(historyEntry, cancellationToken);
+        if (!wasAlreadyReady)
+        {
+            var historyEntry = CylinderHistoryEntry.Create(
+                cylinder.CylinderId,
+                CylinderEventType.MarkedReady,
+                "Botija marcada como cheia",
+                order.OrderId);
+            await _historyRepository.AddAsync(historyEntry, cancellationToken);
+        }
 
         await _cylinderRepository.SaveChangesAsync(cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);

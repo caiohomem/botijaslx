@@ -5,6 +5,8 @@ namespace Botijas.Domain.Repositories;
 public interface ICylinderHistoryRepository
 {
     Task<List<CylinderHistoryEntry>> GetByCylinderIdAsync(Guid cylinderId, CancellationToken cancellationToken = default);
+    Task<CylinderHistoryEntry?> FindByIdAsync(Guid historyEntryId, CancellationToken cancellationToken = default);
+    Task<CylinderHistoryEntry?> GetLatestByCylinderIdAsync(Guid cylinderId, CancellationToken cancellationToken = default);
     Task AddAsync(CylinderHistoryEntry entry, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
