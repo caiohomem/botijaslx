@@ -71,31 +71,51 @@ export function LabelPreview({
     const usableW = W - padSide * 2;
 
     // Zone heights (proportional to label height)
-    // Top: store name + link = 16% of height
+    // Top: customer data = 32% of height
     // QR: 52% of height
-    // Bottom: text = 32% of height
-    const topZone = Math.round(H * 0.16);
+    // Bottom: store name + link = 16% of height
+    const topZone = Math.round(H * 0.32);
     const qrZone = Math.round(H * 0.52);
     const bottomZone = H - topZone - qrZone;
 
-    // --- TOP: Store name and link ---
-    if (storeName) {
-      const nameSize = Math.round(widthMm * 0.07 * SCALE);
-      const linkSize = Math.round(widthMm * 0.045 * SCALE);
-      const topPadding = Math.round(topZone * 0.15);
+    // --- TOP: Name, Phone, Seq ---
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-      ctx.fillStyle = '#000000';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+    const hasName = !!customerName;
+    const hasPhone = !!customerPhone;
+    const hasSeq = sequentialNumber !== undefined;
+    const topLines = [hasName, hasPhone, hasSeq].filter(Boolean).length;
 
-      // Store name
-      ctx.font = `bold ${nameSize}px sans-serif`;
-      ctx.fillText(storeName, W / 2, topPadding + nameSize / 2, usableW);
+    if (topLines > 0) {
+      const lineH = topZone / (topLines + 1);
+      let slot = 1;
 
-      // Store link (if available)
-      if (displayStoreLink) {
-        ctx.font = `${linkSize}px sans-serif`;
-        ctx.fillText(displayStoreLink, W / 2, topPadding + nameSize + linkSize, usableW);
+      if (hasName) {
+        const fontSize = Math.round(widthMm * 0.07 * SCALE);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillText(customerName!, W / 2, lineH * slot, usableW);
+        slot++;
+      }
+
+      if (hasPhone) {
+        const fontSize = Math.round(widthMm * 0.06 * SCALE);
+        ctx.font = `${fontSize}px sans-serif`;
+        const formattedPhone = formatPhoneNumber(customerPhone!);
+        ctx.fillText(formattedPhone, W / 2, lineH * slot, usableW);
+        slot++;
+      }
+
+      if (hasSeq) {
+        const fontSize = Math.round(widthMm * 0.08 * SCALE);
+        ctx.font = `bold ${fontSize}px monospace`;
+        ctx.fillText(
+          `#${String(sequentialNumber).padStart(4, '0')}`,
+          W / 2,
+          lineH * slot,
+          usableW
+        );
       }
     }
 
@@ -150,45 +170,22 @@ export function LabelPreview({
     ctx.lineTo(W - padSide, sep2Y);
     ctx.stroke();
 
-    // --- BOTTOM: Name, Phone, Seq ---
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // --- BOTTOM: Store name and link ---
+    if (storeName) {
+      const nameSize = Math.round(widthMm * 0.07 * SCALE);
+      const linkSize = Math.round(widthMm * 0.045 * SCALE);
+      const lineH = bottomZone / (displayStoreLink ? 3 : 2);
 
-    // Divide bottom zone into slots
-    const hasName = !!customerName;
-    const hasPhone = !!customerPhone;
-    const hasSeq = sequentialNumber !== undefined;
-    const lines = [hasName, hasPhone, hasSeq].filter(Boolean).length;
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
-    if (lines > 0) {
-      const lineH = bottomZone / (lines + 1);
-      let slot = 1;
+      ctx.font = `bold ${nameSize}px sans-serif`;
+      ctx.fillText(storeName, W / 2, sep2Y + lineH, usableW);
 
-      if (hasName) {
-        const fontSize = Math.round(widthMm * 0.07 * SCALE);
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillText(customerName!, W / 2, sep2Y + lineH * slot, usableW);
-        slot++;
-      }
-
-      if (hasPhone) {
-        const fontSize = Math.round(widthMm * 0.06 * SCALE);
-        ctx.font = `${fontSize}px sans-serif`;
-        const formattedPhone = formatPhoneNumber(customerPhone!);
-        ctx.fillText(formattedPhone, W / 2, sep2Y + lineH * slot, usableW);
-        slot++;
-      }
-
-      if (hasSeq) {
-        const fontSize = Math.round(widthMm * 0.08 * SCALE);
-        ctx.font = `bold ${fontSize}px monospace`;
-        ctx.fillText(
-          `#${String(sequentialNumber).padStart(4, '0')}`,
-          W / 2,
-          sep2Y + lineH * slot,
-          usableW
-        );
+      if (displayStoreLink) {
+        ctx.font = `${linkSize}px sans-serif`;
+        ctx.fillText(displayStoreLink, W / 2, sep2Y + lineH * 2, usableW);
       }
     }
   }, [qrContent, customerName, customerPhone, sequentialNumber, storeName, displayStoreLink, W, H, widthMm]);
