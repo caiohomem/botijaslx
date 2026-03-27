@@ -53,7 +53,7 @@ export default function PickupPage() {
     };
   }, [loadOrders]);
 
-  const openThankYouWhatsApp = (order: PickupOrder) => {
+  const openThankYouWhatsApp = async (order: PickupOrder) => {
     const message = thankYouTemplate
       .replace('{name}', order.customerName)
       .replace('{count}', String(order.totalCylinders))
@@ -64,6 +64,20 @@ export default function PickupPage() {
       order.customerPhoneType === 'International' ? 'international' : 'pt'
     );
     window.open(link, '_blank');
+
+    // Marcar como notificado se ainda não foi
+    if (order.needsNotification) {
+      try {
+        await pickupApi.markNotified(order.orderId);
+        setOrders(prev => prev.map(o =>
+          o.orderId === order.orderId
+            ? { ...o, needsNotification: false, notifiedAt: new Date().toISOString() }
+            : o
+        ));
+      } catch {
+        // Não bloquear o fluxo se falhar
+      }
+    }
   };
 
   const handleDeliverAll = async (order: PickupOrder) => {
@@ -245,58 +259,37 @@ export default function PickupPage() {
               const deliveredCount = order.totalCylinders - undeliveredCount;
 
               return (
-            <div key={order.orderId} className="border rounded-lg overflow-hidden">
+            <div key={order.orderId} className={`border rounded-lg overflow-hidden ${order.needsNotification ? 'border-amber-400 dark:border-amber-600' : ''}`}>
               {/* Order Header */}
               <div className="bg-muted/50 p-4 border-b">
-                <div className="flex justify-between items-start gap-4">
+                {/* Linha 1: Nome + badges */}
+                <div className="flex justify-between items-start gap-2">
                   <button
                     onClick={() => setExpandedOrder(
                       expandedOrder === order.orderId ? null : order.orderId
                     )}
-                    className="text-left flex-1"
+                    className="text-left flex-1 min-w-0"
                   >
-                    <div className="font-semibold text-lg">{order.customerName}</div>
+                    <div className="font-semibold text-lg truncate">{order.customerName}</div>
                     <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {t('pickup.createdAt')}: {formatDate(order.createdAt)}
                     </div>
                   </button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {/* M8: Wait time badge */}
-                    <div className={`text-sm px-3 py-1 rounded-full whitespace-nowrap font-medium ${getWaitTimeBadgeClass(getWaitTimeMinutes(order.createdAt))}`}>
+                    <div className={`text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium ${getWaitTimeBadgeClass(getWaitTimeMinutes(order.createdAt))}`}>
                       {formatWaitTime(getWaitTimeMinutes(order.createdAt))}
                     </div>
-
-                    <div className="text-sm bg-background px-3 py-1 rounded-full whitespace-nowrap">
+                    <div className="text-xs bg-background px-2 py-1 rounded-full whitespace-nowrap">
                       {t('pickup.progress', { delivered: deliveredCount, total: order.totalCylinders })}
                     </div>
-
-                    {/* WhatsApp button */}
-                    <button
-                      onClick={() => openThankYouWhatsApp(order)}
-                      className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
-                      title={t('pickup.sendWhatsApp')}
-                    >
-                      {t('pickup.sendWhatsApp')}
-                    </button>
-
-                    {/* M4: Direct deliver button without expand */}
-                    {undeliveredCount > 0 && (
-                      <button
-                        onClick={() => setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
-                        disabled={actionLoading === order.orderId}
-                        className="px-3 py-1 text-sm bg-primary hover:opacity-90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
-                        title={t('pickup.deliverAll', { count: undeliveredCount })}
-                      >
-                        {actionLoading === order.orderId ? (
-                          <span className="inline-block animate-spin">⟳</span>
-                        ) : (
-                          `✓ ${undeliveredCount}`
-                        )}
-                      </button>
+                    {order.needsNotification && (
+                      <div className="text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                        !
+                      </div>
                     )}
-
                     <button
                       onClick={() => setExpandedOrder(
                         expandedOrder === order.orderId ? null : order.orderId
@@ -306,6 +299,40 @@ export default function PickupPage() {
                       {expandedOrder === order.orderId ? '▼' : '▶'}
                     </button>
                   </div>
+                </div>
+
+                {/* Linha 2: Botões de acção */}
+                <div className="flex items-center gap-2 mt-3">
+                  <button
+                    onClick={() => openThankYouWhatsApp(order)}
+                    className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors whitespace-nowrap font-medium ${
+                      order.needsNotification
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-muted hover:bg-accent text-muted-foreground border'
+                    }`}
+                    title={t('pickup.sendWhatsApp')}
+                  >
+                    {order.needsNotification
+                      ? `📱 ${t('pickup.sendWhatsApp')}`
+                      : `✓ ${t('pickup.notified')}`
+                    }
+                  </button>
+
+                  {/* M4: Direct deliver button */}
+                  {undeliveredCount > 0 && (
+                    <button
+                      onClick={() => setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
+                      disabled={actionLoading === order.orderId}
+                      className="flex-1 px-3 py-2 text-sm bg-primary hover:opacity-90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
+                      title={t('pickup.deliverAll', { count: undeliveredCount })}
+                    >
+                      {actionLoading === order.orderId ? (
+                        <span className="inline-block animate-spin">⟳</span>
+                      ) : (
+                        `✓ ${t('pickup.deliver')} (${undeliveredCount})`
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
