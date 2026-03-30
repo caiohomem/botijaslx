@@ -8,6 +8,9 @@ namespace Botijas.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddOrderFulfillmentAndShippingTemplate : Migration
     {
+        private const string DefaultShippingReadyMessageTemplate =
+            "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas e vamos enviar para a morada indicada. {link}";
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -16,7 +19,7 @@ namespace Botijas.Infrastructure.Migrations
                 table: "Orders",
                 type: "text",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "Pickup");
 
             migrationBuilder.AddColumn<bool>(
                 name: "RefillPaid",
@@ -44,7 +47,19 @@ namespace Botijas.Infrastructure.Migrations
                 type: "character varying(1000)",
                 maxLength: 1000,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: DefaultShippingReadyMessageTemplate);
+
+            migrationBuilder.Sql("""
+                UPDATE "Orders"
+                SET "FulfillmentMethod" = 'Pickup'
+                WHERE "FulfillmentMethod" IS NULL OR "FulfillmentMethod" = '';
+                """);
+
+            migrationBuilder.Sql($"""
+                UPDATE "AppSettings"
+                SET "ShippingReadyMessageTemplate" = '{DefaultShippingReadyMessageTemplate.Replace("'", "''")}'
+                WHERE "ShippingReadyMessageTemplate" IS NULL OR "ShippingReadyMessageTemplate" = '';
+                """);
         }
 
         /// <inheritdoc />
