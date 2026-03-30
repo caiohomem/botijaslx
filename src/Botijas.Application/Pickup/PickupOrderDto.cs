@@ -8,8 +8,12 @@ public class PickupOrderDto
     public string CustomerPhone { get; set; } = string.Empty;
     public string CustomerPhoneType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public string FulfillmentMethod { get; set; } = string.Empty;
+    public bool RefillPaid { get; set; }
+    public bool ShippingPaid { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? NotifiedAt { get; set; }
+    public DateTime? ShippedAt { get; set; }
     public bool NeedsNotification { get; set; }
     public int TotalCylinders { get; set; }
     public int DeliveredCylinders { get; set; }

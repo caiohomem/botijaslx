@@ -27,6 +27,7 @@ public class GetFillingQueueQueryHandler
             CustomerName = item.CustomerName,
             CustomerPhone = item.CustomerPhone,
             CustomerPhoneType = item.CustomerPhoneType,
+            FulfillmentMethod = item.FulfillmentMethod,
             TotalCylindersInOrder = item.TotalCylindersInOrder,
             ReadyCylindersInOrder = item.ReadyCylindersInOrder
         }).ToList();

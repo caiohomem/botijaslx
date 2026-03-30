@@ -19,6 +19,11 @@ public class CreateOrderCommandHandler
 
     public async Task<Result<OrderDto>> Handle(CreateOrderCommand command, CancellationToken cancellationToken)
     {
+        if (!Enum.TryParse<FulfillmentMethod>(command.FulfillmentMethod, true, out var fulfillmentMethod))
+        {
+            return Result<OrderDto>.Failure("Fulfillment method inválido");
+        }
+
         // Verificar se cliente existe
         var customer = await _customerRepository.FindByIdAsync(command.CustomerId, cancellationToken);
         if (customer == null)
@@ -34,18 +39,33 @@ public class CreateOrderCommandHandler
 
         if (existingOpenOrder != null)
         {
+            existingOpenOrder.UpdateFulfillmentDetails(
+                fulfillmentMethod,
+                command.RefillPaid,
+                command.ShippingPaid);
+
+            await _orderRepository.SaveChangesAsync(cancellationToken);
+
             return Result<OrderDto>.Success(new OrderDto
             {
                 OrderId = existingOpenOrder.OrderId,
                 CustomerId = existingOpenOrder.CustomerId,
                 Status = existingOpenOrder.Status.ToString(),
+                FulfillmentMethod = existingOpenOrder.FulfillmentMethod.ToString(),
+                RefillPaid = existingOpenOrder.RefillPaid,
+                ShippingPaid = existingOpenOrder.ShippingPaid,
                 CreatedAt = existingOpenOrder.CreatedAt,
                 CompletedAt = existingOpenOrder.CompletedAt,
+                ShippedAt = existingOpenOrder.ShippedAt,
                 CylinderCount = existingOpenOrder.Cylinders.Count
             });
         }
 
-        var order = RefillOrder.Create(command.CustomerId);
+        var order = RefillOrder.Create(
+            command.CustomerId,
+            fulfillmentMethod,
+            command.RefillPaid,
+            command.ShippingPaid);
         await _orderRepository.AddAsync(order, cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);
 
@@ -54,7 +74,11 @@ public class CreateOrderCommandHandler
             OrderId = order.OrderId,
             CustomerId = order.CustomerId,
             Status = order.Status.ToString(),
+            FulfillmentMethod = order.FulfillmentMethod.ToString(),
+            RefillPaid = order.RefillPaid,
+            ShippingPaid = order.ShippingPaid,
             CreatedAt = order.CreatedAt,
+            ShippedAt = order.ShippedAt,
             CylinderCount = order.Cylinders.Count
         });
     }

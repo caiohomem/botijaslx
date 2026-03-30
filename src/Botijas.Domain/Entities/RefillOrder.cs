@@ -9,14 +9,24 @@ public enum RefillOrderStatus
     Completed
 }
 
+public enum FulfillmentMethod
+{
+    Pickup,
+    Shipping
+}
+
 public class RefillOrder
 {
     public Guid OrderId { get; private set; }
     public Guid CustomerId { get; private set; }
     public RefillOrderStatus Status { get; private set; }
+    public FulfillmentMethod FulfillmentMethod { get; private set; }
+    public bool RefillPaid { get; private set; }
+    public bool ShippingPaid { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? CompletedAt { get; private set; }
     public DateTime? NotifiedAt { get; private set; }
+    public DateTime? ShippedAt { get; private set; }
 
     private readonly List<CylinderRef> _cylinders = new();
     public IReadOnlyCollection<CylinderRef> Cylinders => _cylinders.AsReadOnly();
@@ -27,22 +37,50 @@ public class RefillOrder
     private RefillOrder() // EF Core
     {
         Status = RefillOrderStatus.Open;
+        FulfillmentMethod = FulfillmentMethod.Pickup;
         CreatedAt = DateTime.UtcNow;
     }
 
-    private RefillOrder(Guid orderId, Guid customerId)
+    private RefillOrder(
+        Guid orderId,
+        Guid customerId,
+        FulfillmentMethod fulfillmentMethod,
+        bool refillPaid,
+        bool shippingPaid)
     {
         OrderId = orderId;
         CustomerId = customerId;
         Status = RefillOrderStatus.Open;
+        FulfillmentMethod = fulfillmentMethod;
+        RefillPaid = refillPaid;
+        ShippingPaid = shippingPaid;
         CreatedAt = DateTime.UtcNow;
     }
 
-    public static RefillOrder Create(Guid customerId)
+    public static RefillOrder Create(
+        Guid customerId,
+        FulfillmentMethod fulfillmentMethod = FulfillmentMethod.Pickup,
+        bool refillPaid = false,
+        bool shippingPaid = false)
     {
-        var order = new RefillOrder(Guid.NewGuid(), customerId);
+        var order = new RefillOrder(Guid.NewGuid(), customerId, fulfillmentMethod, refillPaid, shippingPaid);
         order._domainEvents.Add(new OrderCreated(order.OrderId, order.CustomerId));
         return order;
+    }
+
+    public void UpdateFulfillmentDetails(
+        FulfillmentMethod fulfillmentMethod,
+        bool refillPaid,
+        bool shippingPaid)
+    {
+        if (Status != RefillOrderStatus.Open)
+        {
+            throw new InvalidOperationException($"Cannot update fulfillment details. Current status: {Status}");
+        }
+
+        FulfillmentMethod = fulfillmentMethod;
+        RefillPaid = refillPaid;
+        ShippingPaid = shippingPaid;
     }
 
     public void AddCylinder(Cylinder cylinder)
@@ -121,6 +159,7 @@ public class RefillOrder
         Status = RefillOrderStatus.Open;
         CompletedAt = null;
         NotifiedAt = null;
+        ShippedAt = null;
     }
 
     public void Complete()
@@ -149,6 +188,21 @@ public class RefillOrder
         }
 
         NotifiedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsShipped()
+    {
+        if (FulfillmentMethod != FulfillmentMethod.Shipping)
+        {
+            throw new InvalidOperationException("Cannot mark order as shipped when fulfillment method is pickup");
+        }
+
+        if (Status != RefillOrderStatus.Completed)
+        {
+            throw new InvalidOperationException($"Cannot mark order as shipped. Current status: {Status}");
+        }
+
+        ShippedAt ??= DateTime.UtcNow;
     }
 
     public bool NeedsNotification => Status == RefillOrderStatus.ReadyForPickup && NotifiedAt == null;

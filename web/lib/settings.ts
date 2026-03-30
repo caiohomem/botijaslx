@@ -8,6 +8,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   storeLink: '',
   appTitle: '',
   whatsAppMessageTemplate: 'Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!',
+  shippingReadyMessageTemplate: 'Olá {name}! As suas {count} botija(s) de CO₂ estão prontas e vamos enviar para a morada indicada. {link}',
   welcomeMessageTemplate: 'Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}',
   thankYouMessageTemplate: 'Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!',
   printerType: 'label',

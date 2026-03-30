@@ -17,7 +17,8 @@ export default function PickupPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
+  const [pickupTemplate, setPickupTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
+  const [shippingTemplate, setShippingTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
   const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
 
   const loadOrders = useCallback(async () => {
@@ -35,7 +36,8 @@ export default function PickupPage() {
   useEffect(() => {
     loadOrders();
     loadAppSettings().then((settings) => {
-      setThankYouTemplate(settings.thankYouMessageTemplate);
+      setPickupTemplate(settings.whatsAppMessageTemplate);
+      setShippingTemplate(settings.shippingReadyMessageTemplate);
       setStoreLink(settings.storeLink);
     });
 
@@ -53,8 +55,11 @@ export default function PickupPage() {
     };
   }, [loadOrders]);
 
-  const openThankYouWhatsApp = async (order: PickupOrder) => {
-    const message = thankYouTemplate
+  const openReadyWhatsApp = async (order: PickupOrder) => {
+    const template = order.fulfillmentMethod === 'Shipping'
+      ? shippingTemplate
+      : pickupTemplate;
+    const message = template
       .replace('{name}', order.customerName)
       .replace('{count}', String(order.totalCylinders))
       .replace('{link}', storeLink);
@@ -77,6 +82,27 @@ export default function PickupPage() {
       } catch {
         // Não bloquear o fluxo se falhar
       }
+    }
+  };
+
+  const handleShipOrder = async (order: PickupOrder) => {
+    setActionLoading(order.orderId);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await pickupApi.markShipped(order.orderId);
+      playSound('complete');
+      setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
+      setExpandedOrder(null);
+      setSuccessMessage(`Pedido expedido para ${order.customerName}!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao marcar pedido como enviado');
+      setLoading(true);
+      loadOrders();
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -255,6 +281,7 @@ export default function PickupPage() {
             getWaitTimeMinutes(b.createdAt) - getWaitTimeMinutes(a.createdAt)
           ).map((order) => (
             (() => {
+              const isShipping = order.fulfillmentMethod === 'Shipping';
               const undeliveredCount = order.cylinders.filter(c => !c.isDelivered).length;
               const deliveredCount = order.totalCylinders - undeliveredCount;
 
@@ -274,6 +301,25 @@ export default function PickupPage() {
                     <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {t('pickup.createdAt')}: {formatDate(order.createdAt)}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        isShipping
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                      }`}>
+                        {isShipping ? 'Envio' : 'Recolha'}
+                      </div>
+                      {order.refillPaid && (
+                        <div className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                          Enchimento pago
+                        </div>
+                      )}
+                      {isShipping && order.shippingPaid && (
+                        <div className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                          Portes pagos
+                        </div>
+                      )}
                     </div>
                   </button>
 
@@ -304,7 +350,7 @@ export default function PickupPage() {
                 {/* Linha 2: Botões de acção */}
                 <div className="flex items-center gap-2 mt-3">
                   <button
-                    onClick={() => openThankYouWhatsApp(order)}
+                    onClick={() => openReadyWhatsApp(order)}
                     className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors whitespace-nowrap font-medium ${
                       order.needsNotification
                         ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -321,15 +367,19 @@ export default function PickupPage() {
                   {/* M4: Direct deliver button */}
                   {undeliveredCount > 0 && (
                     <button
-                      onClick={() => setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
+                      onClick={() => isShipping
+                        ? handleShipOrder(order)
+                        : setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
                       disabled={actionLoading === order.orderId}
                       className="flex-1 px-3 py-2 text-sm bg-primary hover:opacity-90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
-                      title={t('pickup.deliverAll', { count: undeliveredCount })}
+                      title={isShipping ? 'Marcar como enviado' : t('pickup.deliverAll', { count: undeliveredCount })}
                     >
                       {actionLoading === order.orderId ? (
                         <span className="inline-block animate-spin">⟳</span>
                       ) : (
-                        `✓ ${t('pickup.deliver')} (${undeliveredCount})`
+                        isShipping
+                          ? '📦 Marcar enviado'
+                          : `✓ ${t('pickup.deliver')} (${undeliveredCount})`
                       )}
                     </button>
                   )}
@@ -365,7 +415,7 @@ export default function PickupPage() {
                   {undeliveredCount > 0 && (
                     <div className="p-4 border-t">
                       <button
-                        onClick={() => handleDeliverAll(order)}
+                        onClick={() => isShipping ? handleShipOrder(order) : handleDeliverAll(order)}
                         disabled={actionLoading === order.orderId}
                         className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium text-lg"
                       >
@@ -375,7 +425,7 @@ export default function PickupPage() {
                             {t('common.loading')}
                           </span>
                         ) : (
-                          t('pickup.deliverAll', { count: undeliveredCount })
+                          isShipping ? 'Marcar pedido como enviado' : t('pickup.deliverAll', { count: undeliveredCount })
                         )}
                       </button>
                     </div>

@@ -62,7 +62,7 @@ public class DebugController : ControllerBase
             foreach (var order in snapshot.Orders)
             {
                 await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                    $"""INSERT INTO "Orders" ("OrderId", "CustomerId", "Status", "CreatedAt", "CompletedAt", "NotifiedAt") VALUES ({order.OrderId}, {order.CustomerId}, {order.Status}, {order.CreatedAt}, {order.CompletedAt}, {order.NotifiedAt});""",
+                    $"""INSERT INTO "Orders" ("OrderId", "CustomerId", "Status", "FulfillmentMethod", "RefillPaid", "ShippingPaid", "CreatedAt", "CompletedAt", "NotifiedAt", "ShippedAt") VALUES ({order.OrderId}, {order.CustomerId}, {order.Status}, {order.FulfillmentMethod}, {order.RefillPaid}, {order.ShippingPaid}, {order.CreatedAt}, {order.CompletedAt}, {order.NotifiedAt}, {order.ShippedAt});""",
                     cancellationToken);
             }
 
@@ -90,7 +90,7 @@ public class DebugController : ControllerBase
             foreach (var appSettings in snapshot.AppSettings)
             {
                 await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                    $"""INSERT INTO "AppSettings" ("AppSettingsId", "StoreName", "StorePhone", "StoreLink", "AppTitle", "WhatsAppMessageTemplate", "WelcomeMessageTemplate", "ThankYouMessageTemplate", "PrinterType", "LabelWidthMm", "LabelHeightMm", "DebugEnabled", "SoundNotificationsDisabled", "UpdatedAt") VALUES ({appSettings.AppSettingsId}, {appSettings.StoreName}, {appSettings.StorePhone}, {appSettings.StoreLink}, {appSettings.AppTitle}, {appSettings.WhatsAppMessageTemplate}, {appSettings.WelcomeMessageTemplate}, {appSettings.ThankYouMessageTemplate}, {appSettings.PrinterType}, {appSettings.LabelWidthMm}, {appSettings.LabelHeightMm}, {appSettings.DebugEnabled}, {appSettings.SoundNotificationsDisabled}, {appSettings.UpdatedAt});""",
+                    $"""INSERT INTO "AppSettings" ("AppSettingsId", "StoreName", "StorePhone", "StoreLink", "AppTitle", "WhatsAppMessageTemplate", "ShippingReadyMessageTemplate", "WelcomeMessageTemplate", "ThankYouMessageTemplate", "PrinterType", "LabelWidthMm", "LabelHeightMm", "DebugEnabled", "SoundNotificationsDisabled", "UpdatedAt") VALUES ({appSettings.AppSettingsId}, {appSettings.StoreName}, {appSettings.StorePhone}, {appSettings.StoreLink}, {appSettings.AppTitle}, {appSettings.WhatsAppMessageTemplate}, {appSettings.ShippingReadyMessageTemplate}, {appSettings.WelcomeMessageTemplate}, {appSettings.ThankYouMessageTemplate}, {appSettings.PrinterType}, {appSettings.LabelWidthMm}, {appSettings.LabelHeightMm}, {appSettings.DebugEnabled}, {appSettings.SoundNotificationsDisabled}, {appSettings.UpdatedAt});""",
                     cancellationToken);
             }
 
@@ -138,9 +138,13 @@ public class DebugController : ControllerBase
                 o.OrderId,
                 o.CustomerId,
                 Status = o.Status.ToString(),
+                FulfillmentMethod = o.FulfillmentMethod.ToString(),
+                o.RefillPaid,
+                o.ShippingPaid,
                 o.CreatedAt,
                 o.CompletedAt,
-                o.NotifiedAt
+                o.NotifiedAt,
+                o.ShippedAt
             })
             .ToListAsync(cancellationToken);
 
@@ -217,9 +221,13 @@ public class DebugController : ControllerBase
                 o.OrderId,
                 o.CustomerId,
                 Status = o.Status.ToString(),
+                FulfillmentMethod = o.FulfillmentMethod.ToString(),
+                o.RefillPaid,
+                o.ShippingPaid,
                 o.CreatedAt,
                 o.CompletedAt,
-                o.NotifiedAt
+                o.NotifiedAt,
+                o.ShippedAt
             })
             .ToListAsync(cancellationToken);
 
@@ -301,7 +309,7 @@ public class DebugController : ControllerBase
             Orders = await _dbContext.Orders
                 .AsNoTracking()
                 .OrderBy(o => o.CreatedAt)
-                .Select(o => new DebugOrderRow(o.OrderId, o.CustomerId, o.Status.ToString(), o.CreatedAt, o.CompletedAt, o.NotifiedAt))
+                .Select(o => new DebugOrderRow(o.OrderId, o.CustomerId, o.Status.ToString(), o.FulfillmentMethod.ToString(), o.RefillPaid, o.ShippingPaid, o.CreatedAt, o.CompletedAt, o.NotifiedAt, o.ShippedAt))
                 .ToListAsync(cancellationToken),
             CylinderRefs = await _dbContext.CylinderRefs
                 .AsNoTracking()
@@ -334,6 +342,7 @@ public class DebugController : ControllerBase
                 a.StoreLink,
                 a.AppTitle,
                 a.WhatsAppMessageTemplate,
+                a.ShippingReadyMessageTemplate,
                 a.WelcomeMessageTemplate,
                 a.ThankYouMessageTemplate,
                 a.PrinterType,
@@ -443,8 +452,8 @@ public class DebugDatabaseExport
 }
 
 public record DebugCustomerRow(Guid CustomerId, string Name, string Phone, string PhoneType, DateTime CreatedAt);
-public record DebugOrderRow(Guid OrderId, Guid CustomerId, string Status, DateTime CreatedAt, DateTime? CompletedAt, DateTime? NotifiedAt);
+public record DebugOrderRow(Guid OrderId, Guid CustomerId, string Status, string FulfillmentMethod, bool RefillPaid, bool ShippingPaid, DateTime CreatedAt, DateTime? CompletedAt, DateTime? NotifiedAt, DateTime? ShippedAt);
 public record DebugCylinderRefRow(Guid OrderId, Guid CylinderId, string State);
 public record DebugCylinderRow(Guid CylinderId, long SequentialNumber, string? LabelToken, string State, string? OccurrenceNotes, DateTime CreatedAt);
 public record DebugCylinderHistoryRow(Guid Id, Guid CylinderId, string EventType, string? Details, Guid? OrderId, DateTime Timestamp);
-public record DebugAppSettingsRow(Guid AppSettingsId, string StoreName, string StorePhone, string StoreLink, string AppTitle, string WhatsAppMessageTemplate, string WelcomeMessageTemplate, string ThankYouMessageTemplate, string PrinterType, int LabelWidthMm, int LabelHeightMm, bool DebugEnabled, bool SoundNotificationsDisabled, DateTime UpdatedAt);
+public record DebugAppSettingsRow(Guid AppSettingsId, string StoreName, string StorePhone, string StoreLink, string AppTitle, string WhatsAppMessageTemplate, string ShippingReadyMessageTemplate, string WelcomeMessageTemplate, string ThankYouMessageTemplate, string PrinterType, int LabelWidthMm, int LabelHeightMm, bool DebugEnabled, bool SoundNotificationsDisabled, DateTime UpdatedAt);

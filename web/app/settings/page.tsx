@@ -120,6 +120,18 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-medium">{t('settings.shippingMessageTemplate')}</label>
+          <textarea
+            value={settings.shippingReadyMessageTemplate}
+            onChange={(e) => setSettings({ ...settings, shippingReadyMessageTemplate: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg bg-background h-24 resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('settings.shippingTemplateHelp')}
+          </p>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-medium">{t('settings.thankYouMessageTemplate')}</label>
           <textarea
             value={settings.thankYouMessageTemplate}

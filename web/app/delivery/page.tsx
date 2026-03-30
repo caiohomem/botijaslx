@@ -20,7 +20,11 @@ interface Order {
   orderId: string;
   customerId: string;
   status: string;
+  fulfillmentMethod: string;
+  refillPaid: boolean;
+  shippingPaid: boolean;
   createdAt: string;
+  shippedAt?: string;
   cylinderCount: number;
 }
 
@@ -98,6 +102,9 @@ export default function DeliveryPage() {
   const [printReason, setPrintReason] = useState(''); // M13: Reprint reason
   const [printPreview, setPrintPreview] = useState<PrintPreviewState | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<'Pickup' | 'Shipping'>('Pickup');
+  const [refillPaid, setRefillPaid] = useState(false);
+  const [shippingPaid, setShippingPaid] = useState(false);
   const labelsContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -357,6 +364,9 @@ export default function DeliveryPage() {
     setSuccessMessage(null);
     setPrintPreview(null);
     setPrintReason(''); // M13: Reset reprint reason
+    setFulfillmentMethod('Pickup');
+    setRefillPaid(false);
+    setShippingPaid(false);
   };
 
   const handleCloseOrder = async () => {
@@ -370,7 +380,12 @@ export default function DeliveryPage() {
     setError(null);
 
     try {
-      const newOrder = await ordersApi.create(selectedCustomer.customerId);
+      const newOrder = await ordersApi.create({
+        customerId: selectedCustomer.customerId,
+        fulfillmentMethod,
+        refillPaid,
+        shippingPaid: fulfillmentMethod === 'Shipping' ? shippingPaid : false,
+      });
       const finalizedCylinders: Cylinder[] = [];
 
       for (const cylinder of cylinders.filter(c => !c.isDraftNew)) {
@@ -470,30 +485,6 @@ export default function DeliveryPage() {
       {/* Step 2: Add Cylinders to Order */}
       {step === 'order' && (
         <div className="space-y-6">
-          {/* Order Header */}
-          <div className="p-4 border rounded-lg bg-muted/30">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="font-semibold text-lg">{selectedCustomer?.name}</h2>
-                <div className="text-sm text-muted-foreground">{selectedCustomer?.phone}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                {selectedCustomer && (
-                  <button
-                    onClick={() => openWelcomeWhatsApp(selectedCustomer)}
-                    className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
-                  >
-                    {t('pickup.sendWhatsApp')}
-                  </button>
-                )}
-                <div className="text-right">
-                  <div className="text-2xl font-bold">{cylinders.length}</div>
-                  <div className="text-xs text-muted-foreground">{t('order.cylinders')}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Messages */}
           {error && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-lg">
@@ -609,6 +600,64 @@ export default function DeliveryPage() {
               </div>
             </div>
           )}
+
+          <div className="space-y-2">
+            <h3 className="font-semibold">{t('order.title')}</h3>
+            <div className="text-sm text-muted-foreground">
+              {tr('delivery.orderSectionHelp', 'Confirme os dados do pedido e adicione as botijas a este cliente')}
+            </div>
+          </div>
+
+          {/* Order Header */}
+          <div className="p-4 border rounded-lg bg-muted/30">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="font-semibold text-lg">{selectedCustomer?.name}</h2>
+                <div className="text-sm text-muted-foreground">{selectedCustomer?.phone}</div>
+                {!order && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      fulfillmentMethod === 'Shipping'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    }`}>
+                      {fulfillmentMethod === 'Shipping' ? 'Envio para morada' : 'Recolha em loja'}
+                    </div>
+                    <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      refillPaid
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                    }`}>
+                      {refillPaid ? 'Enchimento pago' : 'Enchimento por pagar'}
+                    </div>
+                    {fulfillmentMethod === 'Shipping' && (
+                      <div className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        shippingPaid
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                          : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {shippingPaid ? 'Portes pagos' : 'Portes por pagar'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {selectedCustomer && (
+                  <button
+                    onClick={() => openWelcomeWhatsApp(selectedCustomer)}
+                    className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors whitespace-nowrap font-medium"
+                  >
+                    {t('pickup.sendWhatsApp')}
+                  </button>
+                )}
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{cylinders.length}</div>
+                  <div className="text-xs text-muted-foreground">{t('order.cylinders')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {!order && (
           <div className="space-y-3">
@@ -742,6 +791,82 @@ export default function DeliveryPage() {
                   </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {!order && (
+            <div className="p-4 border-2 border-primary/30 bg-primary/5 rounded-lg space-y-4">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-primary font-semibold">
+                  Configuração do pedido
+                </div>
+                <h3 className="font-semibold mt-1">{tr('delivery.fulfillmentTitle', 'Modo de entrega e pagamento')}</h3>
+                <div className="text-sm text-muted-foreground">
+                  {tr('delivery.fulfillmentHelp', 'Defina se este pedido é para recolha em loja ou envio para morada, e marque os pagamentos antes de fechar o pedido')}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentMethod('Pickup')}
+                  className={`p-4 border rounded-lg text-left transition-colors ${
+                    fulfillmentMethod === 'Pickup'
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  <div className="font-medium">{tr('delivery.fulfillmentPickup', 'Recolha em loja')}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {tr('delivery.fulfillmentPickupHelp', 'Cliente levanta as botijas na oficina')}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentMethod('Shipping')}
+                  className={`p-4 border rounded-lg text-left transition-colors ${
+                    fulfillmentMethod === 'Shipping'
+                      ? 'border-primary bg-primary/5'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  <div className="font-medium">{tr('delivery.fulfillmentShipping', 'Enviar para morada')}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {tr('delivery.fulfillmentShippingHelp', 'Quando estiver pronto, o pedido segue para expedição')}
+                  </div>
+                </button>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center gap-3 border rounded-lg p-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={refillPaid}
+                    onChange={(e) => setRefillPaid(e.target.checked)}
+                  />
+                  <div>
+                    <div className="font-medium">{tr('delivery.refillPaid', 'Enchimento pago')}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {tr('delivery.refillPaidHelp', 'Marque se o enchimento já foi pago')}
+                    </div>
+                  </div>
+                </label>
+
+                <label className={`flex items-center gap-3 border rounded-lg p-3 ${fulfillmentMethod === 'Shipping' ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}>
+                  <input
+                    type="checkbox"
+                    checked={shippingPaid}
+                    disabled={fulfillmentMethod !== 'Shipping'}
+                    onChange={(e) => setShippingPaid(e.target.checked)}
+                  />
+                  <div>
+                    <div className="font-medium">{tr('delivery.shippingPaid', 'Portes pagos')}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {tr('delivery.shippingPaidHelp', 'Disponível apenas para pedidos de envio')}
+                    </div>
+                  </div>
+                </label>
               </div>
             </div>
           )}

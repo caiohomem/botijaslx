@@ -46,6 +46,7 @@ export interface AppSettings {
   storeLink: string;
   appTitle: string;
   whatsAppMessageTemplate: string;
+  shippingReadyMessageTemplate: string;
   welcomeMessageTemplate: string;
   thankYouMessageTemplate: string;
   printerType: 'label' | 'a4';
@@ -124,16 +125,25 @@ export interface CustomerCylindersResult {
 
 // Orders
 export const ordersApi = {
-  create: (customerId: string) =>
+  create: (data: {
+    customerId: string;
+    fulfillmentMethod: 'Pickup' | 'Shipping';
+    refillPaid: boolean;
+    shippingPaid: boolean;
+  }) =>
     apiRequest<{
       orderId: string;
       customerId: string;
       status: string;
+      fulfillmentMethod: string;
+      refillPaid: boolean;
+      shippingPaid: boolean;
       createdAt: string;
+      shippedAt?: string;
       cylinderCount: number;
     }>('/api/orders', {
       method: 'POST',
-      body: JSON.stringify({ customerId }),
+      body: JSON.stringify(data),
     }),
 
   addCylinder: (orderId: string, cylinderId?: string) =>
@@ -183,6 +193,7 @@ export interface FillingQueueItem {
   customerName: string;
   customerPhone: string;
   customerPhoneType: string;
+  fulfillmentMethod: string;
   totalCylindersInOrder: number;
   readyCylindersInOrder: number;
 }
@@ -276,8 +287,12 @@ export interface PickupOrder {
   customerPhone: string;
   customerPhoneType: string;
   status: string;
+  fulfillmentMethod: string;
+  refillPaid: boolean;
+  shippingPaid: boolean;
   createdAt: string;
   notifiedAt?: string;
+  shippedAt?: string;
   needsNotification: boolean;
   totalCylinders: number;
   deliveredCylinders: number;
@@ -299,6 +314,13 @@ export interface MarkNotifiedResult {
   notifiedAt: string;
 }
 
+export interface MarkShippedResult {
+  orderId: string;
+  orderStatus: string;
+  shippedAt: string;
+  totalCylinders: number;
+}
+
 export const pickupApi = {
   getReadyForPickup: (search?: string) =>
     apiRequest<{ orders: PickupOrder[] }>(
@@ -314,6 +336,12 @@ export const pickupApi = {
   markNotified: (orderId: string) =>
     apiRequest<MarkNotifiedResult>(
       `/api/orders/${orderId}/mark-notified`,
+      { method: 'POST' }
+    ),
+
+  markShipped: (orderId: string) =>
+    apiRequest<MarkShippedResult>(
+      `/api/orders/${orderId}/mark-shipped`,
       { method: 'POST' }
     ),
 };

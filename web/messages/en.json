@@ -56,6 +56,8 @@
     "welcomeTemplateHelp": "Variables: '{name}' = customer name, '{link}' = store link",
     "messageTemplate": "Pickup Message",
     "templateHelp": "Variables: '{name}' = customer name, '{count}' = number of cylinders",
+    "shippingMessageTemplate": "Shipping Message",
+    "shippingTemplateHelp": "Variables: '{name}' = customer name, '{count}' = number of cylinders, '{link}' = store link",
     "thankYouMessageTemplate": "Thank You Message",
     "thankYouTemplateHelp": "Variables: '{name}' = customer name, '{count}' = number of cylinders",
     "printerType": "Printer Type",

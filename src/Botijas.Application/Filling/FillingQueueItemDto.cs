@@ -13,6 +13,7 @@ public class FillingQueueItemDto
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
     public string CustomerPhoneType { get; set; } = string.Empty;
+    public string FulfillmentMethod { get; set; } = string.Empty;
     public int TotalCylindersInOrder { get; set; }
     public int ReadyCylindersInOrder { get; set; }
 }

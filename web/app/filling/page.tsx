@@ -40,12 +40,14 @@ export default function FillingPage() {
     timestamp: string;
   }>>([]);
   const [messageTemplate, setMessageTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
+  const [shippingMessageTemplate, setShippingMessageTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
   const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
   const [completedOrders, setCompletedOrders] = useState<Array<{
     orderId: string;
     customerName: string;
     customerPhone: string;
     customerPhoneType: string;
+    fulfillmentMethod: string;
     cylinderCount: number;
   }>>([]);
 
@@ -65,12 +67,23 @@ export default function FillingPage() {
     loadQueue();
     loadAppSettings().then((settings) => {
       setMessageTemplate(settings.whatsAppMessageTemplate);
+      setShippingMessageTemplate(settings.shippingReadyMessageTemplate);
       setStoreLink(settings.storeLink);
     });
   }, [loadQueue]);
 
-  const openWhatsApp = (customerName: string, customerPhone: string, customerPhoneType: string, cylinderCount: number, orderId: string) => {
-    const message = messageTemplate
+  const openWhatsApp = (
+    customerName: string,
+    customerPhone: string,
+    customerPhoneType: string,
+    fulfillmentMethod: string,
+    cylinderCount: number,
+    orderId: string
+  ) => {
+    const selectedTemplate = fulfillmentMethod === 'Shipping'
+      ? shippingMessageTemplate
+      : messageTemplate;
+    const message = selectedTemplate
       .replace('{name}', customerName)
       .replace('{count}', String(cylinderCount))
       .replace('{link}', storeLink);
@@ -108,6 +121,7 @@ export default function FillingPage() {
           customerName: cylinder.customerName,
           customerPhone: cylinder.customerPhone,
           customerPhoneType: cylinder.customerPhoneType,
+          fulfillmentMethod: cylinder.fulfillmentMethod,
           cylinderCount: cylinder.totalCylindersInOrder,
         }]);
         // M10: Play completion sound
@@ -335,11 +349,13 @@ export default function FillingPage() {
               <div>
                 <div className="font-semibold text-green-800 dark:text-green-200">{order.customerName}</div>
                 <div className="text-sm text-green-600 dark:text-green-400">
-                  {order.cylinderCount} {t('order.cylinders')} — {t('filling.orderComplete', { name: '' }).replace(/ $/, '').trim()}
+                  {order.cylinderCount} {t('order.cylinders')} — {order.fulfillmentMethod === 'Shipping'
+                    ? 'Enviar para morada'
+                    : 'Recolha em loja'}
                 </div>
               </div>
               <button
-                onClick={() => openWhatsApp(order.customerName, order.customerPhone, order.customerPhoneType, order.cylinderCount, order.orderId)}
+                onClick={() => openWhatsApp(order.customerName, order.customerPhone, order.customerPhoneType, order.fulfillmentMethod, order.cylinderCount, order.orderId)}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium whitespace-nowrap transition-colors"
               >
                 {t('pickup.sendWhatsApp')}

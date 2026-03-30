@@ -10,6 +10,7 @@ public class AppSettings
     public string StoreLink { get; private set; }
     public string AppTitle { get; private set; }
     public string WhatsAppMessageTemplate { get; private set; }
+    public string ShippingReadyMessageTemplate { get; private set; }
     public string WelcomeMessageTemplate { get; private set; }
     public string ThankYouMessageTemplate { get; private set; }
     public string PrinterType { get; private set; }
@@ -26,6 +27,7 @@ public class AppSettings
         StoreLink = string.Empty;
         AppTitle = string.Empty;
         WhatsAppMessageTemplate = "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!";
+        ShippingReadyMessageTemplate = "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas e vamos enviar para a morada indicada. {link}";
         WelcomeMessageTemplate = "Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}";
         ThankYouMessageTemplate = "Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!";
         PrinterType = "label";
@@ -49,6 +51,7 @@ public class AppSettings
         string storeLink,
         string appTitle,
         string whatsAppMessageTemplate,
+        string shippingReadyMessageTemplate,
         string welcomeMessageTemplate,
         string thankYouMessageTemplate,
         string printerType,
@@ -62,6 +65,7 @@ public class AppSettings
         StoreLink = storeLink;
         AppTitle = appTitle;
         WhatsAppMessageTemplate = whatsAppMessageTemplate;
+        ShippingReadyMessageTemplate = shippingReadyMessageTemplate;
         WelcomeMessageTemplate = welcomeMessageTemplate;
         ThankYouMessageTemplate = thankYouMessageTemplate;
         PrinterType = printerType;

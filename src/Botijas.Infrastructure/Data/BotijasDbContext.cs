@@ -40,7 +40,13 @@ public class BotijasDbContext : DbContext
             entity.HasKey(e => e.OrderId);
             entity.Property(e => e.CustomerId).IsRequired();
             entity.Property(e => e.Status).IsRequired().HasConversion<string>();
+            entity.Property(e => e.FulfillmentMethod).IsRequired().HasConversion<string>();
+            entity.Property(e => e.RefillPaid).IsRequired();
+            entity.Property(e => e.ShippingPaid).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.NotifiedAt);
+            entity.Property(e => e.CompletedAt);
+            entity.Property(e => e.ShippedAt);
             entity.HasMany(e => e.Cylinders)
                   .WithOne()
                   .HasForeignKey(cr => cr.OrderId)
@@ -73,6 +79,7 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.StoreLink).HasMaxLength(500);
             entity.Property(e => e.AppTitle).HasMaxLength(200);
             entity.Property(e => e.WhatsAppMessageTemplate).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.ShippingReadyMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.WelcomeMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.ThankYouMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.PrinterType).IsRequired().HasMaxLength(50);

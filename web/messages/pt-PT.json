@@ -56,6 +56,8 @@
     "welcomeTemplateHelp": "Variáveis: '{name}' = nome do cliente, '{link}' = link da loja",
     "messageTemplate": "Mensagem de Recolha",
     "templateHelp": "Variáveis: '{name}' = nome do cliente, '{count}' = número de botijas",
+    "shippingMessageTemplate": "Mensagem de Envio",
+    "shippingTemplateHelp": "Variáveis: '{name}' = nome do cliente, '{count}' = número de botijas, '{link}' = link da loja",
     "thankYouMessageTemplate": "Mensagem de Agradecimento",
     "thankYouTemplateHelp": "Variáveis: '{name}' = nome do cliente, '{count}' = número de botijas",
     "printerType": "Tipo de Impressora",

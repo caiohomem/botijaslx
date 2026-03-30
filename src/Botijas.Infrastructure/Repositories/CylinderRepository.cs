@@ -118,6 +118,7 @@ public class CylinderRepository : ICylinderRepository
                 CustomerName = r.Customer.Name,
                 CustomerPhone = r.Customer.Phone.Value,
                 CustomerPhoneType = r.Customer.PhoneType.ToString(),
+                FulfillmentMethod = r.Order.FulfillmentMethod.ToString(),
                 TotalCylindersInOrder = totalCounts.GetValueOrDefault(r.Order.OrderId, 0),
                 ReadyCylindersInOrder = readyCounts.GetValueOrDefault(r.Order.OrderId, 0)
         }).ToList();

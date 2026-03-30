@@ -35,6 +35,11 @@ public class DeliverCylinderCommandHandler
             return Result<DeliverCylinderResultDto>.Failure($"Pedido não está pronto para recolha. Status atual: {order.Status}");
         }
 
+        if (order.FulfillmentMethod != FulfillmentMethod.Pickup)
+        {
+            return Result<DeliverCylinderResultDto>.Failure("Este pedido está marcado para envio. Use a ação de expedição.");
+        }
+
         // Verificar se botija pertence ao pedido
         var orderCylinderIds = order.Cylinders.Select(c => c.CylinderId).ToList();
         if (!orderCylinderIds.Contains(command.CylinderId))

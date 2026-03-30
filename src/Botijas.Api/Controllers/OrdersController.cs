@@ -16,6 +16,7 @@ public class OrdersController : ControllerBase
     private readonly GetReadyForPickupQueryHandler _getReadyForPickupHandler;
     private readonly DeliverCylinderCommandHandler _deliverCylinderHandler;
     private readonly MarkOrderNotifiedCommandHandler _markNotifiedHandler;
+    private readonly MarkOrderShippedCommandHandler _markShippedHandler;
 
     public OrdersController(
         CreateOrderCommandHandler createHandler,
@@ -24,7 +25,8 @@ public class OrdersController : ControllerBase
         ScanCylinderToOrderCommandHandler scanHandler,
         GetReadyForPickupQueryHandler getReadyForPickupHandler,
         DeliverCylinderCommandHandler deliverCylinderHandler,
-        MarkOrderNotifiedCommandHandler markNotifiedHandler)
+        MarkOrderNotifiedCommandHandler markNotifiedHandler,
+        MarkOrderShippedCommandHandler markShippedHandler)
     {
         _createHandler = createHandler;
         _addCylinderHandler = addCylinderHandler;
@@ -33,6 +35,7 @@ public class OrdersController : ControllerBase
         _getReadyForPickupHandler = getReadyForPickupHandler;
         _deliverCylinderHandler = deliverCylinderHandler;
         _markNotifiedHandler = markNotifiedHandler;
+        _markShippedHandler = markShippedHandler;
     }
 
     [HttpPost]
@@ -148,6 +151,24 @@ public class OrdersController : ControllerBase
     {
         var result = await _markNotifiedHandler.Handle(
             new MarkOrderNotifiedCommand(orderId),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Marca pedido de envio como expedido
+    /// </summary>
+    [HttpPost("{orderId}/mark-shipped")]
+    public async Task<IActionResult> MarkShipped(Guid orderId, CancellationToken cancellationToken)
+    {
+        var result = await _markShippedHandler.Handle(
+            new MarkOrderShippedCommand(orderId),
             cancellationToken);
 
         if (!result.IsSuccess)

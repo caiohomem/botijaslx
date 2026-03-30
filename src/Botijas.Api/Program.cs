@@ -51,6 +51,7 @@ builder.Services.AddScoped<Botijas.Application.Reports.Queries.IDashboardStatsQu
 builder.Services.AddScoped<Botijas.Application.Pickup.Queries.GetReadyForPickupQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Pickup.Commands.DeliverCylinderCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Pickup.Commands.MarkOrderNotifiedCommandHandler>();
+builder.Services.AddScoped<Botijas.Application.Pickup.Commands.MarkOrderShippedCommandHandler>();
 
 // CORS
 var configuredOrigins = builder.Configuration["CORS__AllowedOrigins"];
