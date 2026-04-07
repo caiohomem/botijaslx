@@ -2,7 +2,7 @@ namespace Botijas.Application.Reports.Queries;
 
 public interface IDashboardStatsQuery
 {
-    Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken);
+    Task<DashboardStatsDto> GetStatsAsync(int days, CancellationToken cancellationToken);
 }
 
 public class DashboardStatsDto

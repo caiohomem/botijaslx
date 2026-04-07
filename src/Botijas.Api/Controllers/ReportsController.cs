@@ -18,9 +18,10 @@ public class ReportsController : ControllerBase
     /// Retorna estatísticas do dashboard
     /// </summary>
     [HttpGet("stats")]
-    public async Task<IActionResult> GetStats(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetStats([FromQuery] int days = 7, CancellationToken cancellationToken = default)
     {
-        var stats = await _statsQuery.GetStatsAsync(cancellationToken);
+        var safeDays = days is 7 or 30 or 60 ? days : 7;
+        var stats = await _statsQuery.GetStatsAsync(safeDays, cancellationToken);
         return Ok(stats);
     }
 }

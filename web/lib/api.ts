@@ -418,7 +418,7 @@ export interface DashboardDailySeriesPoint {
 }
 
 export const reportsApi = {
-  getStats: () => apiRequest<DashboardStats>('/api/reports/stats'),
+  getStats: (days = 7) => apiRequest<DashboardStats>(`/api/reports/stats?days=${days}`),
 };
 
 export const settingsApi = {

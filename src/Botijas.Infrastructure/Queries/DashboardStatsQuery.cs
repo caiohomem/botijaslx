@@ -14,10 +14,11 @@ public class DashboardStatsQuery : IDashboardStatsQuery
         _context = context;
     }
 
-    public async Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken)
+    public async Task<DashboardStatsDto> GetStatsAsync(int days, CancellationToken cancellationToken)
     {
         var today = DateTime.UtcNow.Date;
         var weekStart = today.AddDays(-6);
+        var seriesStart = today.AddDays(-(days - 1));
 
         // Contagens de pedidos
         var ordersOpen = await _context.Orders
@@ -59,7 +60,7 @@ public class DashboardStatsQuery : IDashboardStatsQuery
                 (h.EventType == CylinderEventType.Received ||
                  h.EventType == CylinderEventType.MarkedReady ||
                  h.EventType == CylinderEventType.Delivered) &&
-                h.Timestamp.Date >= weekStart)
+                h.Timestamp.Date >= seriesStart)
             .GroupBy(h => h.Timestamp.Date)
             .Select(g => new
             {
@@ -70,8 +71,8 @@ public class DashboardStatsQuery : IDashboardStatsQuery
             })
             .ToListAsync(cancellationToken);
 
-        var dailySeries = Enumerable.Range(0, 7)
-            .Select(offset => weekStart.AddDays(offset))
+        var dailySeries = Enumerable.Range(0, days)
+            .Select(offset => seriesStart.AddDays(offset))
             .Select(day =>
             {
                 var match = dailySeriesRaw.FirstOrDefault(x => x.Date == day);

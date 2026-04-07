@@ -8,10 +8,12 @@ import { QrScanner } from '@/components/QrScanner';
 import { CustomerSearch } from '@/components/CustomerSearch';
 
 type LookupMode = 'customer' | 'cylinder';
+type ChartRange = 7 | 30 | 60;
 
 export default function DashboardPage() {
   const t = useTranslations();
   const router = useRouter();
+  const [chartRange, setChartRange] = useState<ChartRange>(7);
   const [lookupMode, setLookupMode] = useState<LookupMode>('customer');
   const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,12 +35,13 @@ export default function DashboardPage() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
-    loadStats();
-  }, []);
+    loadStats(chartRange);
+  }, [chartRange]);
 
-  const loadStats = async () => {
+  const loadStats = async (days: ChartRange) => {
+    setStatsLoading(true);
     try {
-      const data = await reportsApi.getStats();
+      const data = await reportsApi.getStats(days);
       setStats(data);
     } catch (err) {
       console.error('Failed to load stats:', err);
@@ -277,8 +280,17 @@ export default function DashboardPage() {
             </div>
           </DashboardSection>
 
-          <DashboardSection title={t('dashboard.sections.last7Days')}>
-            <DailyActivityChart points={stats.dailySeries} t={t} />
+          <DashboardSection
+            title={t('dashboard.sections.activity')}
+            actions={
+              <ChartRangeSelector
+                value={chartRange}
+                onChange={(value) => setChartRange(value)}
+                t={t}
+              />
+            }
+          >
+            <DailyActivityChart points={stats.dailySeries} range={chartRange} t={t} />
           </DashboardSection>
         </div>
       )}
@@ -558,14 +570,55 @@ export default function DashboardPage() {
   );
 }
 
-function DashboardSection({ title, children }: { title: string; children: React.ReactNode }) {
+function DashboardSection({
+  title,
+  actions,
+  children
+}: {
+  title: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="space-y-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h2>
+        {actions}
+      </div>
       {children}
     </section>
+  );
+}
+
+function ChartRangeSelector({
+  value,
+  onChange,
+  t
+}: {
+  value: ChartRange;
+  onChange: (value: ChartRange) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const options: ChartRange[] = [7, 30, 60];
+
+  return (
+    <div className="flex items-center gap-1 rounded-lg border p-1 bg-muted/20">
+      {options.map((option) => (
+        <button
+          key={option}
+          onClick={() => onChange(option)}
+          className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+            value === option
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-accent'
+          }`}
+        >
+          {t(`dashboard.range.${option}d`)}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -678,14 +731,22 @@ function formatHistoryDetails(
 
 function DailyActivityChart({
   points,
+  range,
   t
 }: {
   points: DashboardStats['dailySeries'];
+  range: ChartRange;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const width = 720;
+  const width = 640;
   const height = 260;
-  const padding = { top: 20, right: 20, bottom: 36, left: 36 };
+  const isLongRange = range > 7;
+  const padding = {
+    top: 20,
+    right: 12,
+    bottom: 32,
+    left: 26
+  };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
   const maxValue = Math.max(1, ...points.flatMap((point) => [point.received, point.ready, point.delivered]));
@@ -737,8 +798,8 @@ function DailyActivityChart({
         ))}
       </div>
 
-      <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${width} ${height}`} className="min-w-[640px] w-full h-auto">
+      <div>
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
           {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
             const value = Math.round(maxValue * ratio);
             const y = toY(value);
@@ -789,17 +850,25 @@ function DailyActivityChart({
             ))
           )}
 
-          {points.map((point, index) => (
-            <text
-              key={point.date}
-              x={toX(index)}
-              y={height - 10}
-              textAnchor="middle"
-              className="fill-muted-foreground text-[10px]"
-            >
-              {formatShortDate(point.date)}
-            </text>
-          ))}
+          {points.map((point, index) => {
+            const shouldRenderLabel = !isLongRange || index === 0 || index === points.length - 1 || index % (range === 30 ? 5 : 10) === 0;
+
+            if (!shouldRenderLabel) {
+              return null;
+            }
+
+            return (
+              <text
+                key={point.date}
+                x={toX(index)}
+                y={height - 10}
+                textAnchor="middle"
+                className="fill-muted-foreground text-[10px]"
+              >
+                {formatShortDate(point.date)}
+              </text>
+            );
+          })}
         </svg>
       </div>
     </div>
