@@ -15,6 +15,17 @@ function getApiBaseUrl(): string {
   return typeof window === 'undefined' ? SERVER_API_BASE_URL : BROWSER_API_BASE_URL;
 }
 
+export async function waitForApiReady(): Promise<void> {
+  const response = await fetch(`${BROWSER_API_BASE_URL}/health`, {
+    method: 'GET',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`API healthcheck failed with status ${response.status}`);
+  }
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -396,6 +407,14 @@ export interface DashboardStats {
   cylindersFilledToday: number;
   cylindersFilledThisWeek: number;
   totalCustomers: number;
+  dailySeries: DashboardDailySeriesPoint[];
+}
+
+export interface DashboardDailySeriesPoint {
+  date: string;
+  received: number;
+  ready: number;
+  delivered: number;
 }
 
 export const reportsApi = {

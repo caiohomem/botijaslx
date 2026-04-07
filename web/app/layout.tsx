@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { LocaleProvider } from '@/components/LocaleProvider';
 import { Header } from '@/components/Header';
+import { ApiStartupGate } from '@/components/ApiStartupGate';
 import { defaultLocale } from '@/i18n';
 import { useState, useEffect } from 'react';
 import './globals.css';
@@ -63,12 +64,14 @@ export default function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <LocaleProvider>
             <ThemeProvider>
-              <div className="min-h-screen bg-background text-foreground">
-                <Header />
-                <main className="container mx-auto px-4 py-8">
-                  {children}
-                </main>
-              </div>
+              <ApiStartupGate>
+                <div className="min-h-screen bg-background text-foreground">
+                  <Header />
+                  <main className="container mx-auto px-4 py-8">
+                    {children}
+                  </main>
+                </div>
+              </ApiStartupGate>
             </ThemeProvider>
           </LocaleProvider>
         </NextIntlClientProvider>

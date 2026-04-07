@@ -18,4 +18,13 @@ public class DashboardStatsDto
     public int CylindersFilledToday { get; set; }
     public int CylindersFilledThisWeek { get; set; }
     public int TotalCustomers { get; set; }
+    public IReadOnlyList<DashboardDailySeriesPointDto> DailySeries { get; set; } = [];
+}
+
+public class DashboardDailySeriesPointDto
+{
+    public string Date { get; set; } = string.Empty;
+    public int Received { get; set; }
+    public int Ready { get; set; }
+    public int Delivered { get; set; }
 }

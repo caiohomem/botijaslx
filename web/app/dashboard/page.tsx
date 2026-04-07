@@ -206,65 +206,87 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard
-            label={t('dashboard.stats.ordersOpen')}
-            value={stats.ordersOpen}
-            color="blue"
-            onClick={() => router.push('/filling')}
-          />
-          <StatCard
-            label={t('dashboard.stats.ordersReady')}
-            value={stats.ordersReadyForPickup}
-            color="green"
-            onClick={() => router.push('/pickup')}
-            highlight={stats.ordersAwaitingNotification > 0}
-            sublabel={stats.ordersAwaitingNotification > 0
-              ? t('dashboard.stats.awaitingNotification', { count: stats.ordersAwaitingNotification })
-              : undefined}
-          />
-          <StatCard
-            label={t('dashboard.stats.cylindersPending')}
-            value={stats.cylindersReceived}
-            color="amber"
-            onClick={() => router.push('/filling')}
-          />
-          <StatCard
-            label={t('dashboard.stats.cylindersReady')}
-            value={stats.cylindersReady}
-            color="green"
-            onClick={() => router.push('/pickup')}
-          />
-          <StatCard
-            label={t('dashboard.stats.filledToday')}
-            value={stats.cylindersFilledToday}
-            color="purple"
-          />
-          <StatCard
-            label={t('dashboard.stats.filledThisWeek')}
-            value={stats.cylindersFilledThisWeek}
-            color="purple"
-          />
-          <StatCard
-            label={t('dashboard.stats.completedToday')}
-            value={stats.ordersCompletedToday}
-            color="gray"
-          />
-          {stats.cylindersWithProblem > 0 && (
-            <StatCard
-              label={t('dashboard.stats.withProblem')}
-              value={stats.cylindersWithProblem}
-              color="red"
-              highlight
-            />
-          )}
+        <div className="space-y-6">
+          <DashboardSection title={t('dashboard.sections.now')}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard
+                label={t('dashboard.stats.cylindersPending')}
+                value={stats.cylindersReceived}
+                color="amber"
+                onClick={() => router.push('/filling')}
+              />
+              <StatCard
+                label={t('dashboard.stats.ordersReady')}
+                value={stats.ordersReadyForPickup}
+                color="green"
+                onClick={() => router.push('/pickup')}
+                highlight={stats.ordersAwaitingNotification > 0}
+                sublabel={stats.ordersAwaitingNotification > 0
+                  ? t('dashboard.stats.awaitingNotification', { count: stats.ordersAwaitingNotification })
+                  : t('dashboard.stats.readyToLeave')}
+              />
+              <StatCard
+                label={t('dashboard.stats.cylindersReady')}
+                value={stats.cylindersReady}
+                color="green"
+                onClick={() => router.push('/pickup')}
+                sublabel={t('dashboard.stats.readyStock')}
+              />
+              <StatCard
+                label={t('dashboard.stats.ordersOpen')}
+                value={stats.ordersOpen}
+                color="blue"
+                onClick={() => router.push('/filling')}
+              />
+            </div>
+          </DashboardSection>
+
+          <DashboardSection title={t('dashboard.sections.today')}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard
+                label={t('dashboard.stats.filledToday')}
+                value={stats.cylindersFilledToday}
+                color="purple"
+              />
+              <StatCard
+                label={t('dashboard.stats.completedToday')}
+                value={stats.ordersCompletedToday}
+                color="gray"
+              />
+              <StatCard
+                label={t('dashboard.stats.filledThisWeek')}
+                value={stats.cylindersFilledThisWeek}
+                color="purple"
+                sublabel={t('dashboard.stats.last7Days')}
+              />
+              {stats.cylindersWithProblem > 0 ? (
+                <StatCard
+                  label={t('dashboard.stats.withProblem')}
+                  value={stats.cylindersWithProblem}
+                  color="red"
+                  highlight
+                />
+              ) : (
+                <StatCard
+                  label={t('dashboard.stats.withProblem')}
+                  value={0}
+                  color="gray"
+                  sublabel={t('dashboard.stats.noIssues')}
+                />
+              )}
+            </div>
+          </DashboardSection>
+
+          <DashboardSection title={t('dashboard.sections.last7Days')}>
+            <DailyActivityChart points={stats.dailySeries} t={t} />
+          </DashboardSection>
         </div>
       )}
 
       {statsLoading && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="p-4 border rounded-lg animate-pulse bg-muted/50 h-20" />
+        <div className="space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="p-4 border rounded-lg animate-pulse bg-muted/50 h-36" />
           ))}
         </div>
       )}
@@ -536,6 +558,17 @@ export default function DashboardPage() {
   );
 }
 
+function DashboardSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 // Timeline component for cylinder history
 function CylinderTimeline({
   history,
@@ -641,6 +674,145 @@ function formatHistoryDetails(
     .replace('ProblemReported', t('dashboard.events.ProblemReported'))
     .replace('LabelAssigned', t('dashboard.events.LabelAssigned'))
     .replace('Received', t('dashboard.events.Received'));
+}
+
+function DailyActivityChart({
+  points,
+  t
+}: {
+  points: DashboardStats['dailySeries'];
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const width = 720;
+  const height = 260;
+  const padding = { top: 20, right: 20, bottom: 36, left: 36 };
+  const innerWidth = width - padding.left - padding.right;
+  const innerHeight = height - padding.top - padding.bottom;
+  const maxValue = Math.max(1, ...points.flatMap((point) => [point.received, point.ready, point.delivered]));
+
+  const toX = (index: number) => (
+    padding.left + (points.length === 1 ? innerWidth / 2 : (index * innerWidth) / (points.length - 1))
+  );
+
+  const toY = (value: number) => (
+    padding.top + innerHeight - (value / maxValue) * innerHeight
+  );
+
+  const buildPath = (values: number[]) => values
+    .map((value, index) => `${index === 0 ? 'M' : 'L'} ${toX(index)} ${toY(value)}`)
+    .join(' ');
+
+  const series = [
+    {
+      key: 'received',
+      label: t('dashboard.chart.received'),
+      color: '#f59e0b',
+      values: points.map((point) => point.received)
+    },
+    {
+      key: 'ready',
+      label: t('dashboard.chart.ready'),
+      color: '#22c55e',
+      values: points.map((point) => point.ready)
+    },
+    {
+      key: 'delivered',
+      label: t('dashboard.chart.delivered'),
+      color: '#64748b',
+      values: points.map((point) => point.delivered)
+    }
+  ] as const;
+
+  return (
+    <div className="border rounded-lg bg-muted/20 p-4 space-y-4">
+      <div className="flex flex-wrap gap-3 text-sm">
+        {series.map((item) => (
+          <div key={item.key} className="flex items-center gap-2 text-muted-foreground">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto">
+        <svg viewBox={`0 0 ${width} ${height}`} className="min-w-[640px] w-full h-auto">
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const value = Math.round(maxValue * ratio);
+            const y = toY(value);
+
+            return (
+              <g key={ratio}>
+                <line
+                  x1={padding.left}
+                  x2={width - padding.right}
+                  y1={y}
+                  y2={y}
+                  stroke="currentColor"
+                  strokeOpacity="0.12"
+                />
+                <text
+                  x={padding.left - 8}
+                  y={y + 4}
+                  textAnchor="end"
+                  className="fill-muted-foreground text-[10px]"
+                >
+                  {value}
+                </text>
+              </g>
+            );
+          })}
+
+          {series.map((item) => (
+            <path
+              key={item.key}
+              d={buildPath(item.values)}
+              fill="none"
+              stroke={item.color}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+
+          {series.map((item) =>
+            item.values.map((value, index) => (
+              <circle
+                key={`${item.key}-${points[index].date}`}
+                cx={toX(index)}
+                cy={toY(value)}
+                r="4"
+                fill={item.color}
+              />
+            ))
+          )}
+
+          {points.map((point, index) => (
+            <text
+              key={point.date}
+              x={toX(index)}
+              y={height - 10}
+              textAnchor="middle"
+              className="fill-muted-foreground text-[10px]"
+            >
+              {formatShortDate(point.date)}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function formatShortDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+
+  return parsed.toLocaleDateString('pt-PT', {
+    day: '2-digit',
+    month: '2-digit'
+  });
 }
 
 // Stat Card Component

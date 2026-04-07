@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/Botijas.Api/Dockerfile
+    container_name: botijas-api
+    network_mode: host
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://127.0.0.1:8080
+      ConnectionStrings__Default: Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true
+      CORS__AllowedOrigins: http://localhost:3000
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:8080
+    container_name: botijas-web
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_BASE: http://localhost:8080
+      INTERNAL_API_BASE: http://host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3000:3000"

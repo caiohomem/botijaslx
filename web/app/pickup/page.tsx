@@ -19,6 +19,7 @@ export default function PickupPage() {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [pickupTemplate, setPickupTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
   const [shippingTemplate, setShippingTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
+  const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
   const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
 
   const loadOrders = useCallback(async () => {
@@ -38,6 +39,7 @@ export default function PickupPage() {
     loadAppSettings().then((settings) => {
       setPickupTemplate(settings.whatsAppMessageTemplate);
       setShippingTemplate(settings.shippingReadyMessageTemplate);
+      setThankYouTemplate(settings.thankYouMessageTemplate);
       setStoreLink(settings.storeLink);
     });
 
@@ -85,6 +87,21 @@ export default function PickupPage() {
     }
   };
 
+  const openThankYouWhatsApp = (order: PickupOrder) => {
+    const message = thankYouTemplate
+      .replace('{name}', order.customerName)
+      .replace('{count}', String(order.totalCylinders))
+      .replace('{link}', storeLink);
+
+    const link = generateWhatsAppLink(
+      order.customerPhone,
+      message,
+      order.customerPhoneType === 'International' ? 'international' : 'pt'
+    );
+
+    window.open(link, '_blank');
+  };
+
   const handleShipOrder = async (order: PickupOrder) => {
     setActionLoading(order.orderId);
     setError(null);
@@ -92,6 +109,7 @@ export default function PickupPage() {
 
     try {
       await pickupApi.markShipped(order.orderId);
+      openThankYouWhatsApp(order);
       playSound('complete');
       setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
       setExpandedOrder(null);
@@ -106,7 +124,7 @@ export default function PickupPage() {
     }
   };
 
-  const handleDeliverAll = async (order: PickupOrder) => {
+  const handleDeliverAll = async (order: PickupOrder, sendThankYou: boolean) => {
     const undelivered = order.cylinders.filter(c => !c.isDelivered);
     if (undelivered.length === 0) return;
 
@@ -120,13 +138,21 @@ export default function PickupPage() {
         await pickupApi.deliverCylinder(order.orderId, cylinder.cylinderId);
       }
 
+      if (sendThankYou) {
+        openThankYouWhatsApp(order);
+      }
+
       // M10: Play success sound for order completion
       playSound('complete');
 
       setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
       setExpandedOrder(null);
       setConfirmDeliver(null);
-      setSuccessMessage(t('pickup.orderCompleteThankYou', { name: order.customerName }));
+      setSuccessMessage(
+        sendThankYou
+          ? t('pickup.orderCompleteThankYou', { name: order.customerName })
+          : t('pickup.orderComplete', { name: order.customerName })
+      );
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao entregar botijas');
@@ -356,11 +382,11 @@ export default function PickupPage() {
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : 'bg-muted hover:bg-accent text-muted-foreground border'
                     }`}
-                    title={t('pickup.sendWhatsApp')}
+                    title={t('pickup.sendReadyWhatsApp')}
                   >
                     {order.needsNotification
-                      ? `📱 ${t('pickup.sendWhatsApp')}`
-                      : `✓ ${t('pickup.notified')}`
+                      ? `📱 ${t('pickup.sendReadyWhatsApp')}`
+                      : `✓ ${t('pickup.readyNotified')}`
                     }
                   </button>
 
@@ -372,14 +398,14 @@ export default function PickupPage() {
                         : setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
                       disabled={actionLoading === order.orderId}
                       className="flex-1 px-3 py-2 text-sm bg-primary hover:opacity-90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
-                      title={isShipping ? 'Marcar como enviado' : t('pickup.deliverAll', { count: undeliveredCount })}
+                      title={isShipping ? t('pickup.markShipped') : t('pickup.completeAndThank')}
                     >
                       {actionLoading === order.orderId ? (
                         <span className="inline-block animate-spin">⟳</span>
                       ) : (
                         isShipping
-                          ? '📦 Marcar enviado'
-                          : `✓ ${t('pickup.deliver')} (${undeliveredCount})`
+                          ? `📦 ${t('pickup.markShipped')}`
+                          : `✓ ${t('pickup.completeAndThank')}`
                       )}
                     </button>
                   )}
@@ -415,7 +441,7 @@ export default function PickupPage() {
                   {undeliveredCount > 0 && (
                     <div className="p-4 border-t">
                       <button
-                        onClick={() => isShipping ? handleShipOrder(order) : handleDeliverAll(order)}
+                        onClick={() => isShipping ? handleShipOrder(order) : handleDeliverAll(order, true)}
                         disabled={actionLoading === order.orderId}
                         className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium text-lg"
                       >
@@ -425,7 +451,7 @@ export default function PickupPage() {
                             {t('common.loading')}
                           </span>
                         ) : (
-                          isShipping ? 'Marcar pedido como enviado' : t('pickup.deliverAll', { count: undeliveredCount })
+                          isShipping ? t('pickup.markShipped') : t('pickup.completeAndThank')
                         )}
                       </button>
                     </div>
@@ -463,7 +489,7 @@ export default function PickupPage() {
               })}
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="grid gap-3 pt-2 md:grid-cols-3">
               <button
                 onClick={() => setConfirmDeliver(null)}
                 className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent"
@@ -474,7 +500,27 @@ export default function PickupPage() {
                 onClick={() => {
                   const order = orders.find(o => o.orderId === confirmDeliver.orderId);
                   if (order) {
-                    handleDeliverAll(order);
+                    handleDeliverAll(order, false);
+                    setConfirmDeliver(null);
+                  }
+                }}
+                disabled={actionLoading === confirmDeliver.orderId}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent disabled:opacity-50"
+              >
+                {actionLoading === confirmDeliver.orderId ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block animate-spin">⟳</span>
+                    {t('common.loading')}
+                  </span>
+                ) : (
+                  t('pickup.deliver')
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  const order = orders.find(o => o.orderId === confirmDeliver.orderId);
+                  if (order) {
+                    handleDeliverAll(order, true);
                     setConfirmDeliver(null);
                   }
                 }}
@@ -487,7 +533,7 @@ export default function PickupPage() {
                     {t('common.loading')}
                   </span>
                 ) : (
-                  t('pickup.deliver')
+                  t('pickup.completeAndThank')
                 )}
               </button>
             </div>

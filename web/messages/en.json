@@ -238,6 +238,16 @@
     "undoComment": "Comment",
     "undoCommentPlaceholder": "Explain why this action needs to be undone",
     "undoFailed": "Could not undo the action",
+    "sections": {
+      "now": "Now",
+      "today": "Today",
+      "last7Days": "Last 7 days"
+    },
+    "chart": {
+      "received": "Received",
+      "ready": "Ready",
+      "delivered": "Delivered"
+    },
     "stats": {
       "ordersOpen": "Open Orders",
       "ordersReady": "Ready for Pickup",
@@ -247,7 +257,11 @@
       "filledThisWeek": "Filled (Week)",
       "completedToday": "Completed Today",
       "withProblem": "With Problem",
-      "awaitingNotification": "{count} awaiting notification"
+      "awaitingNotification": "{count} awaiting notification",
+      "readyToLeave": "Ready to leave",
+      "readyStock": "Currently ready",
+      "last7Days": "Last 7 days",
+      "noIssues": "No issues"
     }
   },
   "pickup": {
@@ -269,8 +283,12 @@
     "createdAt": "Created at",
     "refresh": "Refresh",
     "sendWhatsApp": "WhatsApp",
+    "sendReadyWhatsApp": "Ready WhatsApp",
     "notified": "Notified",
+    "readyNotified": "Ready sent",
     "notificationSent": "Notification sent",
+    "markShipped": "Mark shipped",
+    "completeAndThank": "Complete and thank",
     "pendingNotifications": "{count} order(s) pending notification",
     "whatsappMessage": "Hello {name}! Your {count} CO₂ cylinder(s) are ready for pickup. Visit us when convenient!"
   },

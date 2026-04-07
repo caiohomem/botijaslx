@@ -240,16 +240,30 @@
     "undoComment": "Observação",
     "undoCommentPlaceholder": "Explique porque esta ação precisa ser desfeita",
     "undoFailed": "Não foi possível desfazer a ação",
+    "sections": {
+      "now": "Agora",
+      "today": "Hoje",
+      "last7Days": "Últimos 7 dias"
+    },
+    "chart": {
+      "received": "Recebidas",
+      "ready": "Prontas",
+      "delivered": "Entregues"
+    },
     "stats": {
       "ordersOpen": "Pedidos Abertos",
       "ordersReady": "Prontos p/ Recolha",
       "cylindersPending": "Botijas Pendentes",
-      "cylindersReady": "Botijas Cheias",
+      "cylindersReady": "Botijas Prontas",
       "filledToday": "Enchidas Hoje",
       "filledThisWeek": "Enchidas (Semana)",
       "completedToday": "Concluídos Hoje",
       "withProblem": "Com Problema",
-      "awaitingNotification": "{count} por notificar"
+      "awaitingNotification": "{count} por notificar",
+      "readyToLeave": "Prontos a sair",
+      "readyStock": "Em estado pronto",
+      "last7Days": "Últimos 7 dias",
+      "noIssues": "Sem ocorrências"
     }
   },
   "pickup": {
@@ -271,8 +285,12 @@
     "createdAt": "Criado em",
     "refresh": "Atualizar",
     "sendWhatsApp": "WhatsApp",
+    "sendReadyWhatsApp": "WhatsApp pronto",
     "notified": "Notificado",
+    "readyNotified": "Pronto enviado",
     "notificationSent": "Notificação enviada",
+    "markShipped": "Marcar enviado",
+    "completeAndThank": "Concluir e agradecer",
     "pendingNotifications": "{count} pedido(s) por notificar",
     "whatsappMessage": "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!"
   },

@@ -17,7 +17,7 @@ public class DashboardStatsQuery : IDashboardStatsQuery
     public async Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken)
     {
         var today = DateTime.UtcNow.Date;
-        var weekAgo = today.AddDays(-7);
+        var weekStart = today.AddDays(-6);
 
         // Contagens de pedidos
         var ordersOpen = await _context.Orders
@@ -34,7 +34,7 @@ public class DashboardStatsQuery : IDashboardStatsQuery
         var ordersCompletedThisWeek = await _context.Orders
             .CountAsync(o => o.Status == RefillOrderStatus.Completed && 
                             o.CompletedAt != null && 
-                            o.CompletedAt.Value.Date >= weekAgo, cancellationToken);
+                            o.CompletedAt.Value.Date >= weekStart, cancellationToken);
 
         // Contagens de botijas
         var cylindersReceived = await _context.Cylinders
@@ -52,7 +52,39 @@ public class DashboardStatsQuery : IDashboardStatsQuery
 
         var cylindersFilledThisWeek = await _context.CylinderHistory
             .CountAsync(h => h.EventType == CylinderEventType.MarkedReady && 
-                            h.Timestamp.Date >= weekAgo, cancellationToken);
+                            h.Timestamp.Date >= weekStart, cancellationToken);
+
+        var dailySeriesRaw = await _context.CylinderHistory
+            .Where(h =>
+                (h.EventType == CylinderEventType.Received ||
+                 h.EventType == CylinderEventType.MarkedReady ||
+                 h.EventType == CylinderEventType.Delivered) &&
+                h.Timestamp.Date >= weekStart)
+            .GroupBy(h => h.Timestamp.Date)
+            .Select(g => new
+            {
+                Date = g.Key,
+                Received = g.Count(h => h.EventType == CylinderEventType.Received),
+                Ready = g.Count(h => h.EventType == CylinderEventType.MarkedReady),
+                Delivered = g.Count(h => h.EventType == CylinderEventType.Delivered)
+            })
+            .ToListAsync(cancellationToken);
+
+        var dailySeries = Enumerable.Range(0, 7)
+            .Select(offset => weekStart.AddDays(offset))
+            .Select(day =>
+            {
+                var match = dailySeriesRaw.FirstOrDefault(x => x.Date == day);
+
+                return new DashboardDailySeriesPointDto
+                {
+                    Date = day.ToString("yyyy-MM-dd"),
+                    Received = match?.Received ?? 0,
+                    Ready = match?.Ready ?? 0,
+                    Delivered = match?.Delivered ?? 0
+                };
+            })
+            .ToList();
 
         // Total de clientes
         var totalCustomers = await _context.Customers.CountAsync(cancellationToken);
@@ -74,7 +106,8 @@ public class DashboardStatsQuery : IDashboardStatsQuery
             CylindersWithProblem = cylindersWithProblem,
             CylindersFilledToday = cylindersFilledToday,
             CylindersFilledThisWeek = cylindersFilledThisWeek,
-            TotalCustomers = totalCustomers
+            TotalCustomers = totalCustomers,
+            DailySeries = dailySeries
         };
     }
 }
