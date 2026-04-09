@@ -113,7 +113,7 @@ export default function PickupPage() {
       playSound('complete');
       setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
       setExpandedOrder(null);
-      setSuccessMessage(`Pedido expedido para ${order.customerName}!`);
+      setSuccessMessage(t('pickup.orderCompleteThankYou', { name: order.customerName }));
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao marcar pedido como enviado');
@@ -398,14 +398,12 @@ export default function PickupPage() {
                         : setConfirmDeliver({ orderId: order.orderId, count: undeliveredCount })}
                       disabled={actionLoading === order.orderId}
                       className="flex-1 px-3 py-2 text-sm bg-primary hover:opacity-90 text-primary-foreground rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap font-medium"
-                      title={isShipping ? t('pickup.markShipped') : t('pickup.completeAndThank')}
+                      title={t('pickup.completeAndThank')}
                     >
                       {actionLoading === order.orderId ? (
                         <span className="inline-block animate-spin">⟳</span>
                       ) : (
-                        isShipping
-                          ? `📦 ${t('pickup.markShipped')}`
-                          : `✓ ${t('pickup.completeAndThank')}`
+                        `✓ ${t('pickup.completeAndThank')}`
                       )}
                     </button>
                   )}
@@ -446,12 +444,12 @@ export default function PickupPage() {
                         className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors font-medium text-lg"
                       >
                         {actionLoading === order.orderId ? (
-                          <span className="inline-flex items-center gap-2">
+                        <span className="inline-flex items-center gap-2">
                             <span className="inline-block animate-spin">⟳</span>
                             {t('common.loading')}
                           </span>
                         ) : (
-                          isShipping ? t('pickup.markShipped') : t('pickup.completeAndThank')
+                          t('pickup.completeAndThank')
                         )}
                       </button>
                     </div>
