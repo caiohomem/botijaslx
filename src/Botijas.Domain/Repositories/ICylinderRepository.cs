@@ -11,6 +11,7 @@ public interface ICylinderRepository
     Task<Cylinder?> FindInOpenOrderAsync(Guid cylinderId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
+    Task<List<ProblemCylinderItem>> GetProblemCylindersAsync(CancellationToken cancellationToken = default);
     Task<List<FillingQueueItem>> GetFillingQueueAsync(CancellationToken cancellationToken = default);
     Task AddAsync(Cylinder cylinder, CancellationToken cancellationToken = default);
     Task DeleteAsync(Cylinder cylinder, CancellationToken cancellationToken = default);
@@ -32,4 +33,20 @@ public class FillingQueueItem
     public string FulfillmentMethod { get; set; } = string.Empty;
     public int TotalCylindersInOrder { get; set; }
     public int ReadyCylindersInOrder { get; set; }
+}
+
+public class ProblemCylinderItem
+{
+    public Guid CylinderId { get; set; }
+    public long SequentialNumber { get; set; }
+    public string? LabelToken { get; set; }
+    public string State { get; set; } = string.Empty;
+    public string? OccurrenceNotes { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public Guid? OrderId { get; set; }
+    public string? OrderStatus { get; set; }
+    public Guid? CustomerId { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerPhoneType { get; set; }
 }

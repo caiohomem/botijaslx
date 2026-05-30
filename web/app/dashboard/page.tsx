@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { customersApi, historyApi, reportsApi, cylindersApi, CylinderHistory, DashboardStats, CustomerCylindersResult } from '@/lib/api';
+import { customersApi, historyApi, reportsApi, cylindersApi, CylinderHistory, DashboardStats, CustomerCylindersResult, ProblemCylinder } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
 import { CustomerSearch } from '@/components/CustomerSearch';
 
-type LookupMode = 'customer' | 'cylinder';
+type LookupMode = 'customer' | 'cylinder' | 'problems';
 type ChartRange = 7 | 30 | 60;
 
 export default function DashboardPage() {
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [lookupMode, setLookupMode] = useState<LookupMode>('customer');
   const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [problemLoading, setProblemLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Customer lookup state
@@ -29,6 +30,7 @@ export default function DashboardPage() {
 
   // Cylinder lookup state
   const [cylinderHistory, setCylinderHistory] = useState<CylinderHistory | null>(null);
+  const [problemCylinders, setProblemCylinders] = useState<ProblemCylinder[]>([]);
 
   // Stats
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -50,6 +52,42 @@ export default function DashboardPage() {
     }
   };
 
+  const loadProblemCylinders = async () => {
+    setProblemLoading(true);
+    setError(null);
+
+    try {
+      const result = await cylindersApi.getProblems();
+      setProblemCylinders(result.cylinders);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar botijas com problema');
+      setProblemCylinders([]);
+    } finally {
+      setProblemLoading(false);
+    }
+  };
+
+  const resetLookupState = () => {
+    setSearchInput('');
+    setCustomerResults([]);
+    setSelectedCustomerCylinders(null);
+    setCylinderHistory(null);
+    setExpandedCylinder(null);
+    setError(null);
+  };
+
+  const handleSelectLookupMode = (mode: LookupMode) => {
+    resetLookupState();
+    setLookupMode(mode);
+
+    if (mode === 'problems') {
+      void loadProblemCylinders();
+    } else {
+      setProblemCylinders([]);
+      setProblemLoading(false);
+    }
+  };
+
   const handleSearchValue = async (value?: string) => {
     const query = (value ?? searchInput).trim();
     if (!query) return;
@@ -57,6 +95,7 @@ export default function DashboardPage() {
     setSearchInput(query);
     setLoading(true);
     setError(null);
+    setProblemCylinders([]);
     setCustomerResults([]);
     setSelectedCustomerCylinders(null);
     setCylinderHistory(null);
@@ -129,12 +168,10 @@ export default function DashboardPage() {
   };
 
   const handleClear = () => {
-    setSearchInput('');
-    setCustomerResults([]);
-    setSelectedCustomerCylinders(null);
-    setCylinderHistory(null);
-    setExpandedCylinder(null);
-    setError(null);
+    setLookupMode('customer');
+    resetLookupState();
+    setProblemCylinders([]);
+    setProblemLoading(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -201,7 +238,7 @@ export default function DashboardPage() {
     }
   };
 
-  const hasResults = customerResults.length > 0 || selectedCustomerCylinders || cylinderHistory;
+  const hasResults = customerResults.length > 0 || selectedCustomerCylinders || cylinderHistory || problemLoading || lookupMode === 'problems';
 
   return (
     <div className="space-y-6">
@@ -268,6 +305,7 @@ export default function DashboardPage() {
                   value={stats.cylindersWithProblem}
                   color="red"
                   highlight
+                  onClick={() => handleSelectLookupMode('problems')}
                 />
               ) : (
                 <StatCard
@@ -303,77 +341,141 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Lookup Section */}
-      <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
-        {/* Mode Tabs */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => { setLookupMode('customer'); handleClear(); }}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              lookupMode === 'customer'
-                ? 'bg-primary text-primary-foreground'
-                : 'border hover:bg-accent'
-            }`}
-          >
-            {t('dashboard.searchByCustomer')}
-          </button>
-          <button
-            onClick={() => { setLookupMode('cylinder'); handleClear(); }}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              lookupMode === 'cylinder'
-                ? 'bg-primary text-primary-foreground'
-                : 'border hover:bg-accent'
-            }`}
-          >
-            {t('dashboard.searchByCylinder')}
-          </button>
-        </div>
+      <DashboardSection title={t('dashboard.sections.history')}>
+        <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleSelectLookupMode('customer')}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                lookupMode === 'customer'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border hover:bg-accent'
+              }`}
+            >
+              {t('dashboard.searchByCustomer')}
+            </button>
+            <button
+              onClick={() => handleSelectLookupMode('cylinder')}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                lookupMode === 'cylinder'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border hover:bg-accent'
+              }`}
+            >
+              {t('dashboard.searchByCylinder')}
+            </button>
+            <button
+              onClick={() => handleSelectLookupMode('problems')}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                lookupMode === 'problems'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border hover:bg-accent'
+              }`}
+            >
+              {t('dashboard.problemsTab')}
+            </button>
+          </div>
 
-        {/* Customer Search - New typeahead (M0) + QR Scanner */}
-        {lookupMode === 'customer' && (
-          <>
-            {/* QR Scanner to identify customer from cylinder */}
-            <QrScanner
-              onScan={(code) => handleCustomerModeScan(code)}
-              label={t('dashboard.scanCamera')}
-            />
-
-            {/* Typeahead customer search */}
-            <CustomerSearch
-              onSelect={(customer) => handleSelectCustomer(customer.customerId)}
-              onCreateNew={() => {}}
-              disabled={loading}
-            />
-          </>
-        )}
-
-        {/* Cylinder Search - Camera Scanner + Manual Input */}
-        {lookupMode === 'cylinder' && (
-          <>
-            <QrScanner
-              onScan={(code) => handleSearchValue(code)}
-              label={t('dashboard.scanCamera')}
-            />
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder={t('dashboard.scanPlaceholder')}
-                className="flex-1 px-4 py-3 border rounded-lg bg-background text-foreground text-lg"
+          {lookupMode === 'customer' && (
+            <>
+              <QrScanner
+                onScan={(code) => handleCustomerModeScan(code)}
+                label={t('dashboard.scanCamera')}
               />
-              <button
-                onClick={handleSearch}
-                disabled={!searchInput.trim() || loading}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 font-medium"
-              >
-                {loading ? '...' : t('dashboard.search')}
-              </button>
+
+              <CustomerSearch
+                onSelect={(customer) => handleSelectCustomer(customer.customerId)}
+                onCreateNew={() => {}}
+                disabled={loading}
+              />
+            </>
+          )}
+
+          {lookupMode === 'cylinder' && (
+            <>
+              <QrScanner
+                onScan={(code) => handleSearchValue(code)}
+                label={t('dashboard.scanCamera')}
+              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder={t('dashboard.scanPlaceholder')}
+                  className="flex-1 px-4 py-3 border rounded-lg bg-background text-foreground text-lg"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={!searchInput.trim() || loading}
+                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 font-medium"
+                >
+                  {loading ? '...' : t('dashboard.search')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {lookupMode === 'problems' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm text-muted-foreground">
+                  {t('dashboard.problems.description')}
+                </div>
+                <button
+                  onClick={() => void loadProblemCylinders()}
+                  disabled={problemLoading}
+                  className="px-3 py-2 border rounded-lg hover:bg-accent disabled:opacity-50 text-sm font-medium"
+                >
+                  {problemLoading ? t('common.loading') : t('pickup.refresh')}
+                </button>
+              </div>
+
+              {problemLoading && problemCylinders.length === 0 ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+                  <span className="inline-block animate-spin">⟳</span>
+                  {t('common.loading')}
+                </div>
+              ) : problemCylinders.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
+                  <div className="text-4xl mb-2">⚠️</div>
+                  <div>{t('dashboard.problems.empty')}</div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {problemCylinders.map((cylinder) => (
+                    <ProblemCylinderCard
+                      key={cylinder.cylinderId}
+                      cylinder={cylinder}
+                      t={t}
+                      formatDate={formatDate}
+                      onViewHistory={async (cylinderId) => {
+                        setLoading(true);
+                        setError(null);
+                        setLookupMode('cylinder');
+                        setCustomerResults([]);
+                        setSelectedCustomerCylinders(null);
+                        setExpandedCylinder(null);
+                        setSearchInput('');
+
+                        try {
+                          const result = await historyApi.getByCylinderId(cylinderId);
+                          setCylinderHistory(result);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : t('dashboard.cylinderNotFound'));
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      </DashboardSection>
 
       {/* Error */}
       {error && (
@@ -882,6 +984,91 @@ function formatShortDate(date: string) {
     day: '2-digit',
     month: '2-digit'
   });
+}
+
+function cleanProblemNotes(notes?: string): string {
+  if (!notes) return '';
+
+  return notes.replace(/^\[[^\]]+\]\s*/, '').trim();
+}
+
+function ProblemCylinderCard({
+  cylinder,
+  t,
+  formatDate,
+  onViewHistory,
+}: {
+  cylinder: ProblemCylinder;
+  t: ReturnType<typeof useTranslations>;
+  formatDate: (value: string) => string;
+  onViewHistory: (cylinderId: string) => Promise<void>;
+}) {
+  return (
+    <div className="border rounded-lg bg-background p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-300 font-mono text-sm font-bold">
+              #{cylinder.sequentialNumber}
+            </div>
+            <div>
+              <div className="font-mono text-sm font-semibold">
+                #{String(cylinder.sequentialNumber).padStart(4, '0')}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {cylinder.labelToken || '-'}
+              </div>
+            </div>
+          </div>
+        </div>
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+          {t('cylinder.status.problem')}
+        </span>
+      </div>
+
+      <div className="grid gap-2 text-sm md:grid-cols-2">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t('customer.title')}
+          </div>
+          <div className="font-medium">
+            {cylinder.customerName || t('dashboard.problems.customerUnknown')}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {cylinder.customerPhone || '-'}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t('order.title')}
+          </div>
+          <div className="font-medium">
+            {cylinder.orderStatus
+              ? t(`order.status.${cylinder.orderStatus.toLowerCase()}`)
+              : t('dashboard.problems.orderUnknown')}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(cylinder.createdAt)}
+          </div>
+        </div>
+      </div>
+
+      {cleanProblemNotes(cylinder.occurrenceNotes) && (
+        <div className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+          {cleanProblemNotes(cylinder.occurrenceNotes)}
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => void onViewHistory(cylinder.cylinderId)}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 text-sm font-medium"
+        >
+          {t('dashboard.problems.viewHistory')}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // Stat Card Component

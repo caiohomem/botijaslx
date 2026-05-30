@@ -18,6 +18,7 @@ public class CylindersController : ControllerBase
     private readonly AssignLabelCommandHandler _assignLabelHandler;
     private readonly GetCylinderHistoryQueryHandler _getHistoryHandler;
     private readonly GetCylinderByTokenQueryHandler _getByTokenHandler;
+    private readonly GetProblemCylindersQueryHandler _getProblemCylindersHandler;
     private readonly DeleteCylinderHandler _deleteCylinderHandler;
     private readonly UndoCylinderHistoryActionCommandHandler _undoHistoryActionHandler;
 
@@ -29,6 +30,7 @@ public class CylindersController : ControllerBase
         AssignLabelCommandHandler assignLabelHandler,
         GetCylinderHistoryQueryHandler getHistoryHandler,
         GetCylinderByTokenQueryHandler getByTokenHandler,
+        GetProblemCylindersQueryHandler getProblemCylindersHandler,
         DeleteCylinderHandler deleteCylinderHandler,
         UndoCylinderHistoryActionCommandHandler undoHistoryActionHandler)
     {
@@ -39,6 +41,7 @@ public class CylindersController : ControllerBase
         _assignLabelHandler = assignLabelHandler;
         _getHistoryHandler = getHistoryHandler;
         _getByTokenHandler = getByTokenHandler;
+        _getProblemCylindersHandler = getProblemCylindersHandler;
         _deleteCylinderHandler = deleteCylinderHandler;
         _undoHistoryActionHandler = undoHistoryActionHandler;
     }
@@ -189,6 +192,24 @@ public class CylindersController : ControllerBase
         }
 
         return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Lista as botijas com problema
+    /// </summary>
+    [HttpGet("problems")]
+    public async Task<IActionResult> GetProblems(CancellationToken cancellationToken)
+    {
+        var result = await _getProblemCylindersHandler.Handle(
+            new GetProblemCylindersQuery(),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(new { cylinders = result.Value });
     }
 
     /// <summary>

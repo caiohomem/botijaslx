@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: botijas-postgres
+    environment:
+      POSTGRES_DB: devdb
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d devdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   api:
     build:
       context: .
@@ -10,6 +27,9 @@ services:
       ASPNETCORE_URLS: http://127.0.0.1:8080
       ConnectionStrings__Default: Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true
       CORS__AllowedOrigins: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   web:
     build:
@@ -30,3 +50,6 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
+
+volumes:
+  postgres_data:

@@ -46,6 +46,7 @@ builder.Services.AddScoped<Botijas.Application.Filling.Commands.ReportCylinderPr
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.AssignLabelCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Cylinders.Queries.GetCylinderHistoryQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Cylinders.Queries.GetCylinderByTokenQueryHandler>();
+builder.Services.AddScoped<Botijas.Application.Cylinders.Queries.GetProblemCylindersQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Cylinders.Commands.UndoCylinderHistoryActionCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Reports.Queries.IDashboardStatsQuery, Botijas.Infrastructure.Queries.DashboardStatsQuery>();
 builder.Services.AddScoped<Botijas.Application.Pickup.Queries.GetReadyForPickupQueryHandler>();

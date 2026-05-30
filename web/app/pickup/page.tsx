@@ -9,6 +9,7 @@ import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
 export default function PickupPage() {
   const t = useTranslations();
   const [orders, setOrders] = useState<PickupOrder[]>([]);
+  const [fulfillmentFilter, setFulfillmentFilter] = useState<'all' | 'pickup' | 'shipping'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -197,6 +198,26 @@ export default function PickupPage() {
     return `${waitMinutes}m`;
   };
 
+  const filteredOrders = orders.filter((order) => {
+    if (fulfillmentFilter === 'pickup') {
+      return order.fulfillmentMethod === 'Pickup';
+    }
+
+    if (fulfillmentFilter === 'shipping') {
+      return order.fulfillmentMethod === 'Shipping';
+    }
+
+    return true;
+  });
+
+  const emptyMessage = fulfillmentFilter === 'all'
+    ? t('pickup.empty')
+    : t('pickup.emptyFiltered', {
+        filter: fulfillmentFilter === 'pickup'
+          ? t('pickup.filters.pickup')
+          : t('pickup.filters.shipping')
+      });
+
   // M9: Debounced live search
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -224,25 +245,59 @@ export default function PickupPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">{t('pickup.filterBy')}</span>
+        <button
+          onClick={() => setFulfillmentFilter('all')}
+          className={`px-3 py-2 rounded-lg text-sm font-medium border ${
+            fulfillmentFilter === 'all'
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'hover:bg-accent'
+          }`}
+        >
+          {t('pickup.filters.all')}
+        </button>
+        <button
+          onClick={() => setFulfillmentFilter('pickup')}
+          className={`px-3 py-2 rounded-lg text-sm font-medium border ${
+            fulfillmentFilter === 'pickup'
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'hover:bg-accent'
+          }`}
+        >
+          {t('pickup.filters.pickup')}
+        </button>
+        <button
+          onClick={() => setFulfillmentFilter('shipping')}
+          className={`px-3 py-2 rounded-lg text-sm font-medium border ${
+            fulfillmentFilter === 'shipping'
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'hover:bg-accent'
+          }`}
+        >
+          {t('pickup.filters.shipping')}
+        </button>
+      </div>
+
       {/* M7: KPI Counters */}
-      {!loading && orders.length > 0 && (
+      {!loading && (
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-muted/30 p-4 rounded-lg border">
             <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('common.orders') || 'Orders'}</div>
-            <div className="text-2xl font-bold mt-2">{orders.length}</div>
+            <div className="text-2xl font-bold mt-2">{filteredOrders.length}</div>
             <div className="text-xs text-muted-foreground mt-1">{t('pickup.title')}</div>
           </div>
           <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
             <div className="text-xs text-purple-700 dark:text-purple-300 uppercase tracking-wide font-medium">{t('common.cylinders') || 'Cylinders'}</div>
             <div className="text-2xl font-bold mt-2 text-purple-700 dark:text-purple-300">
-              {orders.reduce((sum, o) => sum + o.totalCylinders, 0)}
+              {filteredOrders.reduce((sum, o) => sum + o.totalCylinders, 0)}
             </div>
             <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">{t('common.total') || 'Total'}</div>
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
             <div className="text-xs text-orange-700 dark:text-orange-300 uppercase tracking-wide font-medium">{t('common.pending') || 'Pending'}</div>
             <div className="text-2xl font-bold mt-2 text-orange-700 dark:text-orange-300">
-              {orders.reduce((sum, o) => sum + (o.totalCylinders - o.deliveredCylinders), 0)}
+              {filteredOrders.reduce((sum, o) => sum + (o.totalCylinders - o.deliveredCylinders), 0)}
             </div>
             <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">{t('common.delivery') || 'Delivery'}</div>
           </div>
@@ -292,18 +347,18 @@ export default function PickupPage() {
       )}
 
       {/* Empty State */}
-      {!loading && orders.length === 0 && (
+      {!loading && filteredOrders.length === 0 && (
         <div className="text-center text-muted-foreground py-12 border-2 border-dashed rounded-lg">
           <div className="text-4xl mb-2">📦</div>
-          <div>{t('pickup.empty')}</div>
+          <div>{emptyMessage}</div>
         </div>
       )}
 
       {/* Orders List */}
-      {!loading && orders.length > 0 && (
+      {!loading && filteredOrders.length > 0 && (
         <div className="space-y-4">
           {/* M8: Sort orders by wait time (longest waiting first) */}
-          {[...orders].sort((a, b) =>
+          {[...filteredOrders].sort((a, b) =>
             getWaitTimeMinutes(b.createdAt) - getWaitTimeMinutes(a.createdAt)
           ).map((order) => (
             (() => {

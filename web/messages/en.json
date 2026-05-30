@@ -242,7 +242,8 @@
       "now": "Now",
       "today": "Today",
       "last7Days": "Last 7 days",
-      "activity": "Activity"
+      "activity": "Activity",
+      "history": "History"
     },
     "range": {
       "7d": "7 days",
@@ -268,6 +269,14 @@
       "readyStock": "Currently ready",
       "last7Days": "Last 7 days",
       "noIssues": "No issues"
+    },
+    "problemsTab": "Problems",
+    "problems": {
+      "description": "List of cylinders with issues",
+      "empty": "No problem cylinders",
+      "viewHistory": "View history",
+      "customerUnknown": "Unknown customer",
+      "orderUnknown": "Unknown order"
     }
   },
   "pickup": {
@@ -296,7 +305,14 @@
     "markShipped": "Mark shipped",
     "completeAndThank": "Complete and thank",
     "pendingNotifications": "{count} order(s) pending notification",
-    "whatsappMessage": "Hello {name}! Your {count} CO₂ cylinder(s) are ready for pickup. Visit us when convenient!"
+    "whatsappMessage": "Hello {name}! Your {count} CO₂ cylinder(s) are ready for pickup. Visit us when convenient!",
+    "filterBy": "Filter by",
+    "filters": {
+      "all": "All",
+      "pickup": "Pickup",
+      "shipping": "Shipping"
+    },
+    "emptyFiltered": "No orders for {filter}"
   },
   "clientes": {
     "title": "Customers",

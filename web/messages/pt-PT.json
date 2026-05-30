@@ -244,7 +244,8 @@
       "now": "Agora",
       "today": "Hoje",
       "last7Days": "Últimos 7 dias",
-      "activity": "Atividade"
+      "activity": "Atividade",
+      "history": "Histórico"
     },
     "range": {
       "7d": "7 dias",
@@ -270,6 +271,14 @@
       "readyStock": "Em estado pronto",
       "last7Days": "Últimos 7 dias",
       "noIssues": "Sem ocorrências"
+    },
+    "problemsTab": "Problemas",
+    "problems": {
+      "description": "Lista de botijas em problema",
+      "empty": "Sem botijas com problema",
+      "viewHistory": "Ver histórico",
+      "customerUnknown": "Cliente desconhecido",
+      "orderUnknown": "Pedido desconhecido"
     }
   },
   "pickup": {
@@ -298,7 +307,14 @@
     "markShipped": "Marcar enviado",
     "completeAndThank": "Concluir e agradecer",
     "pendingNotifications": "{count} pedido(s) por notificar",
-    "whatsappMessage": "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!"
+    "whatsappMessage": "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas para recolha. Visite-nos quando puder!",
+    "filterBy": "Filtrar por",
+    "filters": {
+      "all": "Todos",
+      "pickup": "Recolha",
+      "shipping": "Envio"
+    },
+    "emptyFiltered": "Não há pedidos para {filter}"
   },
   "clientes": {
     "title": "Clientes",

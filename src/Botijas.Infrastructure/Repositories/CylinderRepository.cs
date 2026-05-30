@@ -141,6 +141,68 @@ public class CylinderRepository : ICylinderRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<ProblemCylinderItem>> GetProblemCylindersAsync(CancellationToken cancellationToken = default)
+    {
+        var cylinders = await _context.Cylinders
+            .Where(c => c.State == CylinderState.Problem)
+            .Select(c => new ProblemCylinderItem
+            {
+                CylinderId = c.CylinderId,
+                SequentialNumber = c.SequentialNumber,
+                LabelToken = c.LabelToken != null ? c.LabelToken.Value : null,
+                State = c.State.ToString(),
+                OccurrenceNotes = c.OccurrenceNotes,
+                CreatedAt = c.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var linkRows = await (
+            from cylinderRef in _context.CylinderRefs
+            join order in _context.Orders on cylinderRef.OrderId equals order.OrderId
+            join customer in _context.Customers on order.CustomerId equals customer.CustomerId
+            select new
+            {
+                cylinderRef.CylinderId,
+                order.OrderId,
+                OrderStatus = order.Status,
+                order.CreatedAt,
+                CustomerId = customer.CustomerId,
+                CustomerName = customer.Name,
+                CustomerPhone = customer.Phone.Value,
+                CustomerPhoneType = customer.PhoneType
+            })
+            .ToListAsync(cancellationToken);
+
+        var linkByCylinderId = linkRows
+            .GroupBy(x => x.CylinderId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(x => x.OrderStatus == RefillOrderStatus.Open ? 0 :
+                                     x.OrderStatus == RefillOrderStatus.ReadyForPickup ? 1 : 2)
+                      .ThenByDescending(x => x.CreatedAt)
+                      .First());
+
+        foreach (var cylinder in cylinders)
+        {
+            if (!linkByCylinderId.TryGetValue(cylinder.CylinderId, out var link))
+            {
+                continue;
+            }
+
+            cylinder.OrderId = link.OrderId;
+            cylinder.OrderStatus = link.OrderStatus.ToString();
+            cylinder.CustomerId = link.CustomerId;
+            cylinder.CustomerName = link.CustomerName;
+            cylinder.CustomerPhone = link.CustomerPhone;
+            cylinder.CustomerPhoneType = link.CustomerPhoneType.ToString();
+        }
+
+        return cylinders
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.SequentialNumber)
+            .ToList();
+    }
+
     public async Task AddAsync(Cylinder cylinder, CancellationToken cancellationToken = default)
     {
         if (cylinder.SequentialNumber == 0)

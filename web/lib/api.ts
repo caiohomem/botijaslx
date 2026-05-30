@@ -226,6 +226,21 @@ export interface ReportProblemResult {
   notes: string;
 }
 
+export interface ProblemCylinder {
+  cylinderId: string;
+  sequentialNumber: number;
+  labelToken?: string;
+  state: string;
+  occurrenceNotes?: string;
+  createdAt: string;
+  orderId?: string;
+  orderStatus?: string;
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerPhoneType?: string;
+}
+
 export interface AssignLabelResult {
   cylinderId: string;
   labelToken: string;
@@ -257,6 +272,9 @@ export const cylindersApi = {
       method: 'POST',
       body: JSON.stringify({ type, notes }),
     }),
+
+  getProblems: () =>
+    apiRequest<{ cylinders: ProblemCylinder[] }>('/api/cylinders/problems'),
 
   assignLabel: (cylinderId: string, qrToken: string) =>
     apiRequest<AssignLabelResult>(`/api/cylinders/${cylinderId}/assign-label`, {
