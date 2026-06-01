@@ -12,7 +12,11 @@
       "Bash(dotnet add:*)",
       "Bash(dotnet ef migrations script:*)",
       "Bash(npm run build:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find /home/caioh/botijaslx/src -type f -name \"*Notif*\" -o -name \"*WhatsApp*\" -o -name \"*Message*\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"sendWhatsApp\\\\|SendWhatsApp\\\\|send.*message\\\\|Send.*Message\" /home/caioh/botijaslx/src --include=\"*.cs\" 2>/dev/null | head -20)",
+      "Bash(getent hosts:*)"
     ]
   }
 }

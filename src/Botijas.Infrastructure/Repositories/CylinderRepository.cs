@@ -95,7 +95,10 @@ public class CylinderRepository : ICylinderRepository
         // Buscar contagem de botijas prontas por pedido
         var orderIds = orderGroups.Keys.ToList();
         var readyCounts = await _context.CylinderRefs
-            .Where(cr => orderIds.Contains(cr.OrderId) && cr.State == CylinderState.Ready)
+            .Where(cr => orderIds.Contains(cr.OrderId) &&
+                         (cr.State == CylinderState.Ready ||
+                          cr.State == CylinderState.Problem ||
+                          cr.State == CylinderState.Delivered))
             .GroupBy(cr => cr.OrderId)
             .Select(g => new { OrderId = g.Key, ReadyCount = g.Count() })
             .ToDictionaryAsync(x => x.OrderId, x => x.ReadyCount, cancellationToken);

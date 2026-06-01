@@ -72,7 +72,7 @@ public class MarkCylinderReadyCommandHandler
 
         // Calcular progresso
         var totalCylinders = orderCylinders.Count;
-        var readyCylinders = orderCylinders.Count(c => c.State == CylinderState.Ready);
+        var readyCylinders = orderCylinders.Count(c => RefillOrder.IsCylinderReadyForPickup(c.State));
 
         return Result<FillingResultDto>.Success(new FillingResultDto
         {

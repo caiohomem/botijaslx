@@ -46,6 +46,7 @@ public class GetReadyForPickupQueryHandler
 
             // Buscar botijas do pedido
             var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+            order.RecalculateStatus(cylinders);
 
             var cylinderDtos = cylinders.Select(c => new PickupCylinderDto
             {
@@ -53,6 +54,7 @@ public class GetReadyForPickupQueryHandler
                 SequentialNumber = c.SequentialNumber,
                 LabelToken = c.LabelToken?.Value,
                 State = c.State.ToString(),
+                OccurrenceNotes = c.OccurrenceNotes,
                 IsDelivered = c.State == CylinderState.Delivered
             }).ToList();
 
@@ -79,6 +81,8 @@ public class GetReadyForPickupQueryHandler
 
         // Ordenar por data de criação (mais antigos primeiro)
         result = result.OrderBy(o => o.CreatedAt).ToList();
+
+        await _orderRepository.SaveChangesAsync(cancellationToken);
 
         return Result<List<PickupOrderDto>>.Success(result);
     }

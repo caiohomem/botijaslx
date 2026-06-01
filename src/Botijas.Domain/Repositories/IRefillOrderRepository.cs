@@ -20,4 +20,10 @@ public class CurrentCylinderOrderInfo
     public Guid OrderId { get; set; }
     public RefillOrderStatus OrderStatus { get; set; }
     public DateTime OrderCreatedAt { get; set; }
+    public FulfillmentMethod FulfillmentMethod { get; set; }
+    public bool RefillPaid { get; set; }
+    public bool ShippingPaid { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public string? CancellationNotes { get; set; }
 }

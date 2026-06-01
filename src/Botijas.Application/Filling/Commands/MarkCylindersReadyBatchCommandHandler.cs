@@ -31,7 +31,9 @@ public class MarkCylindersReadyBatchCommandHandler
         }
 
         // Get all cylinders in this order that are not yet ready in the order context.
-        var cylinderRefs = order.Cylinders.Where(c => c.State != CylinderState.Ready).ToList();
+        var cylinderRefs = order.Cylinders
+            .Where(c => !RefillOrder.IsCylinderReadyForPickup(c.State))
+            .ToList();
 
         if (cylinderRefs.Count == 0)
         {
@@ -48,7 +50,7 @@ public class MarkCylindersReadyBatchCommandHandler
             {
                 try
                 {
-                    if (cylinder.State != CylinderState.Ready)
+                    if (!RefillOrder.IsCylinderReadyForPickup(cylinder.State))
                     {
                         cylinder.MarkAsReady();
                         markedCount++;

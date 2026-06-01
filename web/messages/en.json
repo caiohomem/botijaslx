@@ -89,7 +89,8 @@
       "open": "Open",
       "readyForPickup": "Ready for Pickup",
       "readyforpickup": "Ready for Pickup",
-      "completed": "Completed"
+      "completed": "Completed",
+      "cancelled": "Cancelled"
     },
     "noOrder": "No active order",
     "createOrder": "Create New Order",
@@ -230,7 +231,8 @@
       "MarkedReady": "Marked as Ready",
       "Delivered": "Delivered",
       "ProblemReported": "Problem Reported",
-      "ActionUndone": "Action Undone"
+      "ActionUndone": "Action Undone",
+      "OrderCancelled": "Order Cancelled"
     },
     "deleteAction": "Delete Action",
     "undoTitle": "Delete history action",
@@ -238,6 +240,21 @@
     "undoComment": "Comment",
     "undoCommentPlaceholder": "Explain why this action needs to be undone",
     "undoFailed": "Could not undo the action",
+    "cancelOrder": "Cancel order",
+    "cancelOrderTitle": "Cancel order",
+    "cancelOrderDescription": "Record the customer withdrawal on order {order}.",
+    "cancelOrderNotes": "Comment",
+    "cancelOrderNotesPlaceholder": "E.g. customer changed their mind and took the cylinders back...",
+    "cancelOrderFailed": "Could not cancel the order",
+    "orderFulfillment": "Type",
+    "orderShipping": "Shipping",
+    "orderDeadline": "Age",
+    "orderDuration": "Duration",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "notApplicable": "N/A",
+    "inProgress": "In progress",
+    "closed": "Closed",
     "sections": {
       "now": "Now",
       "today": "Today",
@@ -248,7 +265,9 @@
     "range": {
       "7d": "7 days",
       "30d": "30 days",
-      "60d": "60 days"
+      "60d": "60 days",
+      "90d": "90 days",
+      "custom": "Days"
     },
     "chart": {
       "received": "Received",

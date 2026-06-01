@@ -11,5 +11,7 @@ public class OrderDto
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? ShippedAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public string? CancellationNotes { get; set; }
     public int CylinderCount { get; set; }
 }

@@ -123,7 +123,27 @@ export interface CustomerCylinder {
   createdAt: string;
   orderId: string;
   orderStatus: string;
+  fulfillmentMethod: string;
+  refillPaid: boolean;
+  shippingPaid: boolean;
+  orderCreatedAt: string;
+  orderCompletedAt?: string;
+  orderCancelledAt?: string;
+  orderCancellationNotes?: string;
   history: CustomerCylinderHistoryItem[];
+}
+
+export interface CustomerOrder {
+  orderId: string;
+  status: string;
+  fulfillmentMethod: string;
+  refillPaid: boolean;
+  shippingPaid: boolean;
+  createdAt: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancellationNotes?: string;
+  cylinders: CustomerCylinder[];
 }
 
 export interface CustomerCylindersResult {
@@ -132,6 +152,7 @@ export interface CustomerCylindersResult {
   phone: string;
   phoneType: string;
   cylinders: CustomerCylinder[];
+  orders: CustomerOrder[];
 }
 
 // Orders
@@ -190,6 +211,17 @@ export const ordersApi = {
     }>(`/api/orders/${orderId}/cylinders/scan`, {
       method: 'POST',
       body: JSON.stringify({ qrToken }),
+    }),
+
+  cancel: (orderId: string, notes: string) =>
+    apiRequest<{
+      orderId: string;
+      status: string;
+      cancelledAt?: string;
+      cancellationNotes?: string;
+    }>(`/api/orders/${orderId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
     }),
 };
 
@@ -306,6 +338,7 @@ export interface PickupCylinder {
   sequentialNumber: number;
   labelToken?: string;
   state: string;
+  occurrenceNotes?: string;
   isDelivered: boolean;
 }
 
@@ -472,6 +505,9 @@ export interface DebugCustomerSnapshot {
     createdAt: string;
     completedAt?: string;
     notifiedAt?: string;
+    shippedAt?: string;
+    cancelledAt?: string;
+    cancellationNotes?: string;
   }>;
   cylinderRefs: Array<{
     orderId: string;

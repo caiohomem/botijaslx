@@ -31,7 +31,8 @@ public class RefillOrderRepository : IRefillOrderRepository
                 o => o.OrderId,
                 (cr, o) => new { o.OrderId, o.Status, o.CreatedAt })
             .OrderBy(x => x.Status == RefillOrderStatus.Open ? 0 :
-                          x.Status == RefillOrderStatus.ReadyForPickup ? 1 : 2)
+                          x.Status == RefillOrderStatus.ReadyForPickup ? 1 :
+                          x.Status == RefillOrderStatus.Completed ? 2 : 3)
             .ThenByDescending(x => x.CreatedAt)
             .Select(x => x.OrderId)
             .FirstOrDefaultAsync(cancellationToken);
@@ -58,7 +59,13 @@ public class RefillOrderRepository : IRefillOrderRepository
                     CylinderId = x.cr.CylinderId,
                     OrderId = x.o.OrderId,
                     OrderStatus = x.o.Status,
-                    OrderCreatedAt = x.o.CreatedAt
+                    OrderCreatedAt = x.o.CreatedAt,
+                    FulfillmentMethod = x.o.FulfillmentMethod,
+                    RefillPaid = x.o.RefillPaid,
+                    ShippingPaid = x.o.ShippingPaid,
+                    CompletedAt = x.o.CompletedAt,
+                    CancelledAt = x.o.CancelledAt,
+                    CancellationNotes = x.o.CancellationNotes
                 })
             .ToListAsync(cancellationToken);
 
@@ -66,7 +73,8 @@ public class RefillOrderRepository : IRefillOrderRepository
             .GroupBy(x => x.CylinderId)
             .Select(g => g
                 .OrderBy(x => x.OrderStatus == RefillOrderStatus.Open ? 0 :
-                              x.OrderStatus == RefillOrderStatus.ReadyForPickup ? 1 : 2)
+                              x.OrderStatus == RefillOrderStatus.ReadyForPickup ? 1 :
+                              x.OrderStatus == RefillOrderStatus.Completed ? 2 : 3)
                 .ThenByDescending(x => x.OrderCreatedAt)
                 .First())
             .ToList();
@@ -93,7 +101,17 @@ public class RefillOrderRepository : IRefillOrderRepository
     {
         var query = _context.Orders
             .Include(o => o.Cylinders)
-            .Where(o => o.Status == RefillOrderStatus.ReadyForPickup);
+            .Where(o =>
+                o.Status == RefillOrderStatus.ReadyForPickup ||
+                (
+                    o.Status == RefillOrderStatus.Open &&
+                    o.Cylinders.Any() &&
+                    o.Cylinders.All(cr => _context.Cylinders.Any(c =>
+                        c.CylinderId == cr.CylinderId &&
+                        (c.State == CylinderState.Ready ||
+                         c.State == CylinderState.Problem ||
+                         c.State == CylinderState.Delivered)))
+                ));
 
         if (customerId.HasValue)
         {

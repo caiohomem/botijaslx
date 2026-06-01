@@ -258,6 +258,12 @@ export default function FillingPage() {
   };
 
   const formatWaitTime = (waitMinutes: number): string => {
+    if (waitMinutes >= 1440) {
+      const days = Math.floor(waitMinutes / 1440);
+      const hours = Math.floor((waitMinutes % 1440) / 60);
+      return `${days}d ${hours}h`;
+    }
+
     if (waitMinutes >= 60) {
       const hours = Math.floor(waitMinutes / 60);
       const mins = waitMinutes % 60;
@@ -265,6 +271,18 @@ export default function FillingPage() {
     }
     return `${waitMinutes}m`;
   };
+
+  const getFulfillmentLabel = (fulfillmentMethod: string) => (
+    fulfillmentMethod === 'Shipping'
+      ? t('pickup.filters.shipping')
+      : t('pickup.filters.pickup')
+  );
+
+  const getFulfillmentBadgeClass = (fulfillmentMethod: string) => (
+    fulfillmentMethod === 'Shipping'
+      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+      : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+  );
 
   // Agrupar botijas por pedido
   const groupedByOrder = cylinders.reduce((acc, cylinder) => {
@@ -423,8 +441,11 @@ export default function FillingPage() {
                           <div className="font-mono text-sm font-bold">
                             #{String(cylinder.sequentialNumber).padStart(4, '0')}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>{t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}</span>
+                            <span className={`px-2 py-0.5 rounded-full font-medium ${getFulfillmentBadgeClass(cylinder.fulfillmentMethod)}`}>
+                              {getFulfillmentLabel(cylinder.fulfillmentMethod)}
+                            </span>
                           </div>
                         </div>
                         {/* M6: Wait time badge */}

@@ -26,5 +26,6 @@ public class PickupCylinderDto
     public long SequentialNumber { get; set; }
     public string? LabelToken { get; set; }
     public string State { get; set; } = string.Empty;
+    public string? OccurrenceNotes { get; set; }
     public bool IsDelivered { get; set; }
 }

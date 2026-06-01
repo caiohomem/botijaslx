@@ -69,7 +69,7 @@ public class Cylinder
 
     public void MarkAsDelivered()
     {
-        if (State != CylinderState.Ready)
+        if (State is not (CylinderState.Ready or CylinderState.Problem))
         {
             throw new InvalidOperationException($"Cannot mark cylinder as Delivered. Current state: {State}");
         }
@@ -99,6 +99,12 @@ public class Cylinder
         State = CylinderState.Received;
         OccurrenceNotes = null;
         _domainEvents.Add(new CylinderReceived(CylinderId, LabelToken?.Value));
+    }
+
+    public void MarkAsReturnedAfterCancellation()
+    {
+        State = CylinderState.Delivered;
+        OccurrenceNotes = null;
     }
 
     public void RevertToReceived()

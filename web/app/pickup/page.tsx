@@ -470,24 +470,41 @@ export default function PickupPage() {
                 <div>
                   {/* Cylinders List (read-only) */}
                   <div className="divide-y">
-                    {order.cylinders.map((cylinder) => (
-                      <div
-                        key={cylinder.cylinderId}
-                        className="p-4 flex items-center gap-3"
-                      >
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
-                          #{cylinder.sequentialNumber}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-mono text-sm font-bold">
-                            #{String(cylinder.sequentialNumber).padStart(4, '0')}
+                    {order.cylinders.map((cylinder) => {
+                      const hasProblem = cylinder.state === 'Problem';
+
+                      return (
+                        <div
+                          key={cylinder.cylinderId}
+                          className={`p-4 flex items-start gap-3 ${
+                            hasProblem
+                              ? 'bg-red-50/80 dark:bg-red-950/30 border-l-4 border-red-600'
+                              : ''
+                          }`}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-mono text-sm font-bold shrink-0 ${
+                            hasProblem
+                              ? 'bg-red-600 text-white ring-2 ring-red-200 dark:ring-red-900'
+                              : 'bg-primary/10 text-primary'
+                          }`}>
+                            #{cylinder.sequentialNumber}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-mono text-sm font-bold ${hasProblem ? 'text-red-700 dark:text-red-300' : ''}`}>
+                              #{String(cylinder.sequentialNumber).padStart(4, '0')}
+                            </div>
+                            <div className={`text-xs font-medium ${hasProblem ? 'text-red-700 dark:text-red-300' : 'text-muted-foreground'}`}>
+                              {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
+                            </div>
+                            {hasProblem && cylinder.occurrenceNotes && (
+                              <div className="mt-2 rounded-md border border-red-200 bg-red-100 px-3 py-2 text-sm font-medium text-red-800 dark:border-red-900 dark:bg-red-950/70 dark:text-red-200">
+                                {cylinder.occurrenceNotes}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Single Deliver All Button */}

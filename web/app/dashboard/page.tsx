@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { customersApi, historyApi, reportsApi, cylindersApi, CylinderHistory, DashboardStats, CustomerCylindersResult, ProblemCylinder } from '@/lib/api';
+import { customersApi, historyApi, reportsApi, cylindersApi, ordersApi, CylinderHistory, DashboardStats, CustomerCylindersResult, CustomerOrder, ProblemCylinder } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
 import { CustomerSearch } from '@/components/CustomerSearch';
 
 type LookupMode = 'customer' | 'cylinder' | 'problems';
-type ChartRange = 7 | 30 | 60;
+type ChartRange = number;
 
 export default function DashboardPage() {
   const t = useTranslations();
@@ -27,6 +27,9 @@ export default function DashboardPage() {
   const [undoModal, setUndoModal] = useState<{ cylinderId: string; historyEntryId: string; eventType: string } | null>(null);
   const [undoComment, setUndoComment] = useState('');
   const [undoLoading, setUndoLoading] = useState(false);
+  const [cancelModal, setCancelModal] = useState<{ orderId: string; label: string } | null>(null);
+  const [cancelNotes, setCancelNotes] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // Cylinder lookup state
   const [cylinderHistory, setCylinderHistory] = useState<CylinderHistory | null>(null);
@@ -193,6 +196,7 @@ export default function DashboardPage() {
       case 'Delivered': return '📦';
       case 'ProblemReported': return '⚠️';
       case 'ActionUndone': return '↩️';
+      case 'OrderCancelled': return '✕';
       default: return '•';
     }
   };
@@ -228,12 +232,34 @@ export default function DashboardPage() {
     }
   };
 
+  const handleCancelOrder = async () => {
+    if (!cancelModal || !cancelNotes.trim()) return;
+
+    setCancelLoading(true);
+    setError(null);
+
+    try {
+      await ordersApi.cancel(cancelModal.orderId, cancelNotes.trim());
+      if (selectedCustomerCylinders) {
+        const refreshed = await customersApi.getCylinders(selectedCustomerCylinders.customerId);
+        setSelectedCustomerCylinders(refreshed);
+      }
+      setCancelModal(null);
+      setCancelNotes('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('dashboard.cancelOrderFailed'));
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   const getStateColor = (state: string) => {
     switch (state) {
       case 'Received': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
       case 'Ready': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
       case 'Delivered': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
       case 'Problem': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+      case 'Cancelled': return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -496,57 +522,32 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Cylinders List */}
-          {selectedCustomerCylinders.cylinders.length === 0 ? (
+          {/* Orders List */}
+          {(selectedCustomerCylinders.orders?.length ?? 0) === 0 ? (
             <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
               {t('dashboard.noCylindersForCustomer')}
             </div>
           ) : (
-            <div className="space-y-2">
-              {selectedCustomerCylinders.cylinders.map((cylinder) => (
-                <div key={cylinder.cylinderId} className="border rounded-lg overflow-hidden">
-                  {/* Cylinder Header */}
-                  <button
-                    onClick={() => setExpandedCylinder(
-                      expandedCylinder === cylinder.cylinderId ? null : cylinder.cylinderId
-                    )}
-                    className="w-full p-4 flex items-center justify-between hover:bg-muted/30 text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
-                        #{cylinder.sequentialNumber}
-                      </div>
-                      <div>
-                        <div className="font-mono text-sm">
-                          #{String(cylinder.sequentialNumber).padStart(4, '0')}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {t(`order.status.${cylinder.orderStatus.toLowerCase()}`)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(cylinder.state)}`}>
-                        {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
-                      </span>
-                      <span className="text-lg">{expandedCylinder === cylinder.cylinderId ? '▼' : '▶'}</span>
-                    </div>
-                  </button>
-
-                  {/* Cylinder History (expandable) */}
-                  {expandedCylinder === cylinder.cylinderId && (
-                    <CylinderTimeline
-                      history={cylinder.history}
-                      formatDate={formatDate}
-                      getEventIcon={getEventIcon}
-                      t={t}
-                      onUndoAction={(historyEntryId, eventType) => {
-                        setUndoModal({ cylinderId: cylinder.cylinderId, historyEntryId, eventType });
-                        setUndoComment('');
-                      }}
-                    />
-                  )}
-                </div>
+            <div className="space-y-3">
+              {selectedCustomerCylinders.orders.map((order) => (
+                <OrderHistoryCard
+                  key={order.orderId}
+                  order={order}
+                  expandedCylinder={expandedCylinder}
+                  setExpandedCylinder={setExpandedCylinder}
+                  getStateColor={getStateColor}
+                  formatDate={formatDate}
+                  getEventIcon={getEventIcon}
+                  t={t}
+                  onUndoAction={(cylinderId, historyEntryId, eventType) => {
+                    setUndoModal({ cylinderId, historyEntryId, eventType });
+                    setUndoComment('');
+                  }}
+                  onCancelOrder={(orderId, label) => {
+                    setCancelModal({ orderId, label });
+                    setCancelNotes('');
+                  }}
+                />
               ))}
             </div>
           )}
@@ -668,6 +669,44 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {cancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold">{t('dashboard.cancelOrderTitle')}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t('dashboard.cancelOrderDescription', { order: cancelModal.label })}
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('dashboard.cancelOrderNotes')}</label>
+              <textarea
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+                placeholder={t('dashboard.cancelOrderNotesPlaceholder')}
+                className="w-full px-3 py-2 border rounded-lg bg-background h-24 resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setCancelModal(null);
+                  setCancelNotes('');
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-accent"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={!cancelNotes.trim() || cancelLoading}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
+              >
+                {cancelLoading ? t('common.loading') : t('dashboard.cancelOrder')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -703,11 +742,12 @@ function ChartRangeSelector({
   onChange: (value: ChartRange) => void;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const options: ChartRange[] = [7, 30, 60];
+  const presetOptions = [7, 30, 60, 90];
+  const isCustom = !presetOptions.includes(value);
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border p-1 bg-muted/20">
-      {options.map((option) => (
+    <div className="flex flex-wrap items-center gap-1 rounded-lg border p-1 bg-muted/20">
+      {presetOptions.map((option) => (
         <button
           key={option}
           onClick={() => onChange(option)}
@@ -720,6 +760,151 @@ function ChartRangeSelector({
           {t(`dashboard.range.${option}d`)}
         </button>
       ))}
+      <label className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs ${
+        isCustom ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+      }`}>
+        <span>{t('dashboard.range.custom')}</span>
+        <input
+          type="number"
+          min={1}
+          max={365}
+          value={value}
+          onChange={(event) => {
+            const nextValue = Number(event.target.value);
+            if (Number.isFinite(nextValue)) {
+              onChange(Math.min(365, Math.max(1, nextValue)));
+            }
+          }}
+          className={`w-16 rounded border px-1 py-0.5 text-xs ${
+            isCustom ? 'bg-primary text-primary-foreground border-primary-foreground/40' : 'bg-background text-foreground'
+          }`}
+        />
+      </label>
+    </div>
+  );
+}
+
+function OrderHistoryCard({
+  order,
+  expandedCylinder,
+  setExpandedCylinder,
+  getStateColor,
+  formatDate,
+  getEventIcon,
+  t,
+  onUndoAction,
+  onCancelOrder,
+}: {
+  order: CustomerOrder;
+  expandedCylinder: string | null;
+  setExpandedCylinder: (value: string | null) => void;
+  getStateColor: (state: string) => string;
+  formatDate: (value: string) => string;
+  getEventIcon: (eventType: string) => string;
+  t: ReturnType<typeof useTranslations>;
+  onUndoAction: (cylinderId: string, historyEntryId: string, eventType: string) => void;
+  onCancelOrder: (orderId: string, label: string) => void;
+}) {
+  const canCancel = order.status === 'Open' || order.status === 'ReadyForPickup';
+  const orderLabel = `#${order.orderId.slice(0, 8)}`;
+  const durationText = formatDurationBetween(order.createdAt, order.completedAt ?? order.cancelledAt);
+
+  return (
+    <div className="border rounded-lg overflow-hidden bg-background">
+      <div className="p-4 bg-muted/30 border-b space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="font-semibold">
+              {t('order.title')} {orderLabel}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('pickup.createdAt')}: {formatDate(order.createdAt)}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(order.status)}`}>
+              {t(`order.status.${order.status.toLowerCase()}`)}
+            </span>
+            {canCancel && (
+              <button
+                onClick={() => onCancelOrder(order.orderId, orderLabel)}
+                className="px-3 py-1.5 rounded-lg border border-red-300 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+              >
+                {t('dashboard.cancelOrder')}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-2 text-sm md:grid-cols-4">
+          <OrderMeta label={t('dashboard.orderFulfillment')} value={order.fulfillmentMethod === 'Shipping' ? t('pickup.filters.shipping') : t('pickup.filters.pickup')} />
+          <OrderMeta label={t('dashboard.orderShipping')} value={order.fulfillmentMethod === 'Shipping' ? (order.shippingPaid ? t('dashboard.paid') : t('dashboard.unpaid')) : t('dashboard.notApplicable')} />
+          <OrderMeta label={t('dashboard.orderDeadline')} value={formatOrderDeadline(order.createdAt, order.status, t)} />
+          <OrderMeta label={t('dashboard.orderDuration')} value={durationText ?? t('dashboard.inProgress')} />
+        </div>
+
+        {order.cancellationNotes && (
+          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+            {order.cancellationNotes}
+          </div>
+        )}
+      </div>
+
+      <div className="divide-y">
+        {order.cylinders.map((cylinder) => {
+          const expandedKey = `${order.orderId}:${cylinder.cylinderId}`;
+
+          return (
+            <div key={expandedKey}>
+              <button
+                onClick={() => setExpandedCylinder(expandedCylinder === expandedKey ? null : expandedKey)}
+                className="w-full p-4 flex items-center justify-between hover:bg-muted/30 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
+                    #{cylinder.sequentialNumber}
+                  </div>
+                  <div>
+                    <div className="font-mono text-sm">
+                      #{String(cylinder.sequentialNumber).padStart(4, '0')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {cylinder.labelToken || t('pickup.noLabel')}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(cylinder.state)}`}>
+                    {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
+                  </span>
+                  <span className="text-lg">{expandedCylinder === expandedKey ? '▼' : '▶'}</span>
+                </div>
+              </button>
+
+              {expandedCylinder === expandedKey && (
+                <CylinderTimeline
+                  history={cylinder.history}
+                  formatDate={formatDate}
+                  getEventIcon={getEventIcon}
+                  t={t}
+                  onUndoAction={(historyEntryId, eventType) => {
+                    onUndoAction(cylinder.cylinderId, historyEntryId, eventType);
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OrderMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-medium">{value}</div>
     </div>
   );
 }
@@ -827,6 +1012,7 @@ function formatHistoryDetails(
     .replace('Delivered', t('dashboard.events.Delivered'))
     .replace('MarkedReady', t('dashboard.events.MarkedReady'))
     .replace('ProblemReported', t('dashboard.events.ProblemReported'))
+    .replace('OrderCancelled', t('dashboard.events.OrderCancelled'))
     .replace('LabelAssigned', t('dashboard.events.LabelAssigned'))
     .replace('Received', t('dashboard.events.Received'));
 }
@@ -984,6 +1170,47 @@ function formatShortDate(date: string) {
     day: '2-digit',
     month: '2-digit'
   });
+}
+
+function formatDurationBetween(startDate: string, endDate?: string): string | null {
+  if (!endDate) return null;
+
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  const totalMinutes = Math.max(0, Math.floor((end - start) / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes}m`;
+}
+
+function formatOrderDeadline(
+  createdAt: string,
+  status: string,
+  t: ReturnType<typeof useTranslations>
+): string {
+  if (status === 'Completed' || status === 'Cancelled') {
+    return t('dashboard.closed');
+  }
+
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000));
+  const days = Math.floor(elapsedMinutes / 1440);
+  const hours = Math.floor((elapsedMinutes % 1440) / 60);
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+
+  return `${hours}h`;
 }
 
 function cleanProblemNotes(notes?: string): string {

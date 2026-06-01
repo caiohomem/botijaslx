@@ -62,7 +62,7 @@ public class DebugController : ControllerBase
             foreach (var order in snapshot.Orders)
             {
                 await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                    $"""INSERT INTO "Orders" ("OrderId", "CustomerId", "Status", "FulfillmentMethod", "RefillPaid", "ShippingPaid", "CreatedAt", "CompletedAt", "NotifiedAt", "ShippedAt") VALUES ({order.OrderId}, {order.CustomerId}, {order.Status}, {order.FulfillmentMethod}, {order.RefillPaid}, {order.ShippingPaid}, {order.CreatedAt}, {order.CompletedAt}, {order.NotifiedAt}, {order.ShippedAt});""",
+                    $"""INSERT INTO "Orders" ("OrderId", "CustomerId", "Status", "FulfillmentMethod", "RefillPaid", "ShippingPaid", "CreatedAt", "CompletedAt", "NotifiedAt", "ShippedAt", "CancelledAt", "CancellationNotes") VALUES ({order.OrderId}, {order.CustomerId}, {order.Status}, {order.FulfillmentMethod}, {order.RefillPaid}, {order.ShippingPaid}, {order.CreatedAt}, {order.CompletedAt}, {order.NotifiedAt}, {order.ShippedAt}, {order.CancelledAt}, {order.CancellationNotes});""",
                     cancellationToken);
             }
 
@@ -309,7 +309,7 @@ public class DebugController : ControllerBase
             Orders = await _dbContext.Orders
                 .AsNoTracking()
                 .OrderBy(o => o.CreatedAt)
-                .Select(o => new DebugOrderRow(o.OrderId, o.CustomerId, o.Status.ToString(), o.FulfillmentMethod.ToString(), o.RefillPaid, o.ShippingPaid, o.CreatedAt, o.CompletedAt, o.NotifiedAt, o.ShippedAt))
+                .Select(o => new DebugOrderRow(o.OrderId, o.CustomerId, o.Status.ToString(), o.FulfillmentMethod.ToString(), o.RefillPaid, o.ShippingPaid, o.CreatedAt, o.CompletedAt, o.NotifiedAt, o.ShippedAt, o.CancelledAt, o.CancellationNotes))
                 .ToListAsync(cancellationToken),
             CylinderRefs = await _dbContext.CylinderRefs
                 .AsNoTracking()
@@ -452,7 +452,7 @@ public class DebugDatabaseExport
 }
 
 public record DebugCustomerRow(Guid CustomerId, string Name, string Phone, string PhoneType, DateTime CreatedAt);
-public record DebugOrderRow(Guid OrderId, Guid CustomerId, string Status, string FulfillmentMethod, bool RefillPaid, bool ShippingPaid, DateTime CreatedAt, DateTime? CompletedAt, DateTime? NotifiedAt, DateTime? ShippedAt);
+public record DebugOrderRow(Guid OrderId, Guid CustomerId, string Status, string FulfillmentMethod, bool RefillPaid, bool ShippingPaid, DateTime CreatedAt, DateTime? CompletedAt, DateTime? NotifiedAt, DateTime? ShippedAt, DateTime? CancelledAt, string? CancellationNotes);
 public record DebugCylinderRefRow(Guid OrderId, Guid CylinderId, string State);
 public record DebugCylinderRow(Guid CylinderId, long SequentialNumber, string? LabelToken, string State, string? OccurrenceNotes, DateTime CreatedAt);
 public record DebugCylinderHistoryRow(Guid Id, Guid CylinderId, string EventType, string? Details, Guid? OrderId, DateTime Timestamp);

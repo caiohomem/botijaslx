@@ -89,7 +89,8 @@
       "open": "Aberto",
       "readyForPickup": "Pronto para Recolha",
       "readyforpickup": "Pronto para Recolha",
-      "completed": "Concluído"
+      "completed": "Concluído",
+      "cancelled": "Cancelado"
     },
     "noOrder": "Nenhum pedido ativo",
     "createOrder": "Criar Novo Pedido",
@@ -232,7 +233,8 @@
       "MarkedReady": "Marcada como Cheia",
       "Delivered": "Entregue",
       "ProblemReported": "Problema Reportado",
-      "ActionUndone": "Ação Desfeita"
+      "ActionUndone": "Ação Desfeita",
+      "OrderCancelled": "Pedido Cancelado"
     },
     "deleteAction": "Apagar Ação",
     "undoTitle": "Apagar ação do histórico",
@@ -240,6 +242,21 @@
     "undoComment": "Observação",
     "undoCommentPlaceholder": "Explique porque esta ação precisa ser desfeita",
     "undoFailed": "Não foi possível desfazer a ação",
+    "cancelOrder": "Cancelar pedido",
+    "cancelOrderTitle": "Cancelar pedido",
+    "cancelOrderDescription": "Registe a desistência do cliente no pedido {order}.",
+    "cancelOrderNotes": "Observação",
+    "cancelOrderNotesPlaceholder": "Ex.: cliente desistiu, devolveu as botijas sem enchimento...",
+    "cancelOrderFailed": "Não foi possível cancelar o pedido",
+    "orderFulfillment": "Tipo",
+    "orderShipping": "Portes",
+    "orderDeadline": "Prazo",
+    "orderDuration": "Demorou",
+    "paid": "Pago",
+    "unpaid": "Por pagar",
+    "notApplicable": "Não aplicável",
+    "inProgress": "Em curso",
+    "closed": "Fechado",
     "sections": {
       "now": "Agora",
       "today": "Hoje",
@@ -250,7 +267,9 @@
     "range": {
       "7d": "7 dias",
       "30d": "30 dias",
-      "60d": "60 dias"
+      "60d": "60 dias",
+      "90d": "90 dias",
+      "custom": "Dias"
     },
     "chart": {
       "received": "Recebidas",

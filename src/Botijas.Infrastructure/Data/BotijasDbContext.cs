@@ -47,6 +47,8 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.NotifiedAt);
             entity.Property(e => e.CompletedAt);
             entity.Property(e => e.ShippedAt);
+            entity.Property(e => e.CancelledAt);
+            entity.Property(e => e.CancellationNotes).HasMaxLength(500);
             entity.HasMany(e => e.Cylinders)
                   .WithOne()
                   .HasForeignKey(cr => cr.OrderId)

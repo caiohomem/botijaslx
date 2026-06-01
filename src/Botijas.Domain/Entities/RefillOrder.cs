@@ -6,7 +6,8 @@ public enum RefillOrderStatus
 {
     Open,
     ReadyForPickup,
-    Completed
+    Completed,
+    Cancelled
 }
 
 public enum FulfillmentMethod
@@ -27,6 +28,8 @@ public class RefillOrder
     public DateTime? CompletedAt { get; private set; }
     public DateTime? NotifiedAt { get; private set; }
     public DateTime? ShippedAt { get; private set; }
+    public DateTime? CancelledAt { get; private set; }
+    public string? CancellationNotes { get; private set; }
 
     private readonly List<CylinderRef> _cylinders = new();
     public IReadOnlyCollection<CylinderRef> Cylinders => _cylinders.AsReadOnly();
@@ -98,6 +101,31 @@ public class RefillOrder
         _cylinders.Add(new CylinderRef(OrderId, cylinder.CylinderId));
     }
 
+    public void Cancel(string notes)
+    {
+        if (Status == RefillOrderStatus.Completed)
+        {
+            throw new InvalidOperationException("Cannot cancel a completed order");
+        }
+
+        if (Status == RefillOrderStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Order is already cancelled");
+        }
+
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            throw new ArgumentException("Cancellation notes cannot be empty", nameof(notes));
+        }
+
+        Status = RefillOrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
+        CancellationNotes = notes.Trim();
+        CompletedAt = null;
+        NotifiedAt = null;
+        ShippedAt = null;
+    }
+
     public void CheckAndUpdateStatus(IEnumerable<Cylinder> cylinders)
     {
         if (Status != RefillOrderStatus.Open)
@@ -115,8 +143,8 @@ public class RefillOrder
             }
         }
 
-        var allReady = _cylinders.Count > 0 && 
-                      _cylinders.All(c => c.State == CylinderState.Ready);
+        var allReady = _cylinders.Count > 0 &&
+                      _cylinders.All(c => IsCylinderReadyForPickup(c.State));
 
         if (allReady && Status == RefillOrderStatus.Open)
         {
@@ -127,6 +155,11 @@ public class RefillOrder
 
     public void RecalculateStatus(IEnumerable<Cylinder> cylinders)
     {
+        if (Status == RefillOrderStatus.Cancelled)
+        {
+            return;
+        }
+
         var cylinderDict = cylinders.ToDictionary(c => c.CylinderId);
         foreach (var cylinderRef in _cylinders)
         {
@@ -147,7 +180,7 @@ public class RefillOrder
         }
 
         var readyForPickup = _cylinders.Count > 0 &&
-                             _cylinders.All(c => c.State is CylinderState.Ready or CylinderState.Delivered);
+                             _cylinders.All(c => IsCylinderReadyForPickup(c.State));
 
         if (readyForPickup)
         {
@@ -160,6 +193,8 @@ public class RefillOrder
         CompletedAt = null;
         NotifiedAt = null;
         ShippedAt = null;
+        CancelledAt = null;
+        CancellationNotes = null;
     }
 
     public void Complete()
@@ -206,6 +241,11 @@ public class RefillOrder
     }
 
     public bool NeedsNotification => Status == RefillOrderStatus.ReadyForPickup && NotifiedAt == null;
+
+    public static bool IsCylinderReadyForPickup(CylinderState state)
+    {
+        return state is CylinderState.Ready or CylinderState.Problem or CylinderState.Delivered;
+    }
 
     public void ClearDomainEvents()
     {

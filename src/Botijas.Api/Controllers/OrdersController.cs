@@ -17,6 +17,7 @@ public class OrdersController : ControllerBase
     private readonly DeliverCylinderCommandHandler _deliverCylinderHandler;
     private readonly MarkOrderNotifiedCommandHandler _markNotifiedHandler;
     private readonly MarkOrderShippedCommandHandler _markShippedHandler;
+    private readonly CancelOrderCommandHandler _cancelOrderHandler;
 
     public OrdersController(
         CreateOrderCommandHandler createHandler,
@@ -26,7 +27,8 @@ public class OrdersController : ControllerBase
         GetReadyForPickupQueryHandler getReadyForPickupHandler,
         DeliverCylinderCommandHandler deliverCylinderHandler,
         MarkOrderNotifiedCommandHandler markNotifiedHandler,
-        MarkOrderShippedCommandHandler markShippedHandler)
+        MarkOrderShippedCommandHandler markShippedHandler,
+        CancelOrderCommandHandler cancelOrderHandler)
     {
         _createHandler = createHandler;
         _addCylinderHandler = addCylinderHandler;
@@ -36,6 +38,7 @@ public class OrdersController : ControllerBase
         _deliverCylinderHandler = deliverCylinderHandler;
         _markNotifiedHandler = markNotifiedHandler;
         _markShippedHandler = markShippedHandler;
+        _cancelOrderHandler = cancelOrderHandler;
     }
 
     [HttpPost]
@@ -178,4 +181,27 @@ public class OrdersController : ControllerBase
 
         return Ok(result.Value);
     }
+
+    /// <summary>
+    /// Cancela um pedido com observação
+    /// </summary>
+    [HttpPost("{orderId}/cancel")]
+    public async Task<IActionResult> CancelOrder(
+        Guid orderId,
+        [FromBody] CancelOrderRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _cancelOrderHandler.Handle(
+            new CancelOrderCommand(orderId, request.Notes),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(result.Value);
+    }
 }
+
+public record CancelOrderRequest(string Notes);
