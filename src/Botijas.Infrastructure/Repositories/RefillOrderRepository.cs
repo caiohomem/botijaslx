@@ -121,6 +121,17 @@ public class RefillOrderRepository : IRefillOrderRepository
         return await query.ToListAsync(cancellationToken);
     }
 
+    public async Task<Dictionary<Guid, DateTime>> GetReadyAtByOrderAsync(CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.CylinderHistory
+            .Where(h => h.EventType == CylinderEventType.MarkedReady && h.OrderId != null)
+            .GroupBy(h => h.OrderId!.Value)
+            .Select(g => new { OrderId = g.Key, ReadyAt = g.Max(h => h.Timestamp) })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.OrderId, x => x.ReadyAt);
+    }
+
     public async Task AddAsync(RefillOrder order, CancellationToken cancellationToken = default)
     {
         await _context.Orders.AddAsync(order, cancellationToken);

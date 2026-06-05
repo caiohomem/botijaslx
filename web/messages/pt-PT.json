@@ -317,6 +317,7 @@
     "cylinderNotFound": "Botija não encontrada nos pedidos prontos",
     "noLabel": "Sem etiqueta",
     "createdAt": "Criado em",
+    "readyAt": "Pronta em",
     "refresh": "Atualizar",
     "sendWhatsApp": "WhatsApp",
     "sendReadyWhatsApp": "WhatsApp pronto",

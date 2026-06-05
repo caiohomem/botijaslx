@@ -25,6 +25,10 @@ public class GetReadyForPickupQueryHandler
         // Buscar pedidos prontos para recolha
         var orders = await _orderRepository.FindReadyForPickupAsync(null, cancellationToken);
 
+        // Data em que cada pedido ficou pronto = última botija enchida (evento MarkedReady).
+        // Uma única query agregada para todos os pedidos.
+        var readyAtByOrder = await _orderRepository.GetReadyAtByOrderAsync(cancellationToken);
+
         var result = new List<PickupOrderDto>();
 
         foreach (var order in orders)
@@ -70,6 +74,7 @@ public class GetReadyForPickupQueryHandler
                 RefillPaid = order.RefillPaid,
                 ShippingPaid = order.ShippingPaid,
                 CreatedAt = order.CreatedAt,
+                ReadyAt = readyAtByOrder.TryGetValue(order.OrderId, out var readyAt) ? readyAt : null,
                 NotifiedAt = order.NotifiedAt,
                 ShippedAt = order.ShippedAt,
                 NeedsNotification = order.NeedsNotification,
@@ -79,8 +84,8 @@ public class GetReadyForPickupQueryHandler
             });
         }
 
-        // Ordenar por data de criação (mais antigos primeiro)
-        result = result.OrderBy(o => o.CreatedAt).ToList();
+        // Ordenar por data em que ficou pronto (mais antigos primeiro)
+        result = result.OrderBy(o => o.ReadyAt ?? o.CreatedAt).ToList();
 
         await _orderRepository.SaveChangesAsync(cancellationToken);
 

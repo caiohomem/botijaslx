@@ -12,6 +12,7 @@ public class PickupOrderDto
     public bool RefillPaid { get; set; }
     public bool ShippingPaid { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? ReadyAt { get; set; }
     public DateTime? NotifiedAt { get; set; }
     public DateTime? ShippedAt { get; set; }
     public bool NeedsNotification { get; set; }

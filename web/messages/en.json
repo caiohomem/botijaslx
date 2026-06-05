@@ -315,6 +315,7 @@
     "cylinderNotFound": "Cylinder not found in ready orders",
     "noLabel": "No label",
     "createdAt": "Created at",
+    "readyAt": "Ready at",
     "refresh": "Refresh",
     "sendWhatsApp": "WhatsApp",
     "sendReadyWhatsApp": "Ready WhatsApp",

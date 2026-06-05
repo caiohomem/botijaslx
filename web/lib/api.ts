@@ -353,6 +353,7 @@ export interface PickupOrder {
   refillPaid: boolean;
   shippingPaid: boolean;
   createdAt: string;
+  readyAt?: string;
   notifiedAt?: string;
   shippedAt?: string;
   needsNotification: boolean;

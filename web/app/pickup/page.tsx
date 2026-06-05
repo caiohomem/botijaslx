@@ -343,9 +343,9 @@ export default function PickupPage() {
       {/* Orders List */}
       {!loading && filteredOrders.length > 0 && (
         <div className="space-y-4">
-          {/* M8: Sort orders by wait time (longest waiting first) */}
+          {/* M8: Sort orders by wait time (longest waiting first), desde que ficou pronta */}
           {[...filteredOrders].sort((a, b) =>
-            getWaitTimeMinutes(b.createdAt) - getWaitTimeMinutes(a.createdAt)
+            getWaitTimeMinutes(b.readyAt ?? b.createdAt) - getWaitTimeMinutes(a.readyAt ?? a.createdAt)
           ).map((order) => (
             (() => {
               const isShipping = order.fulfillmentMethod === 'Shipping';
@@ -367,7 +367,9 @@ export default function PickupPage() {
                     <div className="font-semibold text-lg truncate">{order.customerName}</div>
                     <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {t('pickup.createdAt')}: {formatDate(order.createdAt)}
+                      {order.readyAt
+                        ? `${t('pickup.readyAt')}: ${formatDate(order.readyAt)}`
+                        : `${t('pickup.createdAt')}: ${formatDate(order.createdAt)}`}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       <div className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -392,8 +394,8 @@ export default function PickupPage() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {/* M8: Wait time badge */}
-                    <div className={`text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium ${getWaitTimeBadgeClass(getWaitTimeMinutes(order.createdAt))}`}>
-                      {formatWaitTime(getWaitTimeMinutes(order.createdAt))}
+                    <div className={`text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium ${getWaitTimeBadgeClass(getWaitTimeMinutes(order.readyAt ?? order.createdAt))}`}>
+                      {formatWaitTime(getWaitTimeMinutes(order.readyAt ?? order.createdAt))}
                     </div>
                     <div className="text-xs bg-background px-2 py-1 rounded-full whitespace-nowrap">
                       {t('pickup.progress', { delivered: deliveredCount, total: order.totalCylinders })}
