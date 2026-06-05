@@ -384,12 +384,18 @@ export default function FillingPage() {
         <div className="space-y-4">
           {orderGroups.map((group) => (
             <div key={group.orderId} className="border rounded-lg overflow-hidden">
-              {/* Order Header */}
+              {/* Order Header (cliente → pedido) */}
               <div className="bg-muted/50 p-4 border-b">
                 <div className="flex justify-between items-start gap-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="font-semibold">{group.customerName}</div>
                     <div className="text-sm text-muted-foreground">{group.customerPhone}</div>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <span className="text-xs text-muted-foreground">{t('order.title')}:</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getFulfillmentBadgeClass(group.cylinders[0]?.fulfillmentMethod ?? '')}`}>
+                        {getFulfillmentLabel(group.cylinders[0]?.fulfillmentMethod ?? '')}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm bg-background px-3 py-1 rounded-full whitespace-nowrap">
@@ -402,7 +408,7 @@ export default function FillingPage() {
                 </div>
               </div>
 
-              {/* Cylinders */}
+              {/* Cylinders (botijas) */}
               <div className="divide-y">
                 {/* M6: Sort cylinders by wait time (longest waiting first) */}
                 {[...group.cylinders].sort((a, b) =>
@@ -418,11 +424,8 @@ export default function FillingPage() {
                           #{cylinder.sequentialNumber}
                         </div>
                         <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>{t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}</span>
-                            <span className={`px-2 py-0.5 rounded-full font-medium ${getFulfillmentBadgeClass(cylinder.fulfillmentMethod)}`}>
-                              {getFulfillmentLabel(cylinder.fulfillmentMethod)}
-                            </span>
+                          <div className="text-xs text-muted-foreground">
+                            {t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}
                           </div>
                         </div>
                         {/* M6: Wait time badge */}

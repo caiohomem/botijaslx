@@ -863,11 +863,6 @@ function OrderHistoryCard({
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
                     #{cylinder.sequentialNumber}
                   </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">
-                      {cylinder.labelToken || t('pickup.noLabel')}
-                    </div>
-                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStateColor(cylinder.state)}`}>
@@ -1229,14 +1224,9 @@ function ProblemCylinderCard({
   return (
     <div className="border rounded-lg bg-background p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-300 font-mono text-sm font-bold">
-              #{cylinder.sequentialNumber}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {cylinder.labelToken || '-'}
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-300 font-mono text-sm font-bold">
+            #{cylinder.sequentialNumber}
           </div>
         </div>
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
