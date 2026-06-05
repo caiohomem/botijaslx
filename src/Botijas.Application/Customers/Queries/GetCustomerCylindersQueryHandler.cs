@@ -1,4 +1,5 @@
 using Botijas.Application.Common;
+using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
 
 namespace Botijas.Application.Customers.Queries;
@@ -87,18 +88,12 @@ public class GetCustomerCylindersQueryHandler
         var ordersById = allOrders.ToDictionary(o => o.OrderId);
         var currentOrders = await _orderRepository.FindCurrentCylinderOrdersByCustomerAsync(query.CustomerId, cancellationToken);
         var currentOrdersByCylinderId = currentOrders.ToDictionary(x => x.CylinderId);
-        var historiesByCylinderId = new Dictionary<Guid, List<CustomerCylinderHistoryItemDto>>();
+        var rawHistoriesByCylinderId = new Dictionary<Guid, List<CylinderHistoryEntry>>();
 
         foreach (var cylinder in cylinders.OrderBy(c => c.SequentialNumber))
         {
             var history = await _historyRepository.GetByCylinderIdAsync(cylinder.CylinderId, cancellationToken);
-            historiesByCylinderId[cylinder.CylinderId] = history.Select(h => new CustomerCylinderHistoryItemDto
-            {
-                Id = h.Id,
-                EventType = h.EventType.ToString(),
-                Details = h.Details,
-                Timestamp = h.Timestamp
-            }).ToList();
+            rawHistoriesByCylinderId[cylinder.CylinderId] = history;
 
             if (!currentOrdersByCylinderId.TryGetValue(cylinder.CylinderId, out var currentOrder))
             {
@@ -121,7 +116,11 @@ public class GetCustomerCylindersQueryHandler
                 OrderCompletedAt = currentOrder.CompletedAt,
                 OrderCancelledAt = currentOrder.CancelledAt,
                 OrderCancellationNotes = currentOrder.CancellationNotes,
-                History = historiesByCylinderId[cylinder.CylinderId]
+                History = rawHistoriesByCylinderId.TryGetValue(cylinder.CylinderId, out var ch)
+                    ? ch.Where(h => h.OrderId == currentOrder.OrderId)
+                        .Select(h => new CustomerCylinderHistoryItemDto { Id = h.Id, EventType = h.EventType.ToString(), Details = h.Details, Timestamp = h.Timestamp })
+                        .ToList()
+                    : new List<CustomerCylinderHistoryItemDto>()
             });
         }
 
@@ -145,7 +144,12 @@ public class GetCustomerCylindersQueryHandler
                         return null;
                     }
 
-                    historiesByCylinderId.TryGetValue(cylinder.CylinderId, out var history);
+                    var orderHistory = rawHistoriesByCylinderId.TryGetValue(cylinder.CylinderId, out var rawHistory)
+                        ? rawHistory
+                            .Where(h => h.OrderId == order.OrderId)
+                            .Select(h => new CustomerCylinderHistoryItemDto { Id = h.Id, EventType = h.EventType.ToString(), Details = h.Details, Timestamp = h.Timestamp })
+                            .ToList()
+                        : new List<CustomerCylinderHistoryItemDto>();
 
                     return new CustomerCylinderDto
                     {
@@ -163,7 +167,7 @@ public class GetCustomerCylindersQueryHandler
                         OrderCompletedAt = order.CompletedAt,
                         OrderCancelledAt = order.CancelledAt,
                         OrderCancellationNotes = order.CancellationNotes,
-                        History = history ?? new List<CustomerCylinderHistoryItemDto>()
+                        History = orderHistory
                     };
                 })
                 .Where(dto => dto != null)
