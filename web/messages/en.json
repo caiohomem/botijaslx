@@ -242,7 +242,7 @@
     "undoFailed": "Could not undo the action",
     "cancelOrder": "Cancel order",
     "cancelOrderTitle": "Cancel order",
-    "cancelOrderDescription": "Record the customer withdrawal on order {order}.",
+    "cancelOrderDescription": "Record the customer withdrawal on this order.",
     "cancelOrderNotes": "Comment",
     "cancelOrderNotesPlaceholder": "E.g. customer changed their mind and took the cylinders back...",
     "cancelOrderFailed": "Could not cancel the order",

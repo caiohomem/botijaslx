@@ -361,13 +361,8 @@ export default function ClientesPage() {
                         <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-mono text-sm font-bold">
                           #{cylinder.sequentialNumber}
                         </div>
-                        <div>
-                          <div className="font-mono text-sm font-bold">
-                            #{String(cylinder.sequentialNumber).padStart(4, '0')}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {cylinder.state} · {cylinder.orderStatus}
-                          </div>
+                        <div className="text-xs text-muted-foreground">
+                          {cylinder.state} · {cylinder.orderStatus}
                         </div>
                       </div>
 

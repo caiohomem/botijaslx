@@ -513,8 +513,8 @@ export default function DeliveryPage() {
                   <div key={customerOrder.orderId} className="p-3 border rounded-lg bg-muted/20">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="font-mono text-sm font-bold">
-                          #{customerOrder.orderId.slice(0, 8)}
+                        <div className="text-sm font-medium">
+                          {t('order.title')}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {formatDate(customerOrder.createdAt)}

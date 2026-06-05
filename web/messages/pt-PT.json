@@ -244,7 +244,7 @@
     "undoFailed": "Não foi possível desfazer a ação",
     "cancelOrder": "Cancelar pedido",
     "cancelOrderTitle": "Cancelar pedido",
-    "cancelOrderDescription": "Registe a desistência do cliente no pedido {order}.",
+    "cancelOrderDescription": "Registe a desistência do cliente neste pedido.",
     "cancelOrderNotes": "Observação",
     "cancelOrderNotesPlaceholder": "Ex.: cliente desistiu, devolveu as botijas sem enchimento...",
     "cancelOrderFailed": "Não foi possível cancelar o pedido",

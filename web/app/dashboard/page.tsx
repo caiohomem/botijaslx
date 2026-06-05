@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const [undoModal, setUndoModal] = useState<{ cylinderId: string; historyEntryId: string; eventType: string } | null>(null);
   const [undoComment, setUndoComment] = useState('');
   const [undoLoading, setUndoLoading] = useState(false);
-  const [cancelModal, setCancelModal] = useState<{ orderId: string; label: string } | null>(null);
+  const [cancelModal, setCancelModal] = useState<{ orderId: string } | null>(null);
   const [cancelNotes, setCancelNotes] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
 
@@ -543,8 +543,8 @@ export default function DashboardPage() {
                     setUndoModal({ cylinderId, historyEntryId, eventType });
                     setUndoComment('');
                   }}
-                  onCancelOrder={(orderId, label) => {
-                    setCancelModal({ orderId, label });
+                  onCancelOrder={(orderId) => {
+                    setCancelModal({ orderId });
                     setCancelNotes('');
                   }}
                 />
@@ -675,7 +675,7 @@ export default function DashboardPage() {
           <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
             <h3 className="text-lg font-semibold">{t('dashboard.cancelOrderTitle')}</h3>
             <p className="text-sm text-muted-foreground">
-              {t('dashboard.cancelOrderDescription', { order: cancelModal.label })}
+              {t('dashboard.cancelOrderDescription')}
             </p>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('dashboard.cancelOrderNotes')}</label>
@@ -803,10 +803,9 @@ function OrderHistoryCard({
   getEventIcon: (eventType: string) => string;
   t: ReturnType<typeof useTranslations>;
   onUndoAction: (cylinderId: string, historyEntryId: string, eventType: string) => void;
-  onCancelOrder: (orderId: string, label: string) => void;
+  onCancelOrder: (orderId: string) => void;
 }) {
   const canCancel = order.status === 'Open' || order.status === 'ReadyForPickup';
-  const orderLabel = `#${order.orderId.slice(0, 8)}`;
   const durationText = formatDurationBetween(order.createdAt, order.completedAt ?? order.cancelledAt);
 
   return (
@@ -815,7 +814,7 @@ function OrderHistoryCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="font-semibold">
-              {t('order.title')} {orderLabel}
+              {t('order.title')}
             </div>
             <div className="text-xs text-muted-foreground">
               {t('pickup.createdAt')}: {formatDate(order.createdAt)}
@@ -827,7 +826,7 @@ function OrderHistoryCard({
             </span>
             {canCancel && (
               <button
-                onClick={() => onCancelOrder(order.orderId, orderLabel)}
+                onClick={() => onCancelOrder(order.orderId)}
                 className="px-3 py-1.5 rounded-lg border border-red-300 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
               >
                 {t('dashboard.cancelOrder')}
@@ -865,9 +864,6 @@ function OrderHistoryCard({
                     #{cylinder.sequentialNumber}
                   </div>
                   <div>
-                    <div className="font-mono text-sm">
-                      #{String(cylinder.sequentialNumber).padStart(4, '0')}
-                    </div>
                     <div className="text-xs text-muted-foreground">
                       {cylinder.labelToken || t('pickup.noLabel')}
                     </div>
@@ -1238,13 +1234,8 @@ function ProblemCylinderCard({
             <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-300 font-mono text-sm font-bold">
               #{cylinder.sequentialNumber}
             </div>
-            <div>
-              <div className="font-mono text-sm font-semibold">
-                #{String(cylinder.sequentialNumber).padStart(4, '0')}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {cylinder.labelToken || '-'}
-              </div>
+            <div className="text-xs text-muted-foreground">
+              {cylinder.labelToken || '-'}
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { cylindersApi, pickupApi, historyApi, generateWhatsAppLink, FillingQueue
 import { playSound } from '@/lib/sounds';
 import { QrScanner } from '@/components/QrScanner';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
+import { getWaitTimeMinutes, formatWaitTime } from '@/lib/time';
 
 const PROBLEM_TYPES = [
   'valve',
@@ -243,33 +244,12 @@ export default function FillingPage() {
     });
   };
 
-  // M6: Calculate wait time and priority
-  const getWaitTimeMinutes = (receivedAt: string): number => {
-    const received = new Date(receivedAt);
-    const now = new Date();
-    return Math.floor((now.getTime() - received.getTime()) / 60000);
-  };
-
+  // M6: Wait time urgency badge
   const getWaitTimeBadgeClass = (waitMinutes: number): string => {
     if (waitMinutes >= 60) return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'; // 1+ hour
     if (waitMinutes >= 30) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'; // 30+ minutes
     if (waitMinutes >= 15) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'; // 15+ minutes
     return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'; // < 15 minutes
-  };
-
-  const formatWaitTime = (waitMinutes: number): string => {
-    if (waitMinutes >= 1440) {
-      const days = Math.floor(waitMinutes / 1440);
-      const hours = Math.floor((waitMinutes % 1440) / 60);
-      return `${days}d ${hours}h`;
-    }
-
-    if (waitMinutes >= 60) {
-      const hours = Math.floor(waitMinutes / 60);
-      const mins = waitMinutes % 60;
-      return `${hours}h ${mins}m`;
-    }
-    return `${waitMinutes}m`;
   };
 
   const getFulfillmentLabel = (fulfillmentMethod: string) => (
@@ -438,9 +418,6 @@ export default function FillingPage() {
                           #{cylinder.sequentialNumber}
                         </div>
                         <div className="flex-1">
-                          <div className="font-mono text-sm font-bold">
-                            #{String(cylinder.sequentialNumber).padStart(4, '0')}
-                          </div>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>{t('filling.receivedAt')}: {formatDate(cylinder.receivedAt)}</span>
                             <span className={`px-2 py-0.5 rounded-full font-medium ${getFulfillmentBadgeClass(cylinder.fulfillmentMethod)}`}>

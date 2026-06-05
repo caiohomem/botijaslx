@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { pickupApi, generateWhatsAppLink, PickupOrder } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
 import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
+import { getWaitTimeMinutes, formatWaitTime } from '@/lib/time';
 
 export default function PickupPage() {
   const t = useTranslations();
@@ -175,27 +176,12 @@ export default function PickupPage() {
     });
   };
 
-  // M8: Calculate wait time and urgency
-  const getWaitTimeMinutes = (createdAt: string): number => {
-    const created = new Date(createdAt);
-    const now = new Date();
-    return Math.floor((now.getTime() - created.getTime()) / 60000);
-  };
-
+  // M8: Wait time urgency badge
   const getWaitTimeBadgeClass = (waitMinutes: number): string => {
     if (waitMinutes >= 120) return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'; // 2+ hours
     if (waitMinutes >= 60) return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'; // 1+ hour
     if (waitMinutes >= 30) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'; // 30+ minutes
     return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'; // < 30 minutes
-  };
-
-  const formatWaitTime = (waitMinutes: number): string => {
-    if (waitMinutes >= 60) {
-      const hours = Math.floor(waitMinutes / 60);
-      const mins = waitMinutes % 60;
-      return `${hours}h ${mins}m`;
-    }
-    return `${waitMinutes}m`;
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -490,9 +476,6 @@ export default function PickupPage() {
                             #{cylinder.sequentialNumber}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-mono text-sm font-bold ${hasProblem ? 'text-red-700 dark:text-red-300' : ''}`}>
-                              #{String(cylinder.sequentialNumber).padStart(4, '0')}
-                            </div>
                             <div className={`text-xs font-medium ${hasProblem ? 'text-red-700 dark:text-red-300' : 'text-muted-foreground'}`}>
                               {t(`cylinder.status.${cylinder.state.toLowerCase()}`)}
                             </div>
