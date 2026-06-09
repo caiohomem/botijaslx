@@ -142,6 +142,18 @@ export default function SettingsPage() {
             {t('settings.thankYouTemplateHelp')}
           </p>
         </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t('settings.deadlineMessageTemplate')}</label>
+          <textarea
+            value={settings.deadlineMessageTemplate}
+            onChange={(e) => setSettings({ ...settings, deadlineMessageTemplate: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg bg-background h-24 resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('settings.deadlineTemplateHelp')}
+          </p>
+        </div>
       </div>
 
       {/* Labels & Printer */}

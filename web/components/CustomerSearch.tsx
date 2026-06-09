@@ -13,7 +13,7 @@ interface Customer {
 
 interface CustomerSearchProps {
   onSelect: (customer: Customer) => void;
-  onCreateNew?: () => void;
+  onCreateNew?: (name: string) => void;
   disabled?: boolean;
 }
 
@@ -144,7 +144,7 @@ export function CustomerSearch({ onSelect, onCreateNew, disabled = false }: Cust
           {/* Create new customer link */}
           {onCreateNew && (
             <button
-              onClick={() => { setOpen(false); onCreateNew(); }}
+              onClick={() => { setOpen(false); onCreateNew(query.trim()); }}
               className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-accent transition-colors border-t font-medium"
             >
               + {t('customer.create')}

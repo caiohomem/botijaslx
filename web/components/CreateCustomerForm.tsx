@@ -15,11 +15,12 @@ interface Customer {
 interface CreateCustomerFormProps {
   onCreated: (customer: Customer) => void;
   onCancel: () => void;
+  initialName?: string;
 }
 
-export function CreateCustomerForm({ onCreated, onCancel }: CreateCustomerFormProps) {
+export function CreateCustomerForm({ onCreated, onCancel, initialName = '' }: CreateCustomerFormProps) {
   const t = useTranslations();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState('');
   const [phoneMode, setPhoneMode] = useState<PhoneMode>('pt');
   const [loading, setLoading] = useState(false);

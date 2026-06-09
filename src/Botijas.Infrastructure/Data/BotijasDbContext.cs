@@ -84,6 +84,7 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.ShippingReadyMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.WelcomeMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.ThankYouMessageTemplate).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.DeadlineMessageTemplate).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.PrinterType).IsRequired().HasMaxLength(50);
             entity.Property(e => e.LabelWidthMm).IsRequired();
             entity.Property(e => e.LabelHeightMm).IsRequired();

@@ -13,6 +13,7 @@ public class AppSettings
     public string ShippingReadyMessageTemplate { get; private set; }
     public string WelcomeMessageTemplate { get; private set; }
     public string ThankYouMessageTemplate { get; private set; }
+    public string DeadlineMessageTemplate { get; private set; }
     public string PrinterType { get; private set; }
     public int LabelWidthMm { get; private set; }
     public int LabelHeightMm { get; private set; }
@@ -30,6 +31,7 @@ public class AppSettings
         ShippingReadyMessageTemplate = "Olá {name}! As suas {count} botija(s) de CO₂ estão prontas e vamos enviar para a morada indicada. {link}";
         WelcomeMessageTemplate = "Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}";
         ThankYouMessageTemplate = "Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!";
+        DeadlineMessageTemplate = "Olá {name}! As suas {count} botija(s) de CO₂ já estão prontas e à sua espera há {days} dia(s). Venha buscá-las quando puder!";
         PrinterType = "label";
         LabelWidthMm = 50;
         LabelHeightMm = 75;
@@ -54,6 +56,7 @@ public class AppSettings
         string shippingReadyMessageTemplate,
         string welcomeMessageTemplate,
         string thankYouMessageTemplate,
+        string deadlineMessageTemplate,
         string printerType,
         int labelWidthMm,
         int labelHeightMm,
@@ -68,6 +71,7 @@ public class AppSettings
         ShippingReadyMessageTemplate = shippingReadyMessageTemplate;
         WelcomeMessageTemplate = welcomeMessageTemplate;
         ThankYouMessageTemplate = thankYouMessageTemplate;
+        DeadlineMessageTemplate = deadlineMessageTemplate;
         PrinterType = printerType;
         LabelWidthMm = labelWidthMm;
         LabelHeightMm = labelHeightMm;

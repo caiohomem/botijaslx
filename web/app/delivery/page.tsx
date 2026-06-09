@@ -88,6 +88,7 @@ export default function DeliveryPage() {
   const t = useTranslations();
   const [step, setStep] = useState<'identify' | 'create' | 'order'>('identify');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [newCustomerName, setNewCustomerName] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
   const [cylinders, setCylinders] = useState<Cylinder[]>([]);
   const [customerCylinders, setCustomerCylinders] = useState<CustomerCylinderListItem[]>([]);
@@ -403,17 +404,16 @@ export default function DeliveryPage() {
           state: c.state,
         }));
 
-        for (let i = 0; i < newCylinders.length; i++) {
-          const createdCylinder = newCylinders[i];
-          const qrCode = `${newOrder.orderId}-${i + 1}`;
+        for (const createdCylinder of newCylinders) {
+          const qrCode = `${newOrder.orderId}-${createdCylinder.sequentialNumber}`;
           const assigned = await cylindersApi.assignLabel(createdCylinder.cylinderId, qrCode);
           createdCylinder.labelToken = assigned.labelToken;
         }
 
         finalizedCylinders.push(...newCylinders);
         setPrintPreview({
-          labels: newCylinders.map((c: Cylinder, index: number) => ({
-            qrContent: `${newOrder.orderId}-${index + 1}`,
+          labels: newCylinders.map((c: Cylinder) => ({
+            qrContent: c.labelToken ?? `${newOrder.orderId}-${c.sequentialNumber}`,
             sequentialNumber: c.sequentialNumber,
           })),
         });
@@ -455,7 +455,7 @@ export default function DeliveryPage() {
               {/* Typeahead search */}
               <CustomerSearch
                 onSelect={handleCustomerSelect}
-                onCreateNew={() => setStep('create')}
+                onCreateNew={(name) => { setNewCustomerName(name); setStep('create'); }}
                 disabled={loading}
               />
             </>
@@ -463,6 +463,7 @@ export default function DeliveryPage() {
 
           {step === 'create' && (
             <CreateCustomerForm
+              initialName={newCustomerName}
               onCreated={handleCustomerCreated}
               onCancel={() => setStep('identify')}
             />

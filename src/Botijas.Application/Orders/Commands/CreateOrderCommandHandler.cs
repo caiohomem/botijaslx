@@ -31,36 +31,7 @@ public class CreateOrderCommandHandler
             return Result<OrderDto>.Failure("Customer not found");
         }
 
-        // Reuse an existing open order for this customer (idempotent create).
-        var openOrders = await _orderRepository.FindOpenOrdersByCustomerAsync(command.CustomerId, cancellationToken);
-        var existingOpenOrder = openOrders
-            .OrderByDescending(o => o.CreatedAt)
-            .FirstOrDefault();
-
-        if (existingOpenOrder != null)
-        {
-            existingOpenOrder.UpdateFulfillmentDetails(
-                fulfillmentMethod,
-                command.RefillPaid,
-                command.ShippingPaid);
-
-            await _orderRepository.SaveChangesAsync(cancellationToken);
-
-            return Result<OrderDto>.Success(new OrderDto
-            {
-                OrderId = existingOpenOrder.OrderId,
-                CustomerId = existingOpenOrder.CustomerId,
-                Status = existingOpenOrder.Status.ToString(),
-                FulfillmentMethod = existingOpenOrder.FulfillmentMethod.ToString(),
-                RefillPaid = existingOpenOrder.RefillPaid,
-                ShippingPaid = existingOpenOrder.ShippingPaid,
-                CreatedAt = existingOpenOrder.CreatedAt,
-                CompletedAt = existingOpenOrder.CompletedAt,
-                ShippedAt = existingOpenOrder.ShippedAt,
-                CylinderCount = existingOpenOrder.Cylinders.Count
-            });
-        }
-
+        // Cada entrada de botijas gera um pedido distinto.
         var order = RefillOrder.Create(
             command.CustomerId,
             fulfillmentMethod,

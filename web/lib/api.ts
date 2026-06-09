@@ -60,6 +60,7 @@ export interface AppSettings {
   shippingReadyMessageTemplate: string;
   welcomeMessageTemplate: string;
   thankYouMessageTemplate: string;
+  deadlineMessageTemplate: string;
   printerType: 'label' | 'a4';
   labelWidthMm: number;
   labelHeightMm: number;

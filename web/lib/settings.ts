@@ -11,6 +11,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   shippingReadyMessageTemplate: 'Olá {name}! As suas {count} botija(s) de CO₂ estão prontas e vamos enviar para a morada indicada. {link}',
   welcomeMessageTemplate: 'Obrigado por confiar na Oficina da Cerveja! A sua botija está segura connosco. Visite a nossa loja: {link}',
   thankYouMessageTemplate: 'Obrigado por utilizar o nosso serviço de enchimento. Obrigado, equipa da Oficina da Cerveja!',
+  deadlineMessageTemplate: 'Olá {name}! As suas {count} botija(s) de CO₂ já estão prontas e à sua espera há {days} dia(s). Venha buscá-las quando puder!',
   printerType: 'label',
   labelWidthMm: 50,
   labelHeightMm: 75,

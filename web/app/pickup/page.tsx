@@ -22,6 +22,7 @@ export default function PickupPage() {
   const [pickupTemplate, setPickupTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
   const [shippingTemplate, setShippingTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
   const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
+  const [deadlineTemplate, setDeadlineTemplate] = useState(DEFAULT_APP_SETTINGS.deadlineMessageTemplate);
   const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
 
   const loadOrders = useCallback(async () => {
@@ -42,6 +43,7 @@ export default function PickupPage() {
       setPickupTemplate(settings.whatsAppMessageTemplate);
       setShippingTemplate(settings.shippingReadyMessageTemplate);
       setThankYouTemplate(settings.thankYouMessageTemplate);
+      setDeadlineTemplate(settings.deadlineMessageTemplate);
       setStoreLink(settings.storeLink);
     });
 
@@ -87,6 +89,27 @@ export default function PickupPage() {
         // Não bloquear o fluxo se falhar
       }
     }
+  };
+
+  const openDeadlineWhatsApp = (order: PickupOrder) => {
+    const base = order.readyAt ?? order.createdAt;
+    const days = Math.max(
+      0,
+      Math.floor((Date.now() - new Date(base).getTime()) / 86400000)
+    );
+    const message = deadlineTemplate
+      .replace('{name}', order.customerName)
+      .replace('{count}', String(order.totalCylinders))
+      .replace('{days}', String(days))
+      .replace('{link}', storeLink);
+
+    const link = generateWhatsAppLink(
+      order.customerPhone,
+      message,
+      order.customerPhoneType === 'International' ? 'international' : 'pt'
+    );
+
+    window.open(link, '_blank');
   };
 
   const openThankYouWhatsApp = (order: PickupOrder) => {
@@ -431,6 +454,15 @@ export default function PickupPage() {
                       ? `📱 ${t('pickup.sendReadyWhatsApp')}`
                       : `✓ ${t('pickup.readyNotified')}`
                     }
+                  </button>
+
+                  {/* Lembrete de prazo */}
+                  <button
+                    onClick={() => openDeadlineWhatsApp(order)}
+                    className="flex-1 px-3 py-2 text-sm rounded-lg transition-colors whitespace-nowrap font-medium bg-amber-500 hover:bg-amber-600 text-white"
+                    title={t('pickup.sendDeadlineWhatsApp')}
+                  >
+                    {`⏰ ${t('pickup.deadline')}`}
                   </button>
 
                   {/* M4: Direct deliver button */}
