@@ -5,9 +5,30 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { LocaleProvider } from '@/components/LocaleProvider';
 import { Header } from '@/components/Header';
 import { ApiStartupGate } from '@/components/ApiStartupGate';
+import { AuthProvider } from '@/components/AuthProvider';
+import { AuthGate } from '@/components/AuthGate';
 import { defaultLocale } from '@/i18n';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import './globals.css';
+
+function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Header />
+      <main className="container mx-auto px-4 py-8">
+        {children}
+      </main>
+    </div>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -64,14 +85,13 @@ export default function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <LocaleProvider>
             <ThemeProvider>
-              <ApiStartupGate>
-                <div className="min-h-screen bg-background text-foreground">
-                  <Header />
-                  <main className="container mx-auto px-4 py-8">
-                    {children}
-                  </main>
-                </div>
-              </ApiStartupGate>
+              <AuthProvider>
+                <ApiStartupGate>
+                  <AuthGate>
+                    <AppShell>{children}</AppShell>
+                  </AuthGate>
+                </ApiStartupGate>
+              </AuthProvider>
             </ThemeProvider>
           </LocaleProvider>
         </NextIntlClientProvider>

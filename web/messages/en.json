@@ -33,6 +33,14 @@
     "en": "English",
     "select": "Select language"
   },
+  "auth": {
+    "title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "login": "Login",
+    "logout": "Logout",
+    "invalidCredentials": "Invalid username or password"
+  },
   "navigation": {
     "delivery": "In",
     "filling": "Filling",

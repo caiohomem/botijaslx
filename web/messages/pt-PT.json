@@ -33,6 +33,14 @@
     "en": "English",
     "select": "Selecionar idioma"
   },
+  "auth": {
+    "title": "Entrar",
+    "username": "Utilizador",
+    "password": "Palavra-passe",
+    "login": "Entrar",
+    "logout": "Sair",
+    "invalidCredentials": "Utilizador ou palavra-passe incorretos"
+  },
   "navigation": {
     "delivery": "In",
     "filling": "Enchimento",
