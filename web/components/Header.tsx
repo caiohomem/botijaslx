@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { LanguageSelector } from './LanguageSelector';
 import { ThemeToggle } from './ThemeToggle';
 import { SETTINGS_UPDATED_EVENT, loadAppSettings } from '@/lib/settings';
+import { useAuth } from '@/components/AuthProvider';
 
 const navItems = [
   { href: '/delivery', key: 'delivery' },
@@ -19,6 +20,7 @@ const navItems = [
 
 export function Header() {
   const t = useTranslations();
+  const { logout } = useAuth();
   const pathname = usePathname();
   const [appTitle, setAppTitle] = useState('');
   const [debugEnabled, setDebugEnabled] = useState(false);
@@ -55,6 +57,16 @@ export function Header() {
             >
               ⚙️
             </Link>
+            <button
+              onClick={() => {
+                logout();
+                window.location.href = '/login';
+              }}
+              className="text-sm text-muted-foreground hover:text-foreground"
+              title={t('auth.logout')}
+            >
+              {t('auth.logout')}
+            </button>
             <LanguageSelector />
             <ThemeToggle />
           </div>

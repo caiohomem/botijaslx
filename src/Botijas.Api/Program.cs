@@ -1,3 +1,4 @@
+using Botijas.Api.Middleware;
 using Botijas.Domain.Repositories;
 using Botijas.Infrastructure.Data;
 using Botijas.Infrastructure.Repositories;
@@ -99,6 +100,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseMiddleware<ApiKeyMiddleware>();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();

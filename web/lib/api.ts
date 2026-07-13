@@ -15,6 +15,16 @@ function getApiBaseUrl(): string {
   return typeof window === 'undefined' ? SERVER_API_BASE_URL : BROWSER_API_BASE_URL;
 }
 
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? 'oficina';
+
+function withApiKey(headers: HeadersInit = {}): HeadersInit {
+  const result = new Headers(headers);
+  if (API_KEY) {
+    result.set('X-Api-Key', API_KEY);
+  }
+  return result;
+}
+
 export async function waitForApiReady(): Promise<void> {
   const response = await fetch(`${BROWSER_API_BASE_URL}/health`, {
     method: 'GET',
@@ -32,10 +42,10 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
     ...options,
-    headers: {
+    headers: withApiKey({
       'Content-Type': 'application/json',
       ...options.headers,
-    },
+    }),
   });
 
   if (!response.ok) {
@@ -584,7 +594,9 @@ export const debugApi = {
     apiRequest<void>(`/api/debug/cylinder-history/${historyId}`, { method: 'DELETE' }),
 
   exportDatabase: async () => {
-    const response = await fetch(`${getApiBaseUrl()}/api/debug/export`);
+    const response = await fetch(`${getApiBaseUrl()}/api/debug/export`, {
+      headers: withApiKey(),
+    });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || `HTTP ${response.status}`);
