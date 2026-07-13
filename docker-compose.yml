@@ -27,6 +27,7 @@ services:
       ASPNETCORE_URLS: http://127.0.0.1:8080
       ConnectionStrings__Default: Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true
       CORS__AllowedOrigins: http://localhost:3000
+      API_KEY: oficina
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,11 +38,13 @@ services:
       dockerfile: web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE: http://localhost:8080
+        NEXT_PUBLIC_API_KEY: oficina
     container_name: botijas-web
     environment:
       NODE_ENV: production
       PORT: 3000
       NEXT_PUBLIC_API_BASE: http://localhost:8080
+      NEXT_PUBLIC_API_KEY: oficina
       INTERNAL_API_BASE: http://host.docker.internal:8080
     extra_hosts:
       - "host.docker.internal:host-gateway"

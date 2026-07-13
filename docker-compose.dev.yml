@@ -23,6 +23,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true
+      API_KEY: oficina
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,9 +36,11 @@ services:
       dockerfile: web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE: http://localhost:8080
+        NEXT_PUBLIC_API_KEY: oficina
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: http://localhost:8080
+      NEXT_PUBLIC_API_KEY: oficina
       INTERNAL_API_BASE: http://api:8080
     depends_on:
       api:

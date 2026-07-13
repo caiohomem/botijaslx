@@ -18,3 +18,5 @@ services:
         value: "true"
       - key: ConnectionStrings__Default
         sync: false
+      - key: API_KEY
+        sync: false
