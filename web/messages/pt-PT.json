@@ -127,6 +127,8 @@
     "progress": "{ready} de {total} prontas",
     "confirmMark": "Marcar como cheia?",
     "marked": "Botija marcada como cheia",
+    "alreadyMarked": "Botija já estava marcada como cheia",
+    "alreadyMarkedRefresh": "{cylinder} já estava marcada como cheia. A fila foi atualizada.",
     "markAllReady": "Marcar {count} como prontas",
     "orderComplete": "Pedido de {name} completo!",
     "orderCompleteNotified": "Pedido completo! WhatsApp enviado para {name}.",

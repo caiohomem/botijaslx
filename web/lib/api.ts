@@ -260,6 +260,7 @@ export interface MarkReadyResult {
   totalCylindersInOrder: number;
   readyCylindersInOrder: number;
   isOrderComplete: boolean;
+  wasAlreadyReady?: boolean;
 }
 
 export interface ReportProblemResult {
