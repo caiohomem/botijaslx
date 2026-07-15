@@ -74,7 +74,9 @@ public class CylinderRepository : ICylinderRepository
                     join cylinder in _context.Cylinders on cylinderRef.CylinderId equals cylinder.CylinderId
                     join order in _context.Orders on cylinderRef.OrderId equals order.OrderId
                     join customer in _context.Customers on order.CustomerId equals customer.CustomerId
-                    where cylinderRef.State == CylinderState.Received && order.Status == RefillOrderStatus.Open
+                    where cylinderRef.State == CylinderState.Received
+                          && cylinder.State == CylinderState.Received
+                          && order.Status == RefillOrderStatus.Open
                     orderby cylinder.CreatedAt ascending, cylinder.SequentialNumber ascending
                     select new
                     {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { cylindersApi, pickupApi, historyApi, generateWhatsAppLink, FillingQueueItem } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
@@ -51,18 +51,39 @@ export default function FillingPage() {
     fulfillmentMethod: string;
     cylinderCount: number;
   }>>([]);
+  const recentScansRef = useRef<Map<string, number>>(new Map());
+  const processingScansRef = useRef<Set<string>>(new Set());
+  const SCAN_DEDUP_MS = 3000;
 
-  const loadQueue = useCallback(async () => {
+  const loadQueue = useCallback(async (options?: { silent?: boolean }) => {
     try {
       setError(null);
       const response = await cylindersApi.getFillingQueue();
       setCylinders(response.cylinders);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar fila');
+      if (!options?.silent) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar fila');
+      }
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
+
+  const shouldIgnoreDuplicateScan = (value: string) => {
+    const key = value.trim().toUpperCase();
+    if (!key) return true;
+
+    const now = Date.now();
+    const lastScanAt = recentScansRef.current.get(key);
+    if (lastScanAt !== undefined && now - lastScanAt < SCAN_DEDUP_MS) {
+      return true;
+    }
+
+    recentScansRef.current.set(key, now);
+    return false;
+  };
 
   useEffect(() => {
     loadQueue();
@@ -71,6 +92,14 @@ export default function FillingPage() {
       setShippingMessageTemplate(settings.shippingReadyMessageTemplate);
       setStoreLink(settings.storeLink);
     });
+  }, [loadQueue]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadQueue({ silent: true });
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [loadQueue]);
 
   const openWhatsApp = (
@@ -102,39 +131,52 @@ export default function FillingPage() {
     setCompletedOrders(prev => prev.filter(o => o.orderId !== orderId));
   };
 
+  const applyMarkReadyResult = (
+    result: Awaited<ReturnType<typeof cylindersApi.markReady>>,
+    cylinder?: FillingQueueItem,
+    options?: { wasAlreadyReady?: boolean; cylinderLabel?: string }
+  ) => {
+    setCylinders(prev => prev.filter(c => c.cylinderId !== result.cylinderId));
+
+    const wasAlreadyReady = options?.wasAlreadyReady ?? result.wasAlreadyReady;
+
+    if (result.isOrderComplete && cylinder) {
+      setCompletedOrders(prev => [...prev, {
+        orderId: result.orderId,
+        customerName: cylinder.customerName,
+        customerPhone: cylinder.customerPhone,
+        customerPhoneType: cylinder.customerPhoneType,
+        fulfillmentMethod: cylinder.fulfillmentMethod,
+        cylinderCount: cylinder.totalCylindersInOrder,
+      }]);
+      playSound('complete');
+      setSuccessMessage(t('filling.orderComplete', { name: cylinder.customerName }));
+    } else if (wasAlreadyReady) {
+      playSound('success');
+      if (options?.cylinderLabel) {
+        setSuccessMessage(t('filling.alreadyMarkedRefresh', { cylinder: options.cylinderLabel }));
+      } else {
+        setSuccessMessage(t('filling.alreadyMarked'));
+      }
+    } else {
+      playSound('success');
+      setSuccessMessage(t('filling.marked'));
+    }
+
+    setTimeout(() => setSuccessMessage(null), 5000);
+    loadQueue({ silent: true });
+  };
+
   const handleMarkReady = async (cylinderId: string) => {
     setActionLoading(cylinderId);
     setError(null);
     setSuccessMessage(null);
 
-    // Get customer info before removing cylinder from list
     const cylinder = cylinders.find(c => c.cylinderId === cylinderId);
 
     try {
       const result = await cylindersApi.markReady(cylinderId);
-
-      setCylinders(prev => prev.filter(c => c.cylinderId !== cylinderId));
-
-      if (result.isOrderComplete && cylinder) {
-        // All cylinders filled - track for manual WhatsApp notification
-        setCompletedOrders(prev => [...prev, {
-          orderId: result.orderId,
-          customerName: cylinder.customerName,
-          customerPhone: cylinder.customerPhone,
-          customerPhoneType: cylinder.customerPhoneType,
-          fulfillmentMethod: cylinder.fulfillmentMethod,
-          cylinderCount: cylinder.totalCylindersInOrder,
-        }]);
-        // M10: Play completion sound
-        playSound('complete');
-        setSuccessMessage(t('filling.orderComplete', { name: cylinder.customerName }));
-      } else {
-        // M10: Play success sound for individual cylinder
-        playSound('success');
-        setSuccessMessage(t('filling.marked'));
-      }
-
-      setTimeout(() => setSuccessMessage(null), 5000);
+      applyMarkReadyResult(result, cylinder);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao marcar botija');
     } finally {
@@ -194,6 +236,11 @@ export default function FillingPage() {
   const handleScanValue = async (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return;
+    if (shouldIgnoreDuplicateScan(trimmed)) return;
+
+    const scanKey = trimmed.toUpperCase();
+    if (processingScansRef.current.has(scanKey)) return;
+    processingScansRef.current.add(scanKey);
 
     const normalizedToken = trimmed.toUpperCase();
     const cleanNum = trimmed.replace(/^#?0*/, '');
@@ -203,13 +250,56 @@ export default function FillingPage() {
            (!isNaN(seqNum) && c.sequentialNumber === seqNum)
     );
 
-    if (cylinder) {
-      await handleMarkReady(cylinder.cylinderId);
-      setScanInput('');
-    } else {
-      try {
+    try {
+      if (cylinder) {
+        setActionLoading(cylinder.cylinderId);
+        setError(null);
+        setSuccessMessage(null);
+
+        const result = await cylindersApi.markReady(cylinder.cylinderId);
+        applyMarkReadyResult(result, cylinder);
+        setScanInput('');
+      } else {
         const cylinderData = await historyApi.scanCylinder(trimmed);
         const cylinderLabel = `#${String(cylinderData.sequentialNumber).padStart(4, '0')}`;
+
+        if (
+          cylinderData.state === 'Ready' &&
+          cylinderData.currentOrderStatus === 'Open' &&
+          cylinderData.currentOrderId
+        ) {
+          setActionLoading(cylinderData.cylinderId);
+          setError(null);
+          setSuccessMessage(null);
+
+          const orderCylinder = cylinders.find(c => c.orderId === cylinderData.currentOrderId);
+          const result = await cylindersApi.markReady(cylinderData.cylinderId);
+          const fallbackCylinder: FillingQueueItem | undefined = orderCylinder ?? (
+            cylinderData.customerName
+              ? {
+                  cylinderId: cylinderData.cylinderId,
+                  sequentialNumber: cylinderData.sequentialNumber,
+                  labelToken: cylinderData.labelToken,
+                  state: cylinderData.state,
+                  receivedAt: cylinderData.createdAt,
+                  orderId: cylinderData.currentOrderId,
+                  customerName: cylinderData.customerName,
+                  customerPhone: cylinderData.customerPhone ?? '',
+                  customerPhoneType: 'PT',
+                  fulfillmentMethod: 'Pickup',
+                  totalCylindersInOrder: result.totalCylindersInOrder,
+                  readyCylindersInOrder: result.readyCylindersInOrder,
+                }
+              : undefined
+          );
+          applyMarkReadyResult(result, fallbackCylinder, {
+            wasAlreadyReady: true,
+            cylinderLabel,
+          });
+          setScanInput('');
+          return;
+        }
+
         const stateLabel = formatCylinderStatus(cylinderData.state);
         const orderStatusLabel = formatOrderStatus(cylinderData.currentOrderStatus);
 
@@ -225,10 +315,15 @@ export default function FillingPage() {
             });
 
         setError(message);
-      } catch {
-        setError(t('filling.notFound'));
+        loadQueue({ silent: true });
+        setTimeout(() => setError(null), 5000);
       }
+    } catch {
+      setError(t('filling.notFound'));
       setTimeout(() => setError(null), 3000);
+    } finally {
+      processingScansRef.current.delete(scanKey);
+      setActionLoading(null);
     }
   };
 

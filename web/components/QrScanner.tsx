@@ -13,7 +13,27 @@ export function QrScanner({ onScan, label }: QrScannerProps) {
   const scannerRef = useRef<any>(null);
   const containerId = useRef(`qr-reader-${Math.random().toString(36).slice(2)}`);
   const onScanRef = useRef(onScan);
+  const lastScanRef = useRef<{ value: string; at: number } | null>(null);
+  const SCAN_COOLDOWN_MS = 3000;
   onScanRef.current = onScan;
+
+  const emitScan = useCallback((decodedText: string) => {
+    const trimmed = decodedText.trim();
+    if (!trimmed) return;
+
+    const now = Date.now();
+    const lastScan = lastScanRef.current;
+    if (
+      lastScan &&
+      lastScan.value === trimmed &&
+      now - lastScan.at < SCAN_COOLDOWN_MS
+    ) {
+      return;
+    }
+
+    lastScanRef.current = { value: trimmed, at: now };
+    onScanRef.current(trimmed);
+  }, []);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -64,7 +84,7 @@ export function QrScanner({ onScan, label }: QrScannerProps) {
             qrbox: { width: 250, height: 250 },
           },
           (decodedText: string) => {
-            onScanRef.current(decodedText);
+            emitScan(decodedText);
             // Stop after successful scan
             scanner.stop().catch(() => {});
             try { scanner.clear(); } catch {}

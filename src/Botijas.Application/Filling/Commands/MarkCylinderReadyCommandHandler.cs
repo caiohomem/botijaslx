@@ -36,7 +36,23 @@ public class MarkCylinderReadyCommandHandler
             return Result<FillingResultDto>.Failure("Pedido não encontrado para esta botija");
         }
 
-        var wasAlreadyReady = cylinder.State == CylinderState.Ready;
+        if (order.Status != RefillOrderStatus.Open)
+        {
+            return Result<FillingResultDto>.Failure(
+                $"Pedido não está aberto para enchimento. Estado atual: {order.Status}");
+        }
+
+        var orderCylinderRef = order.Cylinders.FirstOrDefault(c => c.CylinderId == command.CylinderId);
+        if (orderCylinderRef == null)
+        {
+            return Result<FillingResultDto>.Failure("Botija não pertence ao pedido aberto");
+        }
+
+        // Buscar todos os cilindros do pedido e sincronizar refs antes de validar o estado.
+        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+        order.RecalculateStatus(orderCylinders);
+
+        var wasAlreadyReady = RefillOrder.IsCylinderReadyForPickup(cylinder.State);
 
         if (!wasAlreadyReady)
         {
@@ -48,16 +64,9 @@ public class MarkCylinderReadyCommandHandler
             {
                 return Result<FillingResultDto>.Failure(ex.Message);
             }
-        }
 
-        // Buscar todos os cilindros do pedido para verificar se está completo
-        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-        
-        // Sincronizar refs e recalcular status do pedido com base no estado real dos cilindros.
-        order.RecalculateStatus(orderCylinders);
+            order.RecalculateStatus(orderCylinders);
 
-        if (!wasAlreadyReady)
-        {
             var historyEntry = CylinderHistoryEntry.Create(
                 cylinder.CylinderId,
                 CylinderEventType.MarkedReady,
@@ -82,7 +91,8 @@ public class MarkCylinderReadyCommandHandler
             OrderStatus = order.Status.ToString(),
             TotalCylindersInOrder = totalCylinders,
             ReadyCylindersInOrder = readyCylinders,
-            IsOrderComplete = order.Status == RefillOrderStatus.ReadyForPickup
+            IsOrderComplete = order.Status == RefillOrderStatus.ReadyForPickup,
+            WasAlreadyReady = wasAlreadyReady
         });
     }
 }
@@ -96,4 +106,5 @@ public class FillingResultDto
     public int TotalCylindersInOrder { get; set; }
     public int ReadyCylindersInOrder { get; set; }
     public bool IsOrderComplete { get; set; }
+    public bool WasAlreadyReady { get; set; }
 }

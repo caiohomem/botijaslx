@@ -127,6 +127,8 @@
     "progress": "{ready} of {total} ready",
     "confirmMark": "Mark as ready?",
     "marked": "Cylinder marked as ready",
+    "alreadyMarked": "Cylinder was already marked as ready",
+    "alreadyMarkedRefresh": "{cylinder} was already marked as ready. Queue refreshed.",
     "markAllReady": "Mark {count} as ready",
     "orderComplete": "{name}'s order complete!",
     "orderCompleteNotified": "Order complete! WhatsApp sent to {name}.",
