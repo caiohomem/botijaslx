@@ -30,43 +30,50 @@ public class MarkCylindersReadyBatchCommandHandler
             return Result<BatchReadyResult>.Failure("Order not found");
         }
 
-        // Get all cylinders in this order that are not yet ready in the order context.
-        var cylinderRefs = order.Cylinders
-            .Where(c => !RefillOrder.IsCylinderReadyForPickup(c.State))
-            .ToList();
-
-        if (cylinderRefs.Count == 0)
+        // Membership via CylinderRef; readiness via Cylinder.State (não CylinderRef.State).
+        var cylinderIds = order.Cylinders.Select(c => c.CylinderId).ToList();
+        if (cylinderIds.Count == 0)
         {
             return Result<BatchReadyResult>.Failure("No cylinders to mark as ready in this order");
         }
 
         int markedCount = 0;
 
-        // Mark each cylinder as ready
-        foreach (var cylinderRef in cylinderRefs)
+        foreach (var cylinderId in cylinderIds)
         {
-            var cylinder = await _cylinderRepository.FindByIdAsync(cylinderRef.CylinderId, cancellationToken);
-            if (cylinder != null)
+            var cylinder = await _cylinderRepository.FindByIdAsync(cylinderId, cancellationToken);
+            if (cylinder == null)
             {
-                try
-                {
-                    if (!RefillOrder.IsCylinderReadyForPickup(cylinder.State))
-                    {
-                        cylinder.MarkAsReady();
-                        markedCount++;
+                continue;
+            }
 
-                        var historyEntry = CylinderHistoryEntry.Create(
-                            cylinder.CylinderId,
-                            CylinderEventType.MarkedReady,
-                            "Botija marcada como cheia (lote)",
-                            order.OrderId);
-                        await _historyRepository.AddAsync(historyEntry, cancellationToken);
-                    }
-                }
-                catch (InvalidOperationException)
+            try
+            {
+                if (!RefillOrder.IsCylinderReadyForPickup(cylinder.State))
                 {
-                    // Skip if cylinder cannot be marked as ready
+                    cylinder.MarkAsReady();
+                    markedCount++;
+
+                    var historyEntry = CylinderHistoryEntry.Create(
+                        cylinder.CylinderId,
+                        CylinderEventType.MarkedReady,
+                        "Botija marcada como cheia (lote)",
+                        order.OrderId);
+                    await _historyRepository.AddAsync(historyEntry, cancellationToken);
                 }
+            }
+            catch (InvalidOperationException)
+            {
+                // Skip if cylinder cannot be marked as ready
+            }
+        }
+
+        if (markedCount == 0)
+        {
+            var orderCylindersCheck = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+            if (orderCylindersCheck.All(c => RefillOrder.IsCylinderReadyForPickup(c.State)))
+            {
+                return Result<BatchReadyResult>.Failure("No cylinders to mark as ready in this order");
             }
         }
 
