@@ -69,18 +69,16 @@ public class CylinderRepository : ICylinderRepository
 
     public async Task<List<FillingQueueItem>> GetFillingQueueAsync(CancellationToken cancellationToken = default)
     {
-        // A fila de enchimento deve refletir o estado da botija dentro do pedido aberto atual.
+        // Fonte de verdade: Cylinder.State + Order.Status (não CylinderRef.State).
         var query = from cylinderRef in _context.CylinderRefs
                     join cylinder in _context.Cylinders on cylinderRef.CylinderId equals cylinder.CylinderId
                     join order in _context.Orders on cylinderRef.OrderId equals order.OrderId
                     join customer in _context.Customers on order.CustomerId equals customer.CustomerId
-                    where cylinderRef.State == CylinderState.Received
-                          && cylinder.State == CylinderState.Received
+                    where cylinder.State == CylinderState.Received
                           && order.Status == RefillOrderStatus.Open
                     orderby cylinder.CreatedAt ascending, cylinder.SequentialNumber ascending
                     select new
                     {
-                        CylinderRef = cylinderRef,
                         Cylinder = cylinder,
                         Order = order,
                         Customer = customer
@@ -88,24 +86,19 @@ public class CylinderRepository : ICylinderRepository
 
         var results = await query.ToListAsync(cancellationToken);
 
-        // Agrupar por pedido para calcular progresso
-        var orderGroups = results.GroupBy(r => r.Order.OrderId).ToDictionary(
-            g => g.Key,
-            g => new { TotalCount = g.Count(), Items = g.ToList() }
-        );
+        var orderIds = results.Select(r => r.Order.OrderId).Distinct().ToList();
 
-        // Buscar contagem de botijas prontas por pedido
-        var orderIds = orderGroups.Keys.ToList();
-        var readyCounts = await _context.CylinderRefs
-            .Where(cr => orderIds.Contains(cr.OrderId) &&
-                         (cr.State == CylinderState.Ready ||
-                          cr.State == CylinderState.Problem ||
-                          cr.State == CylinderState.Delivered))
-            .GroupBy(cr => cr.OrderId)
-            .Select(g => new { OrderId = g.Key, ReadyCount = g.Count() })
-            .ToDictionaryAsync(x => x.OrderId, x => x.ReadyCount, cancellationToken);
+        var readyCounts = await (
+            from cr in _context.CylinderRefs
+            join c in _context.Cylinders on cr.CylinderId equals c.CylinderId
+            where orderIds.Contains(cr.OrderId) &&
+                  (c.State == CylinderState.Ready ||
+                   c.State == CylinderState.Problem ||
+                   c.State == CylinderState.Delivered)
+            group c by cr.OrderId into g
+            select new { OrderId = g.Key, ReadyCount = g.Count() }
+        ).ToDictionaryAsync(x => x.OrderId, x => x.ReadyCount, cancellationToken);
 
-        // Buscar total de botijas por pedido
         var totalCounts = await _context.CylinderRefs
             .Where(cr => orderIds.Contains(cr.OrderId))
             .GroupBy(cr => cr.OrderId)
@@ -117,7 +110,7 @@ public class CylinderRepository : ICylinderRepository
                 CylinderId = r.Cylinder.CylinderId,
                 SequentialNumber = r.Cylinder.SequentialNumber,
                 LabelToken = r.Cylinder.LabelToken?.Value,
-                State = r.CylinderRef.State.ToString(),
+                State = r.Cylinder.State.ToString(),
                 ReceivedAt = r.Cylinder.CreatedAt,
                 OrderId = r.Order.OrderId,
                 CustomerName = r.Customer.Name,

@@ -126,41 +126,31 @@ public class RefillOrder
         ShippedAt = null;
     }
 
-    public void CheckAndUpdateStatus(IEnumerable<Cylinder> cylinders)
-    {
-        if (Status != RefillOrderStatus.Open)
-        {
-            return;
-        }
-
-        // Atualizar estados dos CylinderRefs baseado nos Cylinders reais
-        var cylinderDict = cylinders.ToDictionary(c => c.CylinderId);
-        foreach (var cylinderRef in _cylinders)
-        {
-            if (cylinderDict.TryGetValue(cylinderRef.CylinderId, out var cylinder))
-            {
-                cylinderRef.State = cylinder.State;
-            }
-        }
-
-        var allReady = _cylinders.Count > 0 &&
-                      _cylinders.All(c => IsCylinderReadyForPickup(c.State));
-
-        if (allReady && Status == RefillOrderStatus.Open)
-        {
-            Status = RefillOrderStatus.ReadyForPickup;
-            _domainEvents.Add(new OrderBecameReadyForPickup(OrderId, CustomerId, _cylinders.Count));
-        }
-    }
-
+    /// <summary>
+    /// Recalcula o status do pedido a partir do estado atual das botijas (Cylinder.State).
+    /// Pedidos terminal (Completed/Cancelled) não são alterados — a botija pode já estar noutro ciclo.
+    /// CylinderRef.State deixa de ser fonte de verdade (espelho legado, a remover).
+    /// </summary>
     public void RecalculateStatus(IEnumerable<Cylinder> cylinders)
     {
-        if (Status == RefillOrderStatus.Cancelled)
+        if (Status is RefillOrderStatus.Cancelled or RefillOrderStatus.Completed)
         {
             return;
         }
 
         var cylinderDict = cylinders.ToDictionary(c => c.CylinderId);
+        var orderCylinders = _cylinders
+            .Select(cylinderRef => cylinderDict.TryGetValue(cylinderRef.CylinderId, out var cylinder) ? cylinder : null)
+            .Where(c => c != null)
+            .Select(c => c!)
+            .ToList();
+
+        if (orderCylinders.Count == 0 || orderCylinders.Count != _cylinders.Count)
+        {
+            return;
+        }
+
+        // Espelho legado: mantido só até a coluna CylinderRef.State ser removida.
         foreach (var cylinderRef in _cylinders)
         {
             if (cylinderDict.TryGetValue(cylinderRef.CylinderId, out var cylinder))
@@ -169,9 +159,7 @@ public class RefillOrder
             }
         }
 
-        var allDelivered = _cylinders.Count > 0 &&
-                          _cylinders.All(c => c.State == CylinderState.Delivered);
-
+        var allDelivered = orderCylinders.All(c => c.State == CylinderState.Delivered);
         if (allDelivered)
         {
             Status = RefillOrderStatus.Completed;
@@ -179,12 +167,15 @@ public class RefillOrder
             return;
         }
 
-        var readyForPickup = _cylinders.Count > 0 &&
-                             _cylinders.All(c => IsCylinderReadyForPickup(c.State));
-
+        var readyForPickup = orderCylinders.All(c => IsCylinderReadyForPickup(c.State));
         if (readyForPickup)
         {
-            Status = RefillOrderStatus.ReadyForPickup;
+            if (Status != RefillOrderStatus.ReadyForPickup)
+            {
+                Status = RefillOrderStatus.ReadyForPickup;
+                _domainEvents.Add(new OrderBecameReadyForPickup(OrderId, CustomerId, _cylinders.Count));
+            }
+
             CompletedAt = null;
             return;
         }
@@ -197,14 +188,19 @@ public class RefillOrder
         CancellationNotes = null;
     }
 
-    public void Complete()
+    public void Complete(IEnumerable<Cylinder> cylinders)
     {
         if (Status != RefillOrderStatus.ReadyForPickup)
         {
             throw new InvalidOperationException($"Cannot complete order. Current status: {Status}");
         }
 
-        var allDelivered = _cylinders.All(c => c.State == CylinderState.Delivered);
+        var cylinderDict = cylinders.ToDictionary(c => c.CylinderId);
+        var allDelivered = _cylinders.Count > 0 &&
+                           _cylinders.All(cylinderRef =>
+                               cylinderDict.TryGetValue(cylinderRef.CylinderId, out var cylinder) &&
+                               cylinder.State == CylinderState.Delivered);
+
         if (!allDelivered)
         {
             throw new InvalidOperationException("Cannot complete order. Not all cylinders are delivered");

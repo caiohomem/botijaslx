@@ -48,9 +48,8 @@ public class GetReadyForPickupQueryHandler
                 }
             }
 
-            // Buscar botijas do pedido
+            // Buscar botijas do pedido (read-only: status só muda em comandos)
             var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-            order.RecalculateStatus(cylinders);
 
             var cylinderDtos = cylinders.Select(c => new PickupCylinderDto
             {
@@ -86,8 +85,6 @@ public class GetReadyForPickupQueryHandler
 
         // Ordenar por data em que ficou pronto (mais antigos primeiro)
         result = result.OrderBy(o => o.ReadyAt ?? o.CreatedAt).ToList();
-
-        await _orderRepository.SaveChangesAsync(cancellationToken);
 
         return Result<List<PickupOrderDto>>.Success(result);
     }
