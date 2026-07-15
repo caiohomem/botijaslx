@@ -1,6 +1,7 @@
 using Botijas.Application.Common;
 using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
+using Botijas.Domain.Services;
 
 namespace Botijas.Application.Customers.Queries;
 
@@ -156,7 +157,12 @@ public class GetCustomerCylindersQueryHandler
                         CylinderId = cylinder.CylinderId,
                         SequentialNumber = cylinder.SequentialNumber,
                         LabelToken = cylinder.LabelToken?.Value,
-                        State = cylinderRef.State.ToString(),
+                        State = OrderCylinderStateResolver.Resolve(
+                            order.Status,
+                            cylinder.State,
+                            rawHistoriesByCylinderId.GetValueOrDefault(cylinder.CylinderId)
+                                ?? Enumerable.Empty<CylinderHistoryEntry>(),
+                            order.OrderId),
                         CreatedAt = cylinder.CreatedAt,
                         OrderId = order.OrderId,
                         OrderStatus = order.Status.ToString(),
