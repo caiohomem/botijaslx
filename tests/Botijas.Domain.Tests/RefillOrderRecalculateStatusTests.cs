@@ -84,21 +84,17 @@ public class RefillOrderRecalculateStatusTests
     }
 
     [Fact]
-    public void RecalculateStatus_UsesCylinderEntityState_NotStaleRefMirror()
+    public void RecalculateStatus_UsesCylinderEntityState_EvenIfMembershipHasNoState()
     {
         var (order, cylinders) = CreateOpenOrderWithCylinders(1);
 
-        // Espelho legado no ref fica Received; entidade passa a Ready.
         cylinders[0].MarkAsReady();
-        var staleRef = order.Cylinders.Single();
-        Assert.Equal(CylinderState.Received, staleRef.State);
         Assert.Equal(CylinderState.Ready, cylinders[0].State);
+        Assert.Single(order.Cylinders);
 
         order.RecalculateStatus(cylinders);
 
         Assert.Equal(RefillOrderStatus.ReadyForPickup, order.Status);
-        // Espelho legado ainda é sincronizado até a coluna ser removida.
-        Assert.Equal(CylinderState.Ready, staleRef.State);
     }
 
     [Fact]

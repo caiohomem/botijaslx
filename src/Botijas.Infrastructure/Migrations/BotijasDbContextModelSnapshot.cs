@@ -199,10 +199,6 @@ namespace Botijas.Infrastructure.Migrations
                     b.Property<Guid>("CylinderId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("OrderId", "CylinderId");
 
                     b.ToTable("CylinderRefs");

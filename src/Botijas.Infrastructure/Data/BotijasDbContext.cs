@@ -70,7 +70,6 @@ public class BotijasDbContext : DbContext
         modelBuilder.Entity<CylinderRef>(entity =>
         {
             entity.HasKey(e => new { e.OrderId, e.CylinderId });
-            entity.Property(e => e.State).IsRequired().HasConversion<string>();
         });
 
         modelBuilder.Entity<AppSettings>(entity =>
