@@ -41,6 +41,7 @@ builder.Services.AddScoped<Botijas.Application.Orders.Commands.AddCylinderToOrde
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.AddCylindersToOrderBatchCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.ScanCylinderToOrderCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Orders.Commands.CancelOrderCommandHandler>();
+builder.Services.AddScoped<Botijas.Application.Orders.Commands.DeleteEmptyOpenOrderCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Queries.GetFillingQueueQueryHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.MarkCylinderReadyCommandHandler>();
 builder.Services.AddScoped<Botijas.Application.Filling.Commands.MarkCylindersReadyBatchCommandHandler>();

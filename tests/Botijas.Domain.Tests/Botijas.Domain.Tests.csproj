@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Botijas.Domain\Botijas.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Botijas.Application\Botijas.Application.csproj" />
   </ItemGroup>
 
 </Project>

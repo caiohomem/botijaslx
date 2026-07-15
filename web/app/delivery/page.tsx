@@ -379,6 +379,7 @@ export default function DeliveryPage() {
 
     setLoading(true);
     setError(null);
+    let createdOrderId: string | null = null;
 
     try {
       const newOrder = await ordersApi.create({
@@ -387,6 +388,7 @@ export default function DeliveryPage() {
         refillPaid,
         shippingPaid: fulfillmentMethod === 'Shipping' ? shippingPaid : false,
       });
+      createdOrderId = newOrder.orderId;
       const finalizedCylinders: Cylinder[] = [];
 
       for (const cylinder of cylinders.filter(c => !c.isDraftNew)) {
@@ -423,6 +425,18 @@ export default function DeliveryPage() {
       setCylinders(finalizedCylinders);
       showSuccess(tr('delivery.orderClosed', 'Pedido fechado'), 3000);
     } catch (err) {
+      if (createdOrderId) {
+        // Evita deixar pedido Open órfão sem botijas (ou parcial incompleto → cancelar).
+        try {
+          await ordersApi.deleteEmpty(createdOrderId);
+        } catch {
+          try {
+            await ordersApi.cancel(createdOrderId, 'Rollback: falha ao fechar pedido');
+          } catch {
+            // best-effort cleanup
+          }
+        }
+      }
       setError(err instanceof Error ? err.message : 'Erro ao fechar pedido');
     } finally {
       setLoading(false);

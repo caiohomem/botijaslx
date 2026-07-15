@@ -18,6 +18,7 @@ public class OrdersController : ControllerBase
     private readonly MarkOrderNotifiedCommandHandler _markNotifiedHandler;
     private readonly MarkOrderShippedCommandHandler _markShippedHandler;
     private readonly CancelOrderCommandHandler _cancelOrderHandler;
+    private readonly DeleteEmptyOpenOrderCommandHandler _deleteEmptyOpenOrderHandler;
 
     public OrdersController(
         CreateOrderCommandHandler createHandler,
@@ -28,7 +29,8 @@ public class OrdersController : ControllerBase
         DeliverCylinderCommandHandler deliverCylinderHandler,
         MarkOrderNotifiedCommandHandler markNotifiedHandler,
         MarkOrderShippedCommandHandler markShippedHandler,
-        CancelOrderCommandHandler cancelOrderHandler)
+        CancelOrderCommandHandler cancelOrderHandler,
+        DeleteEmptyOpenOrderCommandHandler deleteEmptyOpenOrderHandler)
     {
         _createHandler = createHandler;
         _addCylinderHandler = addCylinderHandler;
@@ -39,6 +41,7 @@ public class OrdersController : ControllerBase
         _markNotifiedHandler = markNotifiedHandler;
         _markShippedHandler = markShippedHandler;
         _cancelOrderHandler = cancelOrderHandler;
+        _deleteEmptyOpenOrderHandler = deleteEmptyOpenOrderHandler;
     }
 
     [HttpPost]
@@ -180,6 +183,24 @@ public class OrdersController : ControllerBase
         }
 
         return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Apaga um pedido Open sem botijas (órfão).
+    /// </summary>
+    [HttpDelete("{orderId}")]
+    public async Task<IActionResult> DeleteEmptyOpenOrder(Guid orderId, CancellationToken cancellationToken)
+    {
+        var result = await _deleteEmptyOpenOrderHandler.Handle(
+            new DeleteEmptyOpenOrderCommand(orderId),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return NoContent();
     }
 
     /// <summary>

@@ -137,6 +137,12 @@ public class RefillOrderRepository : IRefillOrderRepository
         await _context.Orders.AddAsync(order, cancellationToken);
     }
 
+    public Task DeleteAsync(RefillOrder order, CancellationToken cancellationToken = default)
+    {
+        _context.Orders.Remove(order);
+        return Task.CompletedTask;
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);

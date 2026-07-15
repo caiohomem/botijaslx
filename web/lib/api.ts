@@ -234,6 +234,11 @@ export const ordersApi = {
       method: 'POST',
       body: JSON.stringify({ notes }),
     }),
+
+  deleteEmpty: (orderId: string) =>
+    apiRequest<void>(`/api/orders/${orderId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Cylinders / Filling
