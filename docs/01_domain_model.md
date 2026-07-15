@@ -49,17 +49,19 @@
 - Open
 - ReadyForPickup
 - Completed
+- Cancelled
 
 **Atributos**
 - OrderId
 - CustomerId
-- Cylinders[]
+- Cylinders[] (membership via CylinderRef: OrderId + CylinderId; sem estado espelho)
 - CreatedAt
 - CompletedAt (opcional)
 
 **Invariantes**
 - Todas as botijas devem pertencer ao mesmo cliente.
-- Pedido só fica ReadyForPickup quando todas as botijas estiverem Ready.
+- Pedido só fica ReadyForPickup quando todas as botijas estiverem Ready (ou Problem/Delivered).
+- Fonte de verdade do estado da botija: `Cylinder.State`. Estado em pedidos fechados: histórico daquele OrderId.
 
 ---
 

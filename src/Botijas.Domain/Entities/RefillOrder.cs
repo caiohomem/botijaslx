@@ -129,7 +129,6 @@ public class RefillOrder
     /// <summary>
     /// Recalcula o status do pedido a partir do estado atual das botijas (Cylinder.State).
     /// Pedidos terminal (Completed/Cancelled) não são alterados — a botija pode já estar noutro ciclo.
-    /// CylinderRef.State deixa de ser fonte de verdade (espelho legado, a remover).
     /// </summary>
     public void RecalculateStatus(IEnumerable<Cylinder> cylinders)
     {
@@ -148,15 +147,6 @@ public class RefillOrder
         if (orderCylinders.Count == 0 || orderCylinders.Count != _cylinders.Count)
         {
             return;
-        }
-
-        // Espelho legado: mantido só até a coluna CylinderRef.State ser removida.
-        foreach (var cylinderRef in _cylinders)
-        {
-            if (cylinderDict.TryGetValue(cylinderRef.CylinderId, out var cylinder))
-            {
-                cylinderRef.State = cylinder.State;
-            }
         }
 
         var allDelivered = orderCylinders.All(c => c.State == CylinderState.Delivered);
@@ -249,12 +239,11 @@ public class RefillOrder
     }
 }
 
-// Entidade de relacionamento para EF Core
+// Entidade de relacionamento para EF Core — membership apenas (sem estado espelho).
 public class CylinderRef
 {
     public Guid OrderId { get; set; }
     public Guid CylinderId { get; set; }
-    public CylinderState State { get; set; } // Mantido sincronizado com Cylinder
 
     private CylinderRef() { } // EF Core
 
@@ -262,6 +251,5 @@ public class CylinderRef
     {
         OrderId = orderId;
         CylinderId = cylinderId;
-        State = CylinderState.Received;
     }
 }

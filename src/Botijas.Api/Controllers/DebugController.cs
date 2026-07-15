@@ -76,7 +76,7 @@ public class DebugController : ControllerBase
             foreach (var cylinderRef in snapshot.CylinderRefs)
             {
                 await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                    $"""INSERT INTO "CylinderRefs" ("OrderId", "CylinderId", "State") VALUES ({cylinderRef.OrderId}, {cylinderRef.CylinderId}, {cylinderRef.State});""",
+                    $"""INSERT INTO "CylinderRefs" ("OrderId", "CylinderId") VALUES ({cylinderRef.OrderId}, {cylinderRef.CylinderId});""",
                     cancellationToken);
             }
 
@@ -153,8 +153,7 @@ public class DebugController : ControllerBase
             .Select(cr => new
             {
                 cr.OrderId,
-                cr.CylinderId,
-                State = cr.State.ToString()
+                cr.CylinderId
             })
             .ToListAsync(cancellationToken);
 
@@ -239,8 +238,7 @@ public class DebugController : ControllerBase
             .Select(cr => new
             {
                 cr.OrderId,
-                cr.CylinderId,
-                State = cr.State.ToString()
+                cr.CylinderId
             })
             .ToListAsync(cancellationToken);
 
@@ -315,7 +313,7 @@ public class DebugController : ControllerBase
                 .AsNoTracking()
                 .OrderBy(cr => cr.OrderId)
                 .ThenBy(cr => cr.CylinderId)
-                .Select(cr => new DebugCylinderRefRow(cr.OrderId, cr.CylinderId, cr.State.ToString()))
+                .Select(cr => new DebugCylinderRefRow(cr.OrderId, cr.CylinderId))
                 .ToListAsync(cancellationToken),
             Cylinders = await _dbContext.Cylinders
                 .AsNoTracking()
@@ -453,7 +451,7 @@ public class DebugDatabaseExport
 
 public record DebugCustomerRow(Guid CustomerId, string Name, string Phone, string PhoneType, DateTime CreatedAt);
 public record DebugOrderRow(Guid OrderId, Guid CustomerId, string Status, string FulfillmentMethod, bool RefillPaid, bool ShippingPaid, DateTime CreatedAt, DateTime? CompletedAt, DateTime? NotifiedAt, DateTime? ShippedAt, DateTime? CancelledAt, string? CancellationNotes);
-public record DebugCylinderRefRow(Guid OrderId, Guid CylinderId, string State);
+public record DebugCylinderRefRow(Guid OrderId, Guid CylinderId);
 public record DebugCylinderRow(Guid CylinderId, long SequentialNumber, string? LabelToken, string State, string? OccurrenceNotes, DateTime CreatedAt);
 public record DebugCylinderHistoryRow(Guid Id, Guid CylinderId, string EventType, string? Details, Guid? OrderId, DateTime Timestamp);
 public record DebugAppSettingsRow(Guid AppSettingsId, string StoreName, string StorePhone, string StoreLink, string AppTitle, string WhatsAppMessageTemplate, string ShippingReadyMessageTemplate, string WelcomeMessageTemplate, string ThankYouMessageTemplate, string PrinterType, int LabelWidthMm, int LabelHeightMm, bool DebugEnabled, bool SoundNotificationsDisabled, DateTime UpdatedAt);
