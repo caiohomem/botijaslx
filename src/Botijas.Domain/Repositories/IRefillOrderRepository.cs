@@ -12,6 +12,7 @@ public interface IRefillOrderRepository
     Task<List<RefillOrder>> FindReadyForPickupAsync(Guid? customerId = null, CancellationToken cancellationToken = default);
     Task<Dictionary<Guid, DateTime>> GetReadyAtByOrderAsync(CancellationToken cancellationToken = default);
     Task AddAsync(RefillOrder order, CancellationToken cancellationToken = default);
+    Task DeleteAsync(RefillOrder order, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 

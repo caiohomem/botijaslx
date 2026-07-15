@@ -1,4 +1,5 @@
 using Botijas.Application.Common;
+using Botijas.Domain.Entities;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,12 +32,31 @@ public class DeleteCylinderHandler
         var cylinderRefs = await _context.CylinderRefs
             .Where(cr => cr.CylinderId == cylinderId)
             .ToListAsync(cancellationToken);
+        var affectedOrderIds = cylinderRefs.Select(cr => cr.OrderId).Distinct().ToList();
         _context.CylinderRefs.RemoveRange(cylinderRefs);
 
         // 3. Delete Cylinder
         _context.Cylinders.Remove(cylinder);
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // 4. Apagar pedidos Open que ficaram sem botijas
+        if (affectedOrderIds.Count > 0)
+        {
+            var emptyOpenOrders = await _context.Orders
+                .Include(o => o.Cylinders)
+                .Where(o => affectedOrderIds.Contains(o.OrderId)
+                            && o.Status == RefillOrderStatus.Open
+                            && !o.Cylinders.Any())
+                .ToListAsync(cancellationToken);
+
+            if (emptyOpenOrders.Count > 0)
+            {
+                _context.Orders.RemoveRange(emptyOpenOrders);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         return Result.Success();
     }
 }

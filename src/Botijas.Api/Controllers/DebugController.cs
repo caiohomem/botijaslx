@@ -1,3 +1,4 @@
+using Botijas.Domain.Entities;
 using Botijas.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -392,6 +393,18 @@ public class DebugController : ControllerBase
 
         _dbContext.CylinderRefs.Remove(cylinderRef);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var emptyOpenOrder = await _dbContext.Orders
+            .Include(o => o.Cylinders)
+            .FirstOrDefaultAsync(
+                o => o.OrderId == orderId && o.Status == RefillOrderStatus.Open && !o.Cylinders.Any(),
+                cancellationToken);
+        if (emptyOpenOrder != null)
+        {
+            _dbContext.Orders.Remove(emptyOpenOrder);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         return NoContent();
     }
 
