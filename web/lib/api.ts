@@ -49,8 +49,17 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    const rawBody = await response.text().catch(() => '');
+    let message = '';
+    if (rawBody) {
+      try {
+        const parsed = JSON.parse(rawBody) as { error?: string; title?: string; detail?: string };
+        message = parsed.error || parsed.detail || parsed.title || '';
+      } catch {
+        message = rawBody.slice(0, 200).trim();
+      }
+    }
+    throw new Error(message || `HTTP ${response.status}`);
   }
 
   // Handle 204 No Content

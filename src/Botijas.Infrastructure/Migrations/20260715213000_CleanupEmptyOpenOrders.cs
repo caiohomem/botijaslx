@@ -1,4 +1,6 @@
 using Botijas.Domain.Entities;
+using Botijas.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +8,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Botijas.Infrastructure.Migrations;
 
 /// <inheritdoc />
+[DbContext(typeof(BotijasDbContext))]
+[Migration("20260715213000_CleanupEmptyOpenOrders")]
 public partial class CleanupEmptyOpenOrders : Migration
 {
     /// <inheritdoc />
