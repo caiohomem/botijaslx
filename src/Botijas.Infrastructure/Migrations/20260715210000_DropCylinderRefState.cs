@@ -1,3 +1,5 @@
+using Botijas.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,14 +7,18 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Botijas.Infrastructure.Migrations;
 
 /// <inheritdoc />
+[DbContext(typeof(BotijasDbContext))]
+[Migration("20260715210000_DropCylinderRefState")]
 public partial class DropCylinderRefState : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "State",
-            table: "CylinderRefs");
+        // IF EXISTS: safe if column already removed manually / partial deploy.
+        migrationBuilder.Sql(
+            """
+            ALTER TABLE "CylinderRefs" DROP COLUMN IF EXISTS "State";
+            """);
     }
 
     /// <inheritdoc />

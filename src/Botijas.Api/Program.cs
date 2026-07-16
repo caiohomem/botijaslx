@@ -101,6 +101,20 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exception = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+        var message = exception?.GetBaseException().Message ?? "Erro interno do servidor";
+
+        // Surface DB/schema failures clearly for the ops UI (avoids "Unknown error").
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { error = message });
+    });
+});
 app.UseMiddleware<ApiKeyMiddleware>();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
@@ -119,6 +133,15 @@ if (autoInitDb)
     {
         try
         {
+            var pending = dbContext.Database.GetPendingMigrations().ToList();
+            if (pending.Count > 0)
+            {
+                app.Logger.LogInformation(
+                    "Applying {Count} pending migrations: {Migrations}",
+                    pending.Count,
+                    string.Join(", ", pending));
+            }
+
             dbContext.Database.Migrate();
             break;
         }
