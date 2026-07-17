@@ -280,29 +280,34 @@ export default function DashboardPage() {
                 value={stats.cylindersReceived}
                 color="amber"
                 onClick={() => router.push('/filling')}
+                sublabel={t('dashboard.stats.stillFilling')}
               />
               <StatCard
-                label={t('dashboard.stats.ordersReady')}
+                label={t('dashboard.stats.ordersReadyForPickup')}
                 value={stats.ordersReadyForPickup}
                 color="green"
-                onClick={() => router.push('/pickup')}
-                highlight={stats.ordersAwaitingNotification > 0}
-                sublabel={stats.ordersAwaitingNotification > 0
-                  ? t('dashboard.stats.awaitingNotification', { count: stats.ordersAwaitingNotification })
-                  : t('dashboard.stats.readyToLeave')}
+                onClick={() => router.push('/pickup?filter=pickup')}
+                highlight={(stats.ordersAwaitingNotificationPickup ?? 0) > 0}
+                sublabel={(stats.ordersAwaitingNotificationPickup ?? 0) > 0
+                  ? t('dashboard.stats.awaitingNotification', { count: stats.ordersAwaitingNotificationPickup })
+                  : t('dashboard.stats.readyForStorePickup')}
               />
               <StatCard
-                label={t('dashboard.stats.cylindersReady')}
-                value={stats.cylindersReady}
-                color="green"
-                onClick={() => router.push('/pickup')}
-                sublabel={t('dashboard.stats.readyStock')}
+                label={t('dashboard.stats.ordersReadyForShipping')}
+                value={stats.ordersReadyForShipping ?? 0}
+                color="blue"
+                onClick={() => router.push('/pickup?filter=shipping')}
+                highlight={(stats.ordersAwaitingNotificationShipping ?? 0) > 0}
+                sublabel={(stats.ordersAwaitingNotificationShipping ?? 0) > 0
+                  ? t('dashboard.stats.awaitingNotification', { count: stats.ordersAwaitingNotificationShipping })
+                  : t('dashboard.stats.readyForShipping')}
               />
               <StatCard
                 label={t('dashboard.stats.ordersOpen')}
                 value={stats.ordersOpen}
-                color="blue"
+                color="gray"
                 onClick={() => router.push('/filling')}
+                sublabel={t('dashboard.stats.stillFilling')}
               />
             </div>
           </DashboardSection>

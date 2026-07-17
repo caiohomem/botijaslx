@@ -476,9 +476,12 @@ export const historyApi = {
 export interface DashboardStats {
   ordersOpen: number;
   ordersReadyForPickup: number;
+  ordersReadyForShipping: number;
   ordersCompletedToday: number;
   ordersCompletedThisWeek: number;
   ordersAwaitingNotification: number;
+  ordersAwaitingNotificationPickup: number;
+  ordersAwaitingNotificationShipping: number;
   cylindersReceived: number;
   cylindersReady: number;
   cylindersWithProblem: number;

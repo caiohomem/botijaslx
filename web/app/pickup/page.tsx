@@ -25,6 +25,13 @@ export default function PickupPage() {
   const [deadlineTemplate, setDeadlineTemplate] = useState(DEFAULT_APP_SETTINGS.deadlineMessageTemplate);
   const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
 
+  useEffect(() => {
+    const filter = new URLSearchParams(window.location.search).get('filter');
+    if (filter === 'pickup' || filter === 'shipping') {
+      setFulfillmentFilter(filter);
+    }
+  }, []);
+
   const loadOrders = useCallback(async () => {
     try {
       setError(null);
