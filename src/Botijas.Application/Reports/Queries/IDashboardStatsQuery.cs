@@ -8,11 +8,17 @@ public interface IDashboardStatsQuery
 public class DashboardStatsDto
 {
     public int OrdersOpen { get; set; }
+    /// <summary>Pedidos ReadyForPickup com recolha em loja.</summary>
     public int OrdersReadyForPickup { get; set; }
+    /// <summary>Pedidos ReadyForPickup com envio para morada.</summary>
+    public int OrdersReadyForShipping { get; set; }
     public int OrdersCompletedToday { get; set; }
     public int OrdersCompletedThisWeek { get; set; }
     public int OrdersAwaitingNotification { get; set; }
+    public int OrdersAwaitingNotificationPickup { get; set; }
+    public int OrdersAwaitingNotificationShipping { get; set; }
     public int CylindersReceived { get; set; }
+    /// <summary>Mantido por compatibilidade; preferir métricas de pedidos prontos por canal.</summary>
     public int CylindersReady { get; set; }
     public int CylindersWithProblem { get; set; }
     public int CylindersFilledToday { get; set; }

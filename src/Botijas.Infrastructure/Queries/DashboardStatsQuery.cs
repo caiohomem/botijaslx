@@ -25,7 +25,12 @@ public class DashboardStatsQuery : IDashboardStatsQuery
             .CountAsync(o => o.Status == RefillOrderStatus.Open, cancellationToken);
 
         var ordersReadyForPickup = await _context.Orders
-            .CountAsync(o => o.Status == RefillOrderStatus.ReadyForPickup, cancellationToken);
+            .CountAsync(o => o.Status == RefillOrderStatus.ReadyForPickup &&
+                            o.FulfillmentMethod == FulfillmentMethod.Pickup, cancellationToken);
+
+        var ordersReadyForShipping = await _context.Orders
+            .CountAsync(o => o.Status == RefillOrderStatus.ReadyForPickup &&
+                            o.FulfillmentMethod == FulfillmentMethod.Shipping, cancellationToken);
 
         var ordersCompletedToday = await _context.Orders
             .CountAsync(o => o.Status == RefillOrderStatus.Completed && 
@@ -90,18 +95,27 @@ public class DashboardStatsQuery : IDashboardStatsQuery
         // Total de clientes
         var totalCustomers = await _context.Customers.CountAsync(cancellationToken);
 
-        // Pedidos aguardando notificação
-        var ordersAwaitingNotification = await _context.Orders
-            .CountAsync(o => o.Status == RefillOrderStatus.ReadyForPickup && 
+        // Pedidos aguardando notificação (por canal)
+        var ordersAwaitingNotificationPickup = await _context.Orders
+            .CountAsync(o => o.Status == RefillOrderStatus.ReadyForPickup &&
+                            o.FulfillmentMethod == FulfillmentMethod.Pickup &&
+                            o.NotifiedAt == null, cancellationToken);
+
+        var ordersAwaitingNotificationShipping = await _context.Orders
+            .CountAsync(o => o.Status == RefillOrderStatus.ReadyForPickup &&
+                            o.FulfillmentMethod == FulfillmentMethod.Shipping &&
                             o.NotifiedAt == null, cancellationToken);
 
         return new DashboardStatsDto
         {
             OrdersOpen = ordersOpen,
             OrdersReadyForPickup = ordersReadyForPickup,
+            OrdersReadyForShipping = ordersReadyForShipping,
             OrdersCompletedToday = ordersCompletedToday,
             OrdersCompletedThisWeek = ordersCompletedThisWeek,
-            OrdersAwaitingNotification = ordersAwaitingNotification,
+            OrdersAwaitingNotification = ordersAwaitingNotificationPickup + ordersAwaitingNotificationShipping,
+            OrdersAwaitingNotificationPickup = ordersAwaitingNotificationPickup,
+            OrdersAwaitingNotificationShipping = ordersAwaitingNotificationShipping,
             CylindersReceived = cylindersReceived,
             CylindersReady = cylindersReady,
             CylindersWithProblem = cylindersWithProblem,
