@@ -255,12 +255,17 @@ export default function DashboardPage() {
 
   const getStateColor = (state: string) => {
     switch (state) {
+      // Botija
       case 'Received': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
       case 'Ready': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
       case 'Delivered': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
       case 'Problem': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+      // Pedido
+      case 'Open': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'ReadyForPickup': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+      case 'Completed': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
       case 'Cancelled': return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300';
-      default: return 'bg-gray-100 text-gray-700';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
