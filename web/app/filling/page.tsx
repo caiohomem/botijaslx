@@ -131,6 +131,8 @@ export default function FillingPage() {
     setCompletedOrders(prev => prev.filter(o => o.orderId !== orderId));
   };
 
+  const formatCylinderLabel = (sequentialNumber: number) => `#${sequentialNumber}`;
+
   const applyMarkReadyResult = (
     result: Awaited<ReturnType<typeof cylindersApi.markReady>>,
     cylinder?: FillingQueueItem,
@@ -139,6 +141,9 @@ export default function FillingPage() {
     setCylinders(prev => prev.filter(c => c.cylinderId !== result.cylinderId));
 
     const wasAlreadyReady = options?.wasAlreadyReady ?? result.wasAlreadyReady;
+    const cylinderLabel =
+      options?.cylinderLabel ??
+      (cylinder ? formatCylinderLabel(cylinder.sequentialNumber) : undefined);
 
     if (result.isOrderComplete && cylinder) {
       setCompletedOrders(prev => [...prev, {
@@ -154,13 +159,17 @@ export default function FillingPage() {
     } else if (wasAlreadyReady) {
       playSound('success');
       if (options?.cylinderLabel) {
-        setSuccessMessage(t('filling.alreadyMarkedRefresh', { cylinder: options.cylinderLabel }));
+        setSuccessMessage(t('filling.alreadyMarkedRefresh', { cylinder: cylinderLabel! }));
+      } else if (cylinderLabel) {
+        setSuccessMessage(t('filling.alreadyMarked', { cylinder: cylinderLabel }));
       } else {
-        setSuccessMessage(t('filling.alreadyMarked'));
+        setSuccessMessage(t('filling.alreadyMarked', { cylinder: '?' }));
       }
     } else {
       playSound('success');
-      setSuccessMessage(t('filling.marked'));
+      setSuccessMessage(
+        t('filling.marked', { cylinder: cylinderLabel ?? '?' })
+      );
     }
 
     setTimeout(() => setSuccessMessage(null), 5000);
