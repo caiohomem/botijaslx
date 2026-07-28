@@ -56,6 +56,10 @@ public class DashboardStatsQuery : IDashboardStatsQuery
             .CountAsync(h => h.EventType == CylinderEventType.MarkedReady && 
                             h.Timestamp.Date == today, cancellationToken);
 
+        var cylindersReceivedToday = await _context.CylinderHistory
+            .CountAsync(h => h.EventType == CylinderEventType.Received &&
+                            h.Timestamp.Date == today, cancellationToken);
+
         var cylindersFilledThisWeek = await _context.CylinderHistory
             .CountAsync(h => h.EventType == CylinderEventType.MarkedReady && 
                             h.Timestamp.Date >= weekStart, cancellationToken);
@@ -120,6 +124,7 @@ public class DashboardStatsQuery : IDashboardStatsQuery
             CylindersReady = cylindersReady,
             CylindersWithProblem = cylindersWithProblem,
             CylindersFilledToday = cylindersFilledToday,
+            CylindersReceivedToday = cylindersReceivedToday,
             CylindersFilledThisWeek = cylindersFilledThisWeek,
             TotalCustomers = totalCustomers,
             DailySeries = dailySeries

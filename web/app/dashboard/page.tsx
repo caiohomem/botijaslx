@@ -330,27 +330,16 @@ export default function DashboardPage() {
                 color="gray"
               />
               <StatCard
+                label={t('dashboard.stats.receivedToday')}
+                value={stats.cylindersReceivedToday ?? 0}
+                color="blue"
+              />
+              <StatCard
                 label={t('dashboard.stats.filledThisWeek')}
                 value={stats.cylindersFilledThisWeek}
                 color="purple"
                 sublabel={t('dashboard.stats.last7Days')}
               />
-              {stats.cylindersWithProblem > 0 ? (
-                <StatCard
-                  label={t('dashboard.stats.withProblem')}
-                  value={stats.cylindersWithProblem}
-                  color="red"
-                  highlight
-                  onClick={() => handleSelectLookupMode('problems')}
-                />
-              ) : (
-                <StatCard
-                  label={t('dashboard.stats.withProblem')}
-                  value={0}
-                  color="gray"
-                  sublabel={t('dashboard.stats.noIssues')}
-                />
-              )}
             </div>
           </DashboardSection>
 

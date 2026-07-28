@@ -486,6 +486,7 @@ export interface DashboardStats {
   cylindersReady: number;
   cylindersWithProblem: number;
   cylindersFilledToday: number;
+  cylindersReceivedToday: number;
   cylindersFilledThisWeek: number;
   totalCustomers: number;
   dailySeries: DashboardDailySeriesPoint[];
