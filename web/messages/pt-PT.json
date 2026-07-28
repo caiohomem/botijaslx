@@ -379,6 +379,7 @@
     "orderFrom": "Pedido de {date}",
     "cylinderProgress": "{ready} de {total} botija(s) prontas",
     "deliveredProgress": "{delivered} de {total} botija(s) entregues",
+    "deliveredCount": "{count} entregues",
     "readySince": "Pronto para recolha desde {date}",
     "completedAt": "Concluído em {date}",
     "shippedAt": "Enviado em {date}",

@@ -59,49 +59,56 @@ function OrderCard({ order, locale }: { order: TrackingOrder; locale: string }) 
 
       {order.status === 'Completed' ? (
         <div className="text-sm font-medium">
-          {t('deliveredProgress', { delivered: order.deliveredCylinders, total: order.totalCylinders })}
+          {t('deliveredCount', { count: order.totalCylinders })}
         </div>
       ) : (
-        <div className="text-sm font-medium">
-          {t('cylinderProgress', { ready: order.readyCylinders + order.deliveredCylinders, total: order.totalCylinders })}
-        </div>
+        <>
+          <div className="text-sm font-medium">
+            {t('cylinderProgress', {
+              ready: order.readyCylinders + order.deliveredCylinders,
+              total: order.totalCylinders,
+            })}
+          </div>
+
+          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{
+                width: `${
+                  order.totalCylinders > 0
+                    ? Math.round(
+                        ((order.readyCylinders + order.deliveredCylinders) / order.totalCylinders) * 100
+                      )
+                    : 0
+                }%`,
+              }}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-xs">
+            {order.receivedCylinders > 0 ? (
+              <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                {t('counts.received')}: {order.receivedCylinders}
+              </span>
+            ) : null}
+            {order.readyCylinders > 0 ? (
+              <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                {t('counts.ready')}: {order.readyCylinders}
+              </span>
+            ) : null}
+            {order.problemCylinders > 0 ? (
+              <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                {t('counts.problem')}: {order.problemCylinders}
+              </span>
+            ) : null}
+            {order.deliveredCylinders > 0 ? (
+              <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                {t('counts.delivered')}: {order.deliveredCylinders}
+              </span>
+            ) : null}
+          </div>
+        </>
       )}
-
-      <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full bg-primary transition-all"
-          style={{
-            width: `${
-              order.totalCylinders > 0
-                ? Math.round(((order.readyCylinders + order.deliveredCylinders) / order.totalCylinders) * 100)
-                : 0
-            }%`,
-          }}
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-2 text-xs">
-        {order.receivedCylinders > 0 ? (
-          <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-            {t('counts.received')}: {order.receivedCylinders}
-          </span>
-        ) : null}
-        {order.readyCylinders > 0 ? (
-          <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-            {t('counts.ready')}: {order.readyCylinders}
-          </span>
-        ) : null}
-        {order.problemCylinders > 0 ? (
-          <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-            {t('counts.problem')}: {order.problemCylinders}
-          </span>
-        ) : null}
-        {order.deliveredCylinders > 0 ? (
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-            {t('counts.delivered')}: {order.deliveredCylinders}
-          </span>
-        ) : null}
-      </div>
 
       {order.status === 'ReadyForPickup' && order.readyAt ? (
         <p className="text-sm text-muted-foreground">{t('readySince', { date: formatDate(order.readyAt, locale) })}</p>
