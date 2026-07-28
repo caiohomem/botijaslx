@@ -377,6 +377,7 @@
     "orderFrom": "Order from {date}",
     "cylinderProgress": "{ready} of {total} cylinder(s) ready",
     "deliveredProgress": "{delivered} of {total} cylinder(s) delivered",
+    "deliveredCount": "{count} delivered",
     "readySince": "Ready for pickup since {date}",
     "completedAt": "Completed at {date}",
     "shippedAt": "Shipped at {date}",
