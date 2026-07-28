@@ -365,6 +365,36 @@
     "confirmDeleteCustomer": "Tem a certeza que quer eliminar o cliente {name}? Esta ação não pode ser desfeita.",
     "customerDeleted": "Cliente eliminado com sucesso"
   },
+  "tracking": {
+    "title": "Acompanhar o meu pedido",
+    "subtitle": "Consulte o estado das suas botijas indicando o seu telefone",
+    "phoneLabel": "O seu telefone",
+    "phonePlaceholder": "912345678",
+    "submit": "Consultar",
+    "searching": "A consultar...",
+    "notFound": "Não encontrámos nenhum pedido associado a este telefone. Verifique o número ou contacte a loja.",
+    "invalidPhone": "Indique um número de telefone válido",
+    "greeting": "Olá, {name}!",
+    "ordersFound": "Encontrámos {count} pedido(s):",
+    "orderFrom": "Pedido de {date}",
+    "cylinderProgress": "{ready} de {total} botija(s) prontas",
+    "deliveredProgress": "{delivered} de {total} botija(s) entregues",
+    "readySince": "Pronto para recolha desde {date}",
+    "completedAt": "Concluído em {date}",
+    "shippedAt": "Enviado em {date}",
+    "cancelledAt": "Cancelado em {date}",
+    "counts": {
+      "received": "A encher",
+      "ready": "Prontas",
+      "problem": "Com ocorrência",
+      "delivered": "Entregues"
+    },
+    "fulfillment": {
+      "pickup": "Recolha em loja",
+      "shipping": "Envio para morada"
+    },
+    "backHome": "Nova consulta"
+  },
   "debug": {
     "title": "Debug",
     "subtitle": "Consultar todas as tabelas relevantes por cliente",

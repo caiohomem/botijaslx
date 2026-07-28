@@ -13,9 +13,11 @@ export function AuthGate({ children }: AuthGateProps) {
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === '/login';
+  // Página pública de autoatendimento do cliente final: não exige login de atendente.
+  const isPublicPage = pathname?.startsWith('/track');
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isPublicPage) return;
 
     if (!isAuthenticated && !isLoginPage) {
       router.replace('/login');
@@ -25,7 +27,11 @@ export function AuthGate({ children }: AuthGateProps) {
     if (isAuthenticated && isLoginPage) {
       router.replace('/');
     }
-  }, [isAuthenticated, isLoading, isLoginPage, router]);
+  }, [isAuthenticated, isLoading, isLoginPage, isPublicPage, router]);
+
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

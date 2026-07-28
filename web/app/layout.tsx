@@ -15,8 +15,9 @@ import './globals.css';
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
+  const isPublicTrackingPage = pathname?.startsWith('/track');
 
-  if (isLoginPage) {
+  if (isLoginPage || isPublicTrackingPage) {
     return <>{children}</>;
   }
 
