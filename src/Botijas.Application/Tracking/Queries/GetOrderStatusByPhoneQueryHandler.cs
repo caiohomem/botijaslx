@@ -1,6 +1,7 @@
 using Botijas.Application.Common;
 using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
+using Botijas.Domain.Services;
 using Botijas.Domain.ValueObjects;
 
 namespace Botijas.Application.Tracking.Queries;
@@ -15,15 +16,18 @@ public class GetOrderStatusByPhoneQueryHandler
     private readonly ICustomerRepository _customerRepository;
     private readonly IRefillOrderRepository _orderRepository;
     private readonly ICylinderRepository _cylinderRepository;
+    private readonly ICylinderHistoryRepository _historyRepository;
 
     public GetOrderStatusByPhoneQueryHandler(
         ICustomerRepository customerRepository,
         IRefillOrderRepository orderRepository,
-        ICylinderRepository cylinderRepository)
+        ICylinderRepository cylinderRepository,
+        ICylinderHistoryRepository historyRepository)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
         _cylinderRepository = cylinderRepository;
+        _historyRepository = historyRepository;
     }
 
     public async Task<Result<TrackingResultDto>> Handle(GetOrderStatusByPhoneQuery query, CancellationToken cancellationToken)
@@ -59,6 +63,20 @@ public class GetOrderStatusByPhoneQueryHandler
         {
             var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
 
+            // Pedidos fechados: o estado atual da botija pode já refletir um ciclo novo
+            // (ex.: botija reentregue e recebida noutro pedido). Resolver via histórico
+            // do OrderId, igual ao dashboard.
+            var states = new List<string>(cylinders.Count);
+            foreach (var cylinder in cylinders)
+            {
+                var history = await _historyRepository.GetByCylinderIdAsync(cylinder.CylinderId, cancellationToken);
+                states.Add(OrderCylinderStateResolver.Resolve(
+                    order.Status,
+                    cylinder.State,
+                    history,
+                    order.OrderId));
+            }
+
             orderDtos.Add(new TrackingOrderDto
             {
                 Status = order.Status.ToString(),
@@ -69,10 +87,10 @@ public class GetOrderStatusByPhoneQueryHandler
                 ShippedAt = order.ShippedAt,
                 CancelledAt = order.CancelledAt,
                 TotalCylinders = cylinders.Count,
-                ReceivedCylinders = cylinders.Count(c => c.State == CylinderState.Received),
-                ReadyCylinders = cylinders.Count(c => c.State == CylinderState.Ready),
-                ProblemCylinders = cylinders.Count(c => c.State == CylinderState.Problem),
-                DeliveredCylinders = cylinders.Count(c => c.State == CylinderState.Delivered)
+                ReceivedCylinders = states.Count(s => s == nameof(CylinderState.Received)),
+                ReadyCylinders = states.Count(s => s == nameof(CylinderState.Ready)),
+                ProblemCylinders = states.Count(s => s == nameof(CylinderState.Problem)),
+                DeliveredCylinders = states.Count(s => s == nameof(CylinderState.Delivered))
             });
         }
 
