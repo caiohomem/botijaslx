@@ -435,6 +435,32 @@ export const pickupApi = {
     ),
 };
 
+// Tracking (public self-service page)
+export interface TrackingOrder {
+  status: string;
+  fulfillmentMethod: string;
+  createdAt: string;
+  readyAt?: string;
+  completedAt?: string;
+  shippedAt?: string;
+  cancelledAt?: string;
+  totalCylinders: number;
+  receivedCylinders: number;
+  readyCylinders: number;
+  problemCylinders: number;
+  deliveredCylinders: number;
+}
+
+export interface TrackingResult {
+  customerName?: string;
+  orders: TrackingOrder[];
+}
+
+export const trackingApi = {
+  getStatus: (phone: string) =>
+    apiRequest<TrackingResult>(`/api/tracking/status?phone=${encodeURIComponent(phone)}`),
+};
+
 // WhatsApp helper
 export const generateWhatsAppLink = (phone: string, message: string, phoneType: PhoneMode = 'pt'): string => {
   const cleanPhone = formatPhoneForWhatsAppByType(phone, phoneType);

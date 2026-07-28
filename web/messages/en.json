@@ -363,6 +363,36 @@
     "confirmDeleteCustomer": "Are you sure you want to delete customer {name}? This action cannot be undone.",
     "customerDeleted": "Customer deleted successfully"
   },
+  "tracking": {
+    "title": "Track my order",
+    "subtitle": "Check the status of your cylinders by entering your phone number",
+    "phoneLabel": "Your phone number",
+    "phonePlaceholder": "912345678",
+    "submit": "Check status",
+    "searching": "Searching...",
+    "notFound": "We couldn't find any order associated with this phone number. Please check the number or contact the store.",
+    "invalidPhone": "Please enter a valid phone number",
+    "greeting": "Hello, {name}!",
+    "ordersFound": "We found {count} order(s):",
+    "orderFrom": "Order from {date}",
+    "cylinderProgress": "{ready} of {total} cylinder(s) ready",
+    "deliveredProgress": "{delivered} of {total} cylinder(s) delivered",
+    "readySince": "Ready for pickup since {date}",
+    "completedAt": "Completed at {date}",
+    "shippedAt": "Shipped at {date}",
+    "cancelledAt": "Cancelled at {date}",
+    "counts": {
+      "received": "Filling",
+      "ready": "Ready",
+      "problem": "Issue reported",
+      "delivered": "Delivered"
+    },
+    "fulfillment": {
+      "pickup": "Store pickup",
+      "shipping": "Ship to address"
+    },
+    "backHome": "New search"
+  },
   "debug": {
     "title": "Debug",
     "subtitle": "Inspect all relevant tables by customer",
