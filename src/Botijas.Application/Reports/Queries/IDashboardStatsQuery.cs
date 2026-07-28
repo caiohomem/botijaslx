@@ -22,6 +22,7 @@ public class DashboardStatsDto
     public int CylindersReady { get; set; }
     public int CylindersWithProblem { get; set; }
     public int CylindersFilledToday { get; set; }
+    public int CylindersReceivedToday { get; set; }
     public int CylindersFilledThisWeek { get; set; }
     public int TotalCustomers { get; set; }
     public IReadOnlyList<DashboardDailySeriesPointDto> DailySeries { get; set; } = [];

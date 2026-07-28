@@ -292,6 +292,7 @@
       "ordersReadyForShipping": "Ready for Shipping",
       "cylindersPending": "Cylinders to Fill",
       "filledToday": "Filled Today",
+      "receivedToday": "Received Today",
       "filledThisWeek": "Filled (Week)",
       "completedToday": "Completed Today",
       "withProblem": "With Problem",
