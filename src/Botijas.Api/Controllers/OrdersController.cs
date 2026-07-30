@@ -10,6 +10,7 @@ namespace Botijas.Api.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly CreateOrderCommandHandler _createHandler;
+    private readonly CloseIntakeCommandHandler _closeIntakeHandler;
     private readonly AddCylinderToOrderCommandHandler _addCylinderHandler;
     private readonly AddCylindersToOrderBatchCommandHandler _addCylindersHandler;
     private readonly ScanCylinderToOrderCommandHandler _scanHandler;
@@ -22,6 +23,7 @@ public class OrdersController : ControllerBase
 
     public OrdersController(
         CreateOrderCommandHandler createHandler,
+        CloseIntakeCommandHandler closeIntakeHandler,
         AddCylinderToOrderCommandHandler addCylinderHandler,
         AddCylindersToOrderBatchCommandHandler addCylindersHandler,
         ScanCylinderToOrderCommandHandler scanHandler,
@@ -33,6 +35,7 @@ public class OrdersController : ControllerBase
         DeleteEmptyOpenOrderCommandHandler deleteEmptyOpenOrderHandler)
     {
         _createHandler = createHandler;
+        _closeIntakeHandler = closeIntakeHandler;
         _addCylinderHandler = addCylinderHandler;
         _addCylindersHandler = addCylindersHandler;
         _scanHandler = scanHandler;
@@ -55,6 +58,24 @@ public class OrdersController : ControllerBase
         }
 
         return CreatedAtAction(nameof(GetById), new { id = result.Value!.OrderId }, result.Value);
+    }
+
+    /// <summary>
+    /// Fecha uma entrada de botijas (existentes + novas) numa única operação.
+    /// </summary>
+    [HttpPost("intake")]
+    public async Task<IActionResult> CloseIntake(
+        [FromBody] CloseIntakeCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _closeIntakeHandler.Handle(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(new { error = result.Error });
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpPost("{orderId}/cylinders")]

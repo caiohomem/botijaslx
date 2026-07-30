@@ -145,7 +145,19 @@ export default function FillingPage() {
       options?.cylinderLabel ??
       (cylinder ? formatCylinderLabel(cylinder.sequentialNumber) : undefined);
 
-    if (result.isOrderComplete && cylinder) {
+    // O cliente pode ter outro pedido aberto com botijas por encher; nesse caso não
+    // se propõe já o WhatsApp, para não avisar antes de tudo estar pronto.
+    const customerStillPending = (result.customerPendingCylinders ?? 0) > 0;
+
+    if (result.isOrderComplete && cylinder && customerStillPending) {
+      playSound('success');
+      setSuccessMessage(
+        t('filling.orderCompleteButCustomerPending', {
+          name: cylinder.customerName,
+          count: result.customerPendingCylinders ?? 0,
+        })
+      );
+    } else if (result.isOrderComplete && cylinder) {
       setCompletedOrders(prev => [...prev, {
         orderId: result.orderId,
         customerName: cylinder.customerName,

@@ -176,7 +176,41 @@ export interface CustomerCylindersResult {
 }
 
 // Orders
+export interface IntakeCylinder {
+  cylinderId: string;
+  sequentialNumber: number;
+  labelToken?: string;
+  state: string;
+}
+
+export interface CloseIntakeResult {
+  orderId: string;
+  customerId: string;
+  status: string;
+  fulfillmentMethod: string;
+  refillPaid: boolean;
+  shippingPaid: boolean;
+  createdAt: string;
+  reusedExistingOrder: boolean;
+  cylinderCount: number;
+  addedCylinders: IntakeCylinder[];
+  cylinders: IntakeCylinder[];
+}
+
 export const ordersApi = {
+  closeIntake: (data: {
+    customerId: string;
+    fulfillmentMethod: 'Pickup' | 'Shipping';
+    refillPaid: boolean;
+    shippingPaid: boolean;
+    existingCylinderIds: string[];
+    newCylinderCount: number;
+  }) =>
+    apiRequest<CloseIntakeResult>('/api/orders/intake', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   create: (data: {
     customerId: string;
     fulfillmentMethod: 'Pickup' | 'Shipping';
@@ -275,6 +309,8 @@ export interface MarkReadyResult {
   readyCylindersInOrder: number;
   isOrderComplete: boolean;
   wasAlreadyReady?: boolean;
+  /** Botijas do mesmo cliente ainda por encher noutros pedidos abertos. */
+  customerPendingCylinders?: number;
 }
 
 export interface ReportProblemResult {
@@ -320,6 +356,7 @@ export const cylindersApi = {
       markedCount: number;
       isOrderComplete: boolean;
       totalCylindersInOrder: number;
+      customerPendingCylinders?: number;
     }>('/api/cylinders/batch/mark-ready', {
       method: 'POST',
       body: JSON.stringify({ orderId }),

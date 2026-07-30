@@ -132,6 +132,7 @@
     "alreadyMarkedRefresh": "{cylinder} was already marked as ready. Queue refreshed.",
     "markAllReady": "Mark {count} as ready",
     "orderComplete": "{name}'s order complete!",
+    "orderCompleteButCustomerPending": "{name}'s order is ready, but the customer still has {count} cylinder(s) to fill. WhatsApp only at the end.",
     "orderCompleteNotified": "Order complete! WhatsApp sent to {name}.",
     "scanPlaceholder": "Scan or type QR code...",
     "scanCamera": "Scan with Camera",
@@ -205,6 +206,7 @@
     "newCylinderDraft": "New cylinder",
     "closeOrder": "Close Order",
     "orderClosed": "Order closed successfully",
+    "orderMerged": "Cylinders added to this customer's open order",
     "reprintReason": "Reason for reprint",
     "selectReason": "Select reason...",
     "reprintReasons": {

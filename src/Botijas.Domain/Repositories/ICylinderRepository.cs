@@ -9,6 +9,10 @@ public interface ICylinderRepository
     Task<Cylinder?> FindByLabelTokenAsync(LabelToken labelToken, CancellationToken cancellationToken = default);
     Task<Cylinder?> FindBySequentialNumberAsync(long sequentialNumber, CancellationToken cancellationToken = default);
     Task<Cylinder?> FindInOpenOrderAsync(Guid cylinderId, CancellationToken cancellationToken = default);
+    /// <summary>Id do pedido aberto que contém a botija, se existir.</summary>
+    Task<Guid?> FindOpenOrderIdAsync(Guid cylinderId, CancellationToken cancellationToken = default);
+    /// <summary>Botijas do cliente ainda por encher (estado Received em pedidos abertos).</summary>
+    Task<int> CountPendingByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<List<ProblemCylinderItem>> GetProblemCylindersAsync(CancellationToken cancellationToken = default);
