@@ -63,16 +63,16 @@ dotnet run
 ```
 
 A API estará disponível em:
-- HTTP: `http://localhost:5000` ou `http://localhost:5001`
-- Swagger UI: `http://localhost:5000/swagger` (em desenvolvimento)
+- HTTP: `http://localhost:5000` (local) ou `http://localhost:8080` (Docker)
+- Swagger UI: `/swagger` (em Development)
 
 ### Endpoints Disponíveis (UC01)
 - `POST /api/customers` - Criar cliente
 - `GET /api/customers?query=...` - Buscar clientes
 
 ### Banco de Dados
-- SQLite: arquivo `botijas.db` criado automaticamente na primeira execução
-- Usa `EnsureCreated()` no startup (para produção, usar migrations)
+- PostgreSQL via Docker Compose (`devdb` / `devuser` / `devpass`)
+- Migrations aplicadas automaticamente no startup (`Database__AutoInitialize`)
 
 ## Print Gateway
 *Será implementado nos próximos passos*

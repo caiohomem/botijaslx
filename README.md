@@ -6,7 +6,7 @@ Sistema de gestão de enchimento de botijas CO₂ com foco em operação de loja
 
 - **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS
 - **Backend**: ASP.NET Core (.NET 10)
-- **DB**: SQLite com EF Core
+- **DB**: PostgreSQL com EF Core
 - **Real-time**: SignalR - *em desenvolvimento*
 
 ## Funcionalidades
