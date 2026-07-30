@@ -79,13 +79,6 @@
     "labelSettings": "Etiquetas",
     "debugEnabled": "Mostrar aba Debug",
     "debugEnabledHelp": "Desative em produção para esconder a navegação e bloquear a página de debug.",
-    "businessFinance": "Negócio / Finanças",
-    "businessFinanceHelp": "Parâmetros usados no dashboard de Negócio para calcular receita, custo de gás e lucro.",
-    "refillPriceEur": "Preço por enchimento (€)",
-    "sourceCylinderCostEur": "Custo da botija fonte (€)",
-    "sourceCylinderGasKg": "Gás na botija fonte (kg)",
-    "consumerCylinderGasG": "Gás por enchimento (g)",
-    "businessDerived": "≈ {fills} enchimentos por botija fonte · custo de gás ≈ {cost} €/enchimento",
     "reset": "Repor Padrões",
     "save": "Guardar"
   },

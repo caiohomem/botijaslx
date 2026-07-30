@@ -57,14 +57,6 @@ public class SettingsController : ControllerBase
             debugEnabled: request.DebugEnabled,
             soundNotificationsDisabled: request.SoundNotificationsDisabled);
 
-        if (request.RefillPriceEur is decimal refillPrice &&
-            request.SourceCylinderCostEur is decimal sourceCost &&
-            request.SourceCylinderGasKg is decimal sourceKg &&
-            request.ConsumerCylinderGasG is decimal consumerG)
-        {
-            settings.UpdateBusinessFinance(refillPrice, sourceCost, sourceKg, consumerG);
-        }
-
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Ok(MapResponse(settings));
     }
@@ -86,12 +78,6 @@ public class SettingsController : ControllerBase
             settings.LabelHeightMm,
             settings.DebugEnabled,
             settings.SoundNotificationsDisabled,
-            settings.RefillPriceEur,
-            settings.SourceCylinderCostEur,
-            settings.SourceCylinderGasKg,
-            settings.ConsumerCylinderGasG,
-            settings.FillsPerSourceCylinder,
-            settings.GasCostPerFillEur,
             settings.UpdatedAt);
     }
 
@@ -115,11 +101,7 @@ public record UpdateAppSettingsRequest(
     int LabelWidthMm,
     int LabelHeightMm,
     bool DebugEnabled,
-    bool SoundNotificationsDisabled,
-    decimal? RefillPriceEur = null,
-    decimal? SourceCylinderCostEur = null,
-    decimal? SourceCylinderGasKg = null,
-    decimal? ConsumerCylinderGasG = null);
+    bool SoundNotificationsDisabled);
 
 public record AppSettingsResponse(
     string StoreName,
@@ -136,10 +118,4 @@ public record AppSettingsResponse(
     int LabelHeightMm,
     bool DebugEnabled,
     bool SoundNotificationsDisabled,
-    decimal RefillPriceEur,
-    decimal SourceCylinderCostEur,
-    decimal SourceCylinderGasKg,
-    decimal ConsumerCylinderGasG,
-    decimal FillsPerSourceCylinder,
-    decimal GasCostPerFillEur,
     DateTime UpdatedAt);

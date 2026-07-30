@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { AppSettings } from '@/lib/api';
 import { DEFAULT_APP_SETTINGS, saveAppSettings, loadAppSettings } from '@/lib/settings';
-import { useAuth } from '@/components/AuthProvider';
 
 export default function SettingsPage() {
   const t = useTranslations();
-  const { isAdmin } = useAuth();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -25,13 +23,6 @@ export default function SettingsPage() {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
-
-  const fillsPerSource =
-    settings.consumerCylinderGasG > 0
-      ? (settings.sourceCylinderGasKg * 1000) / settings.consumerCylinderGasG
-      : 0;
-  const gasCostPerFill =
-    fillsPerSource > 0 ? settings.sourceCylinderCostEur / fillsPerSource : 0;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -99,79 +90,6 @@ export default function SettingsPage() {
           />
         </div>
       </div>
-
-      {/* Business finance — admin only */}
-      {isAdmin && (
-        <div className="p-4 border rounded-lg space-y-4">
-          <h2 className="font-semibold">{t('settings.businessFinance')}</h2>
-          <p className="text-xs text-muted-foreground">{t('settings.businessFinanceHelp')}</p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('settings.refillPriceEur')}</label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.5"
-                value={settings.refillPriceEur}
-                onChange={(e) =>
-                  setSettings({ ...settings, refillPriceEur: Number(e.target.value) || 0 })
-                }
-                className="w-full px-3 py-2 border rounded-lg bg-background"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('settings.sourceCylinderCostEur')}</label>
-              <input
-                type="number"
-                min="0.01"
-                step="1"
-                value={settings.sourceCylinderCostEur}
-                onChange={(e) =>
-                  setSettings({ ...settings, sourceCylinderCostEur: Number(e.target.value) || 0 })
-                }
-                className="w-full px-3 py-2 border rounded-lg bg-background"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('settings.sourceCylinderGasKg')}</label>
-              <input
-                type="number"
-                min="0.1"
-                step="0.1"
-                value={settings.sourceCylinderGasKg}
-                onChange={(e) =>
-                  setSettings({ ...settings, sourceCylinderGasKg: Number(e.target.value) || 0 })
-                }
-                className="w-full px-3 py-2 border rounded-lg bg-background"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('settings.consumerCylinderGasG')}</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={settings.consumerCylinderGasG}
-                onChange={(e) =>
-                  setSettings({ ...settings, consumerCylinderGasG: Number(e.target.value) || 0 })
-                }
-                className="w-full px-3 py-2 border rounded-lg bg-background"
-              />
-            </div>
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            {t('settings.businessDerived', {
-              fills: fillsPerSource.toFixed(1),
-              cost: gasCostPerFill.toFixed(2),
-            })}
-          </p>
-        </div>
-      )}
 
       {/* WhatsApp */}
       <div className="p-4 border rounded-lg space-y-4">
