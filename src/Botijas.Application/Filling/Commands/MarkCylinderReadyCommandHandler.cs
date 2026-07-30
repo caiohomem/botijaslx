@@ -89,6 +89,20 @@ public class MarkCylinderReadyCommandHandler
             order.CustomerId,
             cancellationToken);
 
+        // Se o cliente tinha pedidos partidos, o WhatsApp deve refletir o total pronto
+        // (todos os pedidos ReadyForPickup), não só o pedido que acabou de fechar.
+        var notifyCylinderCount = totalCylinders;
+        if (order.Status == RefillOrderStatus.ReadyForPickup && customerPendingCylinders == 0)
+        {
+            notifyCylinderCount = await _cylinderRepository.CountReadyForPickupByCustomerAsync(
+                order.CustomerId,
+                cancellationToken);
+            if (notifyCylinderCount <= 0)
+            {
+                notifyCylinderCount = totalCylinders;
+            }
+        }
+
         return Result<FillingResultDto>.Success(new FillingResultDto
         {
             CylinderId = cylinder.CylinderId,
@@ -99,7 +113,8 @@ public class MarkCylinderReadyCommandHandler
             ReadyCylindersInOrder = readyCylinders,
             IsOrderComplete = order.Status == RefillOrderStatus.ReadyForPickup,
             WasAlreadyReady = wasAlreadyReady,
-            CustomerPendingCylinders = customerPendingCylinders
+            CustomerPendingCylinders = customerPendingCylinders,
+            NotifyCylinderCount = notifyCylinderCount
         });
     }
 }
@@ -116,4 +131,6 @@ public class FillingResultDto
     public bool WasAlreadyReady { get; set; }
     /// <summary>Botijas do mesmo cliente ainda por encher noutros pedidos abertos.</summary>
     public int CustomerPendingCylinders { get; set; }
+    /// <summary>Contagem a usar na mensagem WhatsApp (agrega pedidos ReadyForPickup do cliente).</summary>
+    public int NotifyCylinderCount { get; set; }
 }

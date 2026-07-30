@@ -82,6 +82,19 @@ public class CylinderRepository : ICylinderRepository
         ).Distinct().CountAsync(cancellationToken);
     }
 
+    public async Task<int> CountReadyForPickupByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
+    {
+        return await (
+            from cylinderRef in _context.CylinderRefs
+            join cylinder in _context.Cylinders on cylinderRef.CylinderId equals cylinder.CylinderId
+            join order in _context.Orders on cylinderRef.OrderId equals order.OrderId
+            where order.CustomerId == customerId
+                  && order.Status == RefillOrderStatus.ReadyForPickup
+                  && (cylinder.State == CylinderState.Ready || cylinder.State == CylinderState.Problem)
+            select cylinder.CylinderId
+        ).Distinct().CountAsync(cancellationToken);
+    }
+
     public async Task<List<Cylinder>> FindByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default)
     {
         var cylinderIds = await _context.CylinderRefs

@@ -8,8 +8,6 @@ namespace Botijas.Domain.Services;
 /// </summary>
 public static class OrderCylinderStateResolver
 {
-    private const string UndoMarker = "||UNDO:";
-
     private static readonly CylinderEventType[] StateEvents =
     [
         CylinderEventType.Received,
@@ -44,13 +42,8 @@ public static class OrderCylinderStateResolver
         IEnumerable<CylinderHistoryEntry> cylinderHistory,
         Guid orderId)
     {
-        var entries = cylinderHistory.ToList();
-        var undoneIds = ExtractUndoneIds(entries);
-
-        var latest = entries
+        var latest = CylinderHistoryUndo.ActiveEvents(cylinderHistory)
             .Where(h => h.OrderId == orderId)
-            .Where(h => h.EventType != CylinderEventType.ActionUndone)
-            .Where(h => !undoneIds.Contains(h.Id))
             .Where(h => StateEvents.Contains(h.EventType))
             .OrderByDescending(h => h.Timestamp)
             .ThenByDescending(h => h.Id)
@@ -65,35 +58,5 @@ public static class OrderCylinderStateResolver
             CylinderEventType.OrderCancelled => CylinderState.Delivered,
             _ => null
         };
-    }
-
-    private static HashSet<Guid> ExtractUndoneIds(IEnumerable<CylinderHistoryEntry> history)
-    {
-        var undoneIds = new HashSet<Guid>();
-
-        foreach (var entry in history.Where(h => h.EventType == CylinderEventType.ActionUndone))
-        {
-            var details = entry.Details ?? string.Empty;
-            var start = details.IndexOf(UndoMarker, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                continue;
-            }
-
-            start += UndoMarker.Length;
-            var end = details.IndexOf("||", start, StringComparison.Ordinal);
-            if (end < 0)
-            {
-                continue;
-            }
-
-            var value = details[start..end];
-            if (Guid.TryParse(value, out var undoneId))
-            {
-                undoneIds.Add(undoneId);
-            }
-        }
-
-        return undoneIds;
     }
 }

@@ -13,6 +13,8 @@ public interface ICylinderRepository
     Task<Guid?> FindOpenOrderIdAsync(Guid cylinderId, CancellationToken cancellationToken = default);
     /// <summary>Botijas do cliente ainda por encher (estado Received em pedidos abertos).</summary>
     Task<int> CountPendingByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
+    /// <summary>Botijas prontas do cliente em pedidos ReadyForPickup (para contagem no WhatsApp).</summary>
+    Task<int> CountReadyForPickupByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default);
     Task<List<Cylinder>> FindByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
     Task<List<ProblemCylinderItem>> GetProblemCylindersAsync(CancellationToken cancellationToken = default);

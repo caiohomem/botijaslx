@@ -457,7 +457,8 @@
       "gasCost": "Custo de gás",
       "perFill": "{value}/ench.",
       "sourceUsed": "Botijas fonte",
-      "produced": "{count} enchidas"
+      "produced": "{count} enchidas",
+      "delivered": "{count} entregues"
     },
     "chart": {
       "revenue": "Receita",

@@ -1,5 +1,6 @@
 using Botijas.Application.Reports.Queries;
 using Botijas.Domain.Entities;
+using Botijas.Domain.Services;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,8 @@ public class DashboardStatsQuery : IDashboardStatsQuery
         var today = DateTime.UtcNow.Date;
         var weekStart = today.AddDays(-6);
         var seriesStart = today.AddDays(-(days - 1));
+        // Inclui ActionUndone um pouco antes do período para anular eventos no intervalo.
+        var historyLoadStart = seriesStart.AddDays(-30);
 
         // Contagens de pedidos
         var ordersOpen = await _context.Orders
@@ -33,13 +36,13 @@ public class DashboardStatsQuery : IDashboardStatsQuery
                             o.FulfillmentMethod == FulfillmentMethod.Shipping, cancellationToken);
 
         var ordersCompletedToday = await _context.Orders
-            .CountAsync(o => o.Status == RefillOrderStatus.Completed && 
-                            o.CompletedAt != null && 
+            .CountAsync(o => o.Status == RefillOrderStatus.Completed &&
+                            o.CompletedAt != null &&
                             o.CompletedAt.Value.Date == today, cancellationToken);
 
         var ordersCompletedThisWeek = await _context.Orders
-            .CountAsync(o => o.Status == RefillOrderStatus.Completed && 
-                            o.CompletedAt != null && 
+            .CountAsync(o => o.Status == RefillOrderStatus.Completed &&
+                            o.CompletedAt != null &&
                             o.CompletedAt.Value.Date >= weekStart, cancellationToken);
 
         // Contagens de botijas
@@ -52,19 +55,36 @@ public class DashboardStatsQuery : IDashboardStatsQuery
         var cylindersWithProblem = await _context.Cylinders
             .CountAsync(c => c.State == CylinderState.Problem, cancellationToken);
 
-        var cylindersFilledToday = await _context.CylinderHistory
-            .CountAsync(h => h.EventType == CylinderEventType.MarkedReady && 
-                            h.Timestamp.Date == today, cancellationToken);
+        var historyRaw = await _context.CylinderHistory
+            .AsNoTracking()
+            .Where(h =>
+                (h.EventType == CylinderEventType.Received ||
+                 h.EventType == CylinderEventType.MarkedReady ||
+                 h.EventType == CylinderEventType.Delivered ||
+                 h.EventType == CylinderEventType.ActionUndone) &&
+                h.Timestamp.Date >= historyLoadStart)
+            .Select(h => new { h.Id, h.EventType, h.Timestamp, h.Details })
+            .ToListAsync(cancellationToken);
 
-        var cylindersReceivedToday = await _context.CylinderHistory
-            .CountAsync(h => h.EventType == CylinderEventType.Received &&
-                            h.Timestamp.Date == today, cancellationToken);
+        var undoneIds = CylinderHistoryUndo.ExtractUndoneIds(
+            historyRaw.Select(h => (h.EventType, h.Details)));
 
-        var cylindersFilledThisWeek = await _context.CylinderHistory
-            .CountAsync(h => h.EventType == CylinderEventType.MarkedReady && 
-                            h.Timestamp.Date >= weekStart, cancellationToken);
+        var activeHistory = historyRaw
+            .Where(h =>
+                h.EventType != CylinderEventType.ActionUndone &&
+                !undoneIds.Contains(h.Id))
+            .ToList();
 
-        var dailySeriesRaw = await _context.CylinderHistory
+        var cylindersFilledToday = activeHistory.Count(h =>
+            h.EventType == CylinderEventType.MarkedReady && h.Timestamp.Date == today);
+
+        var cylindersReceivedToday = activeHistory.Count(h =>
+            h.EventType == CylinderEventType.Received && h.Timestamp.Date == today);
+
+        var cylindersFilledThisWeek = activeHistory.Count(h =>
+            h.EventType == CylinderEventType.MarkedReady && h.Timestamp.Date >= weekStart);
+
+        var dailySeriesRaw = activeHistory
             .Where(h =>
                 (h.EventType == CylinderEventType.Received ||
                  h.EventType == CylinderEventType.MarkedReady ||
@@ -78,7 +98,7 @@ public class DashboardStatsQuery : IDashboardStatsQuery
                 Ready = g.Count(h => h.EventType == CylinderEventType.MarkedReady),
                 Delivered = g.Count(h => h.EventType == CylinderEventType.Delivered)
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var dailySeries = Enumerable.Range(0, days)
             .Select(offset => seriesStart.AddDays(offset))

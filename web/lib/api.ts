@@ -311,6 +311,8 @@ export interface MarkReadyResult {
   wasAlreadyReady?: boolean;
   /** Botijas do mesmo cliente ainda por encher noutros pedidos abertos. */
   customerPendingCylinders?: number;
+  /** Contagem agregada para a mensagem WhatsApp. */
+  notifyCylinderCount?: number;
 }
 
 export interface ReportProblemResult {
@@ -357,6 +359,7 @@ export const cylindersApi = {
       isOrderComplete: boolean;
       totalCylindersInOrder: number;
       customerPendingCylinders?: number;
+      notifyCylinderCount?: number;
     }>('/api/cylinders/batch/mark-ready', {
       method: 'POST',
       body: JSON.stringify({ orderId }),
