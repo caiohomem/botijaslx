@@ -85,12 +85,6 @@ export interface AppSettings {
   labelHeightMm: number;
   debugEnabled: boolean;
   soundNotificationsDisabled: boolean;
-  refillPriceEur: number;
-  sourceCylinderCostEur: number;
-  sourceCylinderGasKg: number;
-  consumerCylinderGasG: number;
-  fillsPerSourceCylinder?: number;
-  gasCostPerFillEur?: number;
   updatedAt?: string;
 }
 

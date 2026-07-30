@@ -17,10 +17,6 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   labelHeightMm: 75,
   debugEnabled: false,
   soundNotificationsDisabled: false,
-  refillPriceEur: 10,
-  sourceCylinderCostEur: 90,
-  sourceCylinderGasKg: 17,
-  consumerCylinderGasG: 425,
   updatedAt: '',
 };
 
