@@ -95,13 +95,26 @@ public class MarkCylindersReadyBatchCommandHandler
             order.CustomerId,
             cancellationToken);
 
+        var notifyCylinderCount = order.Cylinders.Count;
+        if (isOrderComplete && customerPendingCylinders == 0)
+        {
+            notifyCylinderCount = await _cylinderRepository.CountReadyForPickupByCustomerAsync(
+                order.CustomerId,
+                cancellationToken);
+            if (notifyCylinderCount <= 0)
+            {
+                notifyCylinderCount = order.Cylinders.Count;
+            }
+        }
+
         return Result<BatchReadyResult>.Success(new BatchReadyResult
         {
             OrderId = order.OrderId,
             MarkedCount = markedCount,
             IsOrderComplete = isOrderComplete,
             TotalCylindersInOrder = order.Cylinders.Count,
-            CustomerPendingCylinders = customerPendingCylinders
+            CustomerPendingCylinders = customerPendingCylinders,
+            NotifyCylinderCount = notifyCylinderCount
         });
     }
 }
@@ -114,4 +127,6 @@ public class BatchReadyResult
     public int TotalCylindersInOrder { get; set; }
     /// <summary>Botijas do mesmo cliente ainda por encher noutros pedidos abertos.</summary>
     public int CustomerPendingCylinders { get; set; }
+    /// <summary>Contagem a usar na mensagem WhatsApp (agrega pedidos ReadyForPickup do cliente).</summary>
+    public int NotifyCylinderCount { get; set; }
 }

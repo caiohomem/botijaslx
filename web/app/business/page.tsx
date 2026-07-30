@@ -310,9 +310,10 @@ export default function BusinessPage() {
               />
               <KpiCard
                 label={t('business.kpi.fills')}
-                value={String(overview.fillsDelivered)}
+                value={String(overview.fillsProduced)}
                 delta={formatPct(overview.fillsChangePercent)}
                 positive={overview.fillsChangePercent >= 0}
+                sublabel={t('business.kpi.delivered', { count: overview.fillsDelivered })}
               />
               <KpiCard
                 label={t('business.kpi.gasCost')}

@@ -1,12 +1,12 @@
 using Botijas.Application.Common;
 using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
+using Botijas.Domain.Services;
 
 namespace Botijas.Application.Cylinders.Commands;
 
 public class UndoCylinderHistoryActionCommandHandler
 {
-    private const string UndoMarker = "||UNDO:";
     private static readonly CylinderEventType[] UndoableEventTypes =
     [
         CylinderEventType.MarkedReady,
@@ -55,10 +55,7 @@ public class UndoCylinderHistoryActionCommandHandler
         }
 
         var fullHistory = await _historyRepository.GetByCylinderIdAsync(command.CylinderId, cancellationToken);
-        var undoneIds = ExtractUndoneIds(fullHistory);
-        var activeHistory = fullHistory
-            .Where(h => h.EventType != CylinderEventType.ActionUndone && !undoneIds.Contains(h.Id))
-            .ToList();
+        var activeHistory = CylinderHistoryUndo.ActiveEvents(fullHistory).ToList();
 
         var latestUndoableActiveHistory = activeHistory.FirstOrDefault(h => UndoableEventTypes.Contains(h.EventType));
         if (latestUndoableActiveHistory?.Id != command.HistoryEntryId)
@@ -84,7 +81,7 @@ public class UndoCylinderHistoryActionCommandHandler
         var historyDetails =
             $"Ação desfeita: {historyEntry.EventType}. " +
             $"Estado restaurado para: {restoredEventType}. " +
-            $"Observação: {command.Comment.Trim()} {UndoMarker}{historyEntry.Id}||";
+            $"Observação: {command.Comment.Trim()} {CylinderHistoryUndo.UndoMarker}{historyEntry.Id}||";
         var undoEntry = CylinderHistoryEntry.Create(
             cylinder.CylinderId,
             CylinderEventType.ActionUndone,
@@ -134,35 +131,6 @@ public class UndoCylinderHistoryActionCommandHandler
         }
     }
 
-    private static HashSet<Guid> ExtractUndoneIds(IEnumerable<CylinderHistoryEntry> history)
-    {
-        var undoneIds = new HashSet<Guid>();
-
-        foreach (var entry in history.Where(h => h.EventType == CylinderEventType.ActionUndone))
-        {
-            var details = entry.Details ?? string.Empty;
-            var start = details.IndexOf(UndoMarker, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                continue;
-            }
-
-            start += UndoMarker.Length;
-            var end = details.IndexOf("||", start, StringComparison.Ordinal);
-            if (end < 0)
-            {
-                continue;
-            }
-
-            var value = details[start..end];
-            if (Guid.TryParse(value, out var undoneId))
-            {
-                undoneIds.Add(undoneId);
-            }
-        }
-
-        return undoneIds;
-    }
 }
 
 public class UndoCylinderHistoryActionResultDto

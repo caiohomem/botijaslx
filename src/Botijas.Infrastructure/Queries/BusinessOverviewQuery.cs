@@ -1,5 +1,6 @@
 using Botijas.Application.Business.Queries;
 using Botijas.Domain.Entities;
+using Botijas.Domain.Services;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,13 +45,24 @@ public class BusinessOverviewQuery : IBusinessOverviewQuery
         var gasCost = settings.GasCostPerFillEur;
         var fillsPerSource = settings.FillsPerSourceCylinder;
 
-        var history = await _context.CylinderHistory
+        var historyRaw = await _context.CylinderHistory
             .AsNoTracking()
             .Where(h =>
-                (h.EventType == CylinderEventType.MarkedReady || h.EventType == CylinderEventType.Delivered) &&
+                (h.EventType == CylinderEventType.MarkedReady ||
+                 h.EventType == CylinderEventType.Delivered ||
+                 h.EventType == CylinderEventType.ActionUndone) &&
                 h.Timestamp.Date >= prevStart)
-            .Select(h => new { h.EventType, h.Timestamp, h.OrderId })
+            .Select(h => new { h.Id, h.EventType, h.Timestamp, h.OrderId, h.Details })
             .ToListAsync(cancellationToken);
+
+        var undoneIds = CylinderHistoryUndo.ExtractUndoneIds(
+            historyRaw.Select(h => (h.EventType, h.Details)));
+
+        var history = historyRaw
+            .Where(h =>
+                (h.EventType == CylinderEventType.MarkedReady || h.EventType == CylinderEventType.Delivered) &&
+                !undoneIds.Contains(h.Id))
+            .ToList();
 
         var current = history.Where(h => h.Timestamp.Date >= periodStart).ToList();
         var previous = history.Where(h => h.Timestamp.Date >= prevStart && h.Timestamp.Date <= prevEnd).ToList();
@@ -92,8 +104,9 @@ public class BusinessOverviewQuery : IBusinessOverviewQuery
             })
             .ToList();
 
+        // Ritmo operacional = enchimentos feitos (MarkedReady), alinhado com o KPI "Enchimentos".
         var averageDailyFills = safeDays > 0
-            ? Math.Round((decimal)fillsDelivered / safeDays, 2)
+            ? Math.Round((decimal)fillsProduced / safeDays, 2)
             : 0m;
 
         const int forecastDays = 30;
@@ -105,9 +118,18 @@ public class BusinessOverviewQuery : IBusinessOverviewQuery
             ? Math.Round(forecastFills / fillsPerSource, 2)
             : 0m;
 
-        // Remaining fills in current source cylinder cycle (based on all-time production)
-        var totalProducedAllTime = await _context.CylinderHistory
-            .CountAsync(h => h.EventType == CylinderEventType.MarkedReady, cancellationToken);
+        // Remaining fills in current source cylinder cycle (based on all-time production, excluding undos)
+        var allTimeRaw = await _context.CylinderHistory
+            .AsNoTracking()
+            .Where(h =>
+                h.EventType == CylinderEventType.MarkedReady ||
+                h.EventType == CylinderEventType.ActionUndone)
+            .Select(h => new { h.Id, h.EventType, h.Details })
+            .ToListAsync(cancellationToken);
+        var allTimeUndone = CylinderHistoryUndo.ExtractUndoneIds(
+            allTimeRaw.Select(h => (h.EventType, h.Details)));
+        var totalProducedAllTime = allTimeRaw.Count(h =>
+            h.EventType == CylinderEventType.MarkedReady && !allTimeUndone.Contains(h.Id));
         var fillsPerSourceInt = (int)Math.Max(1, Math.Floor(fillsPerSource));
         var fillsIntoCurrentSource = totalProducedAllTime % fillsPerSourceInt;
         var fillsLeftInSource = Math.Max(0, fillsPerSourceInt - fillsIntoCurrentSource);
@@ -205,7 +227,7 @@ public class BusinessOverviewQuery : IBusinessOverviewQuery
             PrevGrossProfit = prevProfit,
             RevenueChangePercent = PercentChange(prevRevenue, revenue),
             ProfitChangePercent = PercentChange(prevProfit, grossProfit),
-            FillsChangePercent = PercentChange(prevFillsDelivered, fillsDelivered),
+            FillsChangePercent = PercentChange(prevFillsProduced, fillsProduced),
             DailySeries = dailySeries,
             AverageDailyFills = averageDailyFills,
             ForecastDays = forecastDays,
@@ -237,13 +259,23 @@ public class BusinessOverviewQuery : IBusinessOverviewQuery
         var currentMonthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var historyStart = currentMonthStart.AddMonths(-(MonthlyHistoryMonths - 1));
 
-        var events = await _context.CylinderHistory
+        var eventsRaw = await _context.CylinderHistory
             .AsNoTracking()
             .Where(h =>
-                (h.EventType == CylinderEventType.MarkedReady || h.EventType == CylinderEventType.Delivered) &&
+                (h.EventType == CylinderEventType.MarkedReady ||
+                 h.EventType == CylinderEventType.Delivered ||
+                 h.EventType == CylinderEventType.ActionUndone) &&
                 h.Timestamp >= historyStart)
-            .Select(h => new { h.EventType, h.Timestamp })
+            .Select(h => new { h.Id, h.EventType, h.Timestamp, h.Details })
             .ToListAsync(cancellationToken);
+
+        var monthlyUndone = CylinderHistoryUndo.ExtractUndoneIds(
+            eventsRaw.Select(h => (h.EventType, h.Details)));
+        var events = eventsRaw
+            .Where(h =>
+                (h.EventType == CylinderEventType.MarkedReady || h.EventType == CylinderEventType.Delivered) &&
+                !monthlyUndone.Contains(h.Id))
+            .ToList();
 
         var months = Enumerable.Range(0, MonthlyHistoryMonths)
             .Select(offset => historyStart.AddMonths(offset))

@@ -455,7 +455,8 @@
       "gasCost": "Gas cost",
       "perFill": "{value}/fill",
       "sourceUsed": "Source tanks",
-      "produced": "{count} filled"
+      "produced": "{count} filled",
+      "delivered": "{count} delivered"
     },
     "chart": {
       "revenue": "Revenue",

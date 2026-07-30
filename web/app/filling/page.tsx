@@ -164,7 +164,7 @@ export default function FillingPage() {
         customerPhone: cylinder.customerPhone,
         customerPhoneType: cylinder.customerPhoneType,
         fulfillmentMethod: cylinder.fulfillmentMethod,
-        cylinderCount: cylinder.totalCylindersInOrder,
+        cylinderCount: result.notifyCylinderCount ?? cylinder.totalCylindersInOrder,
       }]);
       playSound('complete');
       setSuccessMessage(t('filling.orderComplete', { name: cylinder.customerName }));

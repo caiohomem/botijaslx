@@ -247,6 +247,9 @@ public class CloseIntakeCommandHandlerTests
         public Task<int> CountPendingByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
+        public Task<int> CountReadyForPickupByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
         public Task<Cylinder?> FindBySequentialNumberAsync(long sequentialNumber, CancellationToken cancellationToken = default)
             => Task.FromResult(_cylinders.Values.FirstOrDefault(c => c.SequentialNumber == sequentialNumber));
 
