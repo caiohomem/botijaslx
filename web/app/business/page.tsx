@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
+  BusinessMonthlyAnalysis,
   BusinessOverview,
   businessApi,
 } from '@/lib/api';
@@ -205,6 +206,17 @@ export default function BusinessPage() {
       });
     }
 
+    if (overview.monthly.closedMonths >= 2) {
+      const growth = overview.monthly.averageMonthlyGrowthPercent;
+      items.push({
+        severity: growth >= 0 ? 'success' : 'warning',
+        text: t('business.insights.monthlyTrend', {
+          growth: formatPct(growth),
+          profit: formatEur(overview.monthly.averageMonthlyProfit),
+        }),
+      });
+    }
+
     if (items.length === 0) {
       items.push({ severity: 'info', text: t('business.insights.stable') });
     }
@@ -321,6 +333,14 @@ export default function BusinessPage() {
               {t('business.sections.evolution')}
             </h2>
             <BusinessChart points={overview.dailySeries} days={days} t={t} />
+          </section>
+
+          {/* Monthly analysis */}
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('business.sections.monthly')}
+            </h2>
+            <MonthlyAnalysis monthly={overview.monthly} t={t} />
           </section>
 
           {/* Simulator */}
@@ -626,6 +646,198 @@ export default function BusinessPage() {
             )}
           </section>
         </>
+      )}
+    </div>
+  );
+}
+
+function MonthlyAnalysis({
+  monthly,
+  t,
+}: {
+  monthly: BusinessMonthlyAnalysis;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const visibleHistory = monthly.history.filter(
+    (point, index) =>
+      point.delivered > 0 ||
+      point.isPartial ||
+      monthly.history.slice(index).some((later) => later.delivered > 0)
+  );
+
+  if (visibleHistory.length === 0) {
+    return (
+      <div className="border rounded-lg p-4 text-sm text-muted-foreground">
+        {t('business.monthly.empty')}
+      </div>
+    );
+  }
+
+  const combined = [...visibleHistory, ...monthly.forecast];
+  const maxProfit = Math.max(
+    1,
+    ...combined.map((point) => Math.max(point.profit, point.projectedProfit ?? 0))
+  );
+
+  const growthPositive = monthly.averageMonthlyGrowthPercent >= 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard
+          label={t('business.monthly.avgRevenue')}
+          value={formatEur(monthly.averageMonthlyRevenue)}
+          sublabel={t('business.monthly.closedMonths', { count: monthly.closedMonths })}
+        />
+        <KpiCard
+          label={t('business.monthly.avgProfit')}
+          value={formatEur(monthly.averageMonthlyProfit)}
+          sublabel={t('business.monthly.avgFills', { count: monthly.averageMonthlyDelivered.toFixed(1) })}
+        />
+        <KpiCard
+          label={t('business.monthly.growth')}
+          value={formatPct(monthly.averageMonthlyGrowthPercent)}
+          positive={growthPositive}
+          sublabel={t('business.monthly.trend', { slope: monthly.trendSlopePerMonth.toFixed(1) })}
+        />
+        <KpiCard
+          label={t('business.monthly.best')}
+          value={monthly.bestMonth ?? '—'}
+          sublabel={formatEur(monthly.bestMonthProfit)}
+        />
+      </div>
+
+      <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-600" />
+            {t('business.monthly.legendProfit')}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-blue-500/50" />
+            {t('business.monthly.legendProjected')}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm border border-dashed border-muted-foreground" />
+            {t('business.monthly.legendForecast')}
+          </span>
+        </div>
+
+        <div className="flex items-end gap-2 h-40 overflow-x-auto pb-1">
+          {combined.map((point) => {
+            const displayValue = point.isForecast
+              ? point.projectedProfit ?? point.profit
+              : point.profit;
+            const projectedValue = point.isPartial ? point.projectedProfit ?? 0 : 0;
+            const barHeight = Math.max(2, (Math.max(0, displayValue) / maxProfit) * 100);
+            const projectedHeight = Math.max(0, (projectedValue / maxProfit) * 100);
+
+            return (
+              <div key={point.month} className="flex flex-col items-center gap-1 min-w-[42px] flex-1">
+                <div className="relative w-full flex-1 flex items-end">
+                  {point.isPartial && projectedHeight > barHeight && (
+                    <div
+                      className="absolute bottom-0 w-full rounded-t bg-blue-500/30"
+                      style={{ height: `${projectedHeight}%` }}
+                    />
+                  )}
+                  <div
+                    className={`relative w-full rounded-t ${
+                      point.isForecast
+                        ? 'border border-dashed border-muted-foreground bg-muted/40'
+                        : 'bg-green-600'
+                    }`}
+                    style={{ height: `${barHeight}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-muted-foreground whitespace-nowrap">{point.label}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="py-2 px-3 font-medium">{t('business.monthly.month')}</th>
+              <th className="py-2 px-3 font-medium">{t('business.monthly.fills')}</th>
+              <th className="py-2 px-3 font-medium">{t('business.monthly.revenue')}</th>
+              <th className="py-2 px-3 font-medium">{t('business.monthly.profit')}</th>
+              <th className="py-2 px-3 font-medium">{t('business.monthly.vsPrev')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleHistory.map((point) => (
+              <tr key={point.month} className="border-b border-border/40">
+                <td className="py-2 px-3 font-medium">
+                  {point.label}
+                  {point.isPartial && (
+                    <span className="ml-2 text-[10px] uppercase text-muted-foreground">
+                      {t('business.monthly.partial')}
+                    </span>
+                  )}
+                </td>
+                <td className="py-2 px-3">{point.delivered}</td>
+                <td className="py-2 px-3">{formatEur(point.revenue)}</td>
+                <td className="py-2 px-3">{formatEur(point.profit)}</td>
+                <td
+                  className={`py-2 px-3 text-xs ${
+                    point.growthPercent >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formatPct(point.growthPercent)}
+                </td>
+              </tr>
+            ))}
+            {monthly.forecast.map((point) => (
+              <tr key={point.month} className="border-b border-border/40 bg-muted/20">
+                <td className="py-2 px-3 font-medium text-muted-foreground">
+                  {point.label}
+                  <span className="ml-2 text-[10px] uppercase">{t('business.monthly.forecastTag')}</span>
+                </td>
+                <td className="py-2 px-3 text-muted-foreground">{point.delivered}</td>
+                <td className="py-2 px-3 text-muted-foreground">{formatEur(point.revenue)}</td>
+                <td className="py-2 px-3 text-muted-foreground">{formatEur(point.profit)}</td>
+                <td className="py-2 px-3" />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {(() => {
+        const partial = visibleHistory.find((point) => point.isPartial);
+        if (!partial?.projectedProfit) return null;
+
+        return (
+          <p className="text-sm text-muted-foreground">
+            {t('business.monthly.currentProjection', {
+              month: partial.label,
+              fills: (partial.projectedDelivered ?? 0).toFixed(0),
+              revenue: formatEur(partial.projectedRevenue ?? 0),
+              profit: formatEur(partial.projectedProfit),
+            })}
+          </p>
+        );
+      })()}
+
+      {monthly.forecast.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {t('business.monthly.trendSummary', {
+            months: monthly.forecast.length,
+            profit: formatEur(monthly.forecast.reduce((sum, point) => sum + point.profit, 0)),
+            direction: t(
+              monthly.trendSlopePerMonth >= 0
+                ? 'business.monthly.directionUp'
+                : 'business.monthly.directionDown'
+            ),
+            slope: Math.abs(monthly.trendSlopePerMonth).toFixed(1),
+          })}
+        </p>
       )}
     </div>
   );
