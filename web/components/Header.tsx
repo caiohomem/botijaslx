@@ -14,6 +14,7 @@ const navItems = [
   { href: '/filling', key: 'filling' },
   { href: '/pickup', key: 'pickup' },
   { href: '/dashboard', key: 'dashboard' },
+  { href: '/business', key: 'business' },
   { href: '/clientes', key: 'customers' },
   { href: '/debug', key: 'debug' },
 ];

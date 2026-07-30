@@ -69,6 +69,18 @@ export default function HomePage() {
         </Link>
 
         <Link
+          href="/business"
+          className="p-6 border rounded-lg hover:bg-accent transition-colors"
+        >
+          <h2 className="text-xl font-semibold mb-2">
+            {t('navigation.business')}
+          </h2>
+          <p className="text-muted-foreground">
+            Lucros, previsões e simulador
+          </p>
+        </Link>
+
+        <Link
           href="/clientes"
           className="p-6 border rounded-lg hover:bg-accent transition-colors"
         >

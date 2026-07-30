@@ -19,7 +19,29 @@ public class AppSettings
     public int LabelHeightMm { get; private set; }
     public bool DebugEnabled { get; private set; }
     public bool SoundNotificationsDisabled { get; private set; }
+
+    /// <summary>Preço cobrado por enchimento (EUR).</summary>
+    public decimal RefillPriceEur { get; private set; }
+    /// <summary>Custo de aquisição da botija fonte (EUR).</summary>
+    public decimal SourceCylinderCostEur { get; private set; }
+    /// <summary>Gás na botija fonte (kg).</summary>
+    public decimal SourceCylinderGasKg { get; private set; }
+    /// <summary>Gás consumido por enchimento SodaStream (g).</summary>
+    public decimal ConsumerCylinderGasG { get; private set; }
+
     public DateTime UpdatedAt { get; private set; }
+
+    /// <summary>Enchimentos estimados por botija fonte.</summary>
+    public decimal FillsPerSourceCylinder =>
+        ConsumerCylinderGasG > 0
+            ? Math.Round((SourceCylinderGasKg * 1000m) / ConsumerCylinderGasG, 2)
+            : 40m;
+
+    /// <summary>Custo de gás estimado por enchimento.</summary>
+    public decimal GasCostPerFillEur =>
+        FillsPerSourceCylinder > 0
+            ? Math.Round(SourceCylinderCostEur / FillsPerSourceCylinder, 4)
+            : 0m;
 
     private AppSettings()
     {
@@ -36,6 +58,10 @@ public class AppSettings
         LabelWidthMm = 50;
         LabelHeightMm = 75;
         DebugEnabled = false;
+        RefillPriceEur = 10m;
+        SourceCylinderCostEur = 90m;
+        SourceCylinderGasKg = 17m;
+        ConsumerCylinderGasG = 425m;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -77,6 +103,19 @@ public class AppSettings
         LabelHeightMm = labelHeightMm;
         DebugEnabled = debugEnabled;
         SoundNotificationsDisabled = soundNotificationsDisabled;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateBusinessFinance(
+        decimal refillPriceEur,
+        decimal sourceCylinderCostEur,
+        decimal sourceCylinderGasKg,
+        decimal consumerCylinderGasG)
+    {
+        RefillPriceEur = Math.Clamp(refillPriceEur, 0.01m, 9999m);
+        SourceCylinderCostEur = Math.Clamp(sourceCylinderCostEur, 0.01m, 99999m);
+        SourceCylinderGasKg = Math.Clamp(sourceCylinderGasKg, 0.1m, 1000m);
+        ConsumerCylinderGasG = Math.Clamp(consumerCylinderGasG, 1m, 10000m);
         UpdatedAt = DateTime.UtcNow;
     }
 }

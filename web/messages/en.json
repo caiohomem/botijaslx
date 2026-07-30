@@ -46,6 +46,7 @@
     "filling": "Filling",
     "pickup": "Out",
     "dashboard": "Dashboard",
+    "business": "Business",
     "customers": "Customers",
     "debug": "Debug",
     "settings": "Settings"
@@ -416,5 +417,107 @@
     "cylinders": "Cylinders",
     "cylinderHistory": "CylinderHistory",
     "appSettings": "AppSettings"
+  },
+  "business": {
+    "title": "Business",
+    "unlockHint": "Enter the admin password to view profits and forecasts.",
+    "pin": "Password",
+    "pinInvalid": "Incorrect password",
+    "unlock": "Unlock",
+    "loadError": "Failed to load business data",
+    "saveError": "Failed to save settings",
+    "range": {
+      "7": "7 days",
+      "30": "30 days",
+      "90": "90 days",
+      "365": "Year"
+    },
+    "sections": {
+      "summary": "Summary",
+      "evolution": "Trend",
+      "simulator": "Simulator",
+      "forecast": "Forecast",
+      "insights": "Insights",
+      "detail": "Detail",
+      "settings": "Finance settings"
+    },
+    "kpi": {
+      "revenue": "Revenue",
+      "profit": "Gross profit",
+      "margin": "Margin",
+      "fills": "Refills",
+      "gasCost": "Gas cost",
+      "perFill": "{value}/fill",
+      "sourceUsed": "Source tanks",
+      "produced": "{count} filled"
+    },
+    "chart": {
+      "revenue": "Revenue",
+      "profit": "Profit"
+    },
+    "sim": {
+      "price": "Refill price (€)",
+      "volume": "Volume / month",
+      "sourceCost": "Source tank cost (€)",
+      "plus1": "+1 €",
+      "plus2": "+2 €",
+      "volUp": "Vol +20%",
+      "volDown": "Vol −20%",
+      "reset": "Reset",
+      "metric": "Metric",
+      "current": "Current",
+      "simulated": "Simulated",
+      "delta": "Delta",
+      "profitPerFill": "Profit / refill",
+      "margin": "Margin",
+      "monthlyRevenue": "Revenue / month",
+      "monthlyProfit": "Profit / month",
+      "yearlyProfit": "Profit / year"
+    },
+    "forecast": {
+      "basis": "Based on {avg} refills/day recently, {days}-day projection at {price}.",
+      "fills": "Refills",
+      "revenue": "Revenue",
+      "profit": "Profit",
+      "source": "Source tanks",
+      "summary": "Projected ~{fills} refills, {revenue} revenue and {profit} profit (~{sources} source tanks).",
+      "nextSource": "Next source tank estimated in ~{days} day(s)."
+    },
+    "insights": {
+      "growth": "Volume up {pct} vs previous period.",
+      "decline": "Volume down {pct} vs previous period.",
+      "sourceSoon": "Source tank running low — ~{days} day(s) left.",
+      "pipeline": "{count} filled cylinders awaiting pickup ({value}).",
+      "unpaid": "{count} completed order(s) without payment recorded.",
+      "problems": "{count} cylinder(s) with problems.",
+      "priceSim": "At {price}: estimated profit impact {delta}/month.",
+      "topCustomer": "Top customer: {name} ({count} refills).",
+      "stable": "Business looks stable this period — no major alerts."
+    },
+    "pipeline": {
+      "title": "Pipeline",
+      "hint": "Cylinders already filled waiting for pickup.",
+      "ready": "Ready",
+      "value": "Estimated value"
+    },
+    "weekday": {
+      "title": "Average by weekday"
+    },
+    "topCustomers": {
+      "title": "Top customers",
+      "empty": "No deliveries in this period.",
+      "name": "Customer",
+      "fills": "Refills",
+      "revenue": "Revenue"
+    },
+    "settings": {
+      "hint": "Adjust the parameters used for profit calculations and the simulator.",
+      "price": "Price per refill (€)",
+      "sourceCost": "Source tank cost (€)",
+      "sourceKg": "Gas in source tank (kg)",
+      "consumerG": "Gas per refill (g)",
+      "derived": "≈ {fills} refills per source tank · gas cost {cost}/refill",
+      "saved": "Settings saved!"
+    }
   }
 }

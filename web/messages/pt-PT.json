@@ -46,6 +46,7 @@
     "filling": "Enchimento",
     "pickup": "Out",
     "dashboard": "Painel",
+    "business": "Negócio",
     "customers": "Clientes",
     "debug": "Debug",
     "settings": "Configurações"
@@ -418,5 +419,107 @@
     "cylinders": "Cylinders",
     "cylinderHistory": "CylinderHistory",
     "appSettings": "AppSettings"
+  },
+  "business": {
+    "title": "Negócio",
+    "unlockHint": "Introduza a palavra-passe de administrador para ver lucros e previsões.",
+    "pin": "Palavra-passe",
+    "pinInvalid": "Palavra-passe incorreta",
+    "unlock": "Desbloquear",
+    "loadError": "Erro ao carregar dados do negócio",
+    "saveError": "Erro ao guardar configuração",
+    "range": {
+      "7": "7 dias",
+      "30": "30 dias",
+      "90": "90 dias",
+      "365": "Ano"
+    },
+    "sections": {
+      "summary": "Resumo",
+      "evolution": "Evolução",
+      "simulator": "Simulador",
+      "forecast": "Previsão",
+      "insights": "Insights",
+      "detail": "Detalhe",
+      "settings": "Configuração financeira"
+    },
+    "kpi": {
+      "revenue": "Receita",
+      "profit": "Lucro bruto",
+      "margin": "Margem",
+      "fills": "Enchimentos",
+      "gasCost": "Custo de gás",
+      "perFill": "{value}/ench.",
+      "sourceUsed": "Botijas fonte",
+      "produced": "{count} enchidas"
+    },
+    "chart": {
+      "revenue": "Receita",
+      "profit": "Lucro"
+    },
+    "sim": {
+      "price": "Preço enchimento (€)",
+      "volume": "Volume / mês",
+      "sourceCost": "Custo botija fonte (€)",
+      "plus1": "+1 €",
+      "plus2": "+2 €",
+      "volUp": "Vol +20%",
+      "volDown": "Vol −20%",
+      "reset": "Repor",
+      "metric": "Métrica",
+      "current": "Atual",
+      "simulated": "Simulado",
+      "delta": "Diferença",
+      "profitPerFill": "Lucro / enchimento",
+      "margin": "Margem",
+      "monthlyRevenue": "Receita / mês",
+      "monthlyProfit": "Lucro / mês",
+      "yearlyProfit": "Lucro / ano"
+    },
+    "forecast": {
+      "basis": "Com base em {avg} enchimentos/dia nos últimos dias, projeção a {days} dias com preço {price}.",
+      "fills": "Enchimentos",
+      "revenue": "Receita",
+      "profit": "Lucro",
+      "source": "Botijas fonte",
+      "summary": "Projetam-se ~{fills} enchimentos, {revenue} de receita e {profit} de lucro (~{sources} botijas fonte).",
+      "nextSource": "Próxima botija fonte estimada em ~{days} dia(s)."
+    },
+    "insights": {
+      "growth": "Volume subiu {pct} face ao período anterior.",
+      "decline": "Volume desceu {pct} face ao período anterior.",
+      "sourceSoon": "Botija fonte a esgotar — estimativa de ~{days} dia(s).",
+      "pipeline": "{count} botijas enchidas aguardam recolha ({value}).",
+      "unpaid": "{count} pedido(s) concluído(s) sem pagamento registado.",
+      "problems": "{count} botija(s) com problema.",
+      "priceSim": "Com preço a {price}: impacto estimado de {delta}/mês no lucro.",
+      "topCustomer": "Top cliente: {name} ({count} enchimentos).",
+      "stable": "Negócio estável neste período — sem alertas relevantes."
+    },
+    "pipeline": {
+      "title": "Pipeline",
+      "hint": "Botijas já enchidas à espera de recolha.",
+      "ready": "Prontas",
+      "value": "Valor estimado"
+    },
+    "weekday": {
+      "title": "Média por dia da semana"
+    },
+    "topCustomers": {
+      "title": "Top clientes",
+      "empty": "Sem entregas no período.",
+      "name": "Cliente",
+      "fills": "Enchimentos",
+      "revenue": "Receita"
+    },
+    "settings": {
+      "hint": "Ajuste os parâmetros usados no cálculo de lucro e no simulador.",
+      "price": "Preço por enchimento (€)",
+      "sourceCost": "Custo botija fonte (€)",
+      "sourceKg": "Gás na botija fonte (kg)",
+      "consumerG": "Gás por enchimento (g)",
+      "derived": "≈ {fills} enchimentos por botija fonte · custo de gás {cost}/enchimento",
+      "saved": "Configuração guardada!"
+    }
   }
 }

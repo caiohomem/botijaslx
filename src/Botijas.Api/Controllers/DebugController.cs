@@ -91,7 +91,7 @@ public class DebugController : ControllerBase
             foreach (var appSettings in snapshot.AppSettings)
             {
                 await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                    $"""INSERT INTO "AppSettings" ("AppSettingsId", "StoreName", "StorePhone", "StoreLink", "AppTitle", "WhatsAppMessageTemplate", "ShippingReadyMessageTemplate", "WelcomeMessageTemplate", "ThankYouMessageTemplate", "PrinterType", "LabelWidthMm", "LabelHeightMm", "DebugEnabled", "SoundNotificationsDisabled", "UpdatedAt") VALUES ({appSettings.AppSettingsId}, {appSettings.StoreName}, {appSettings.StorePhone}, {appSettings.StoreLink}, {appSettings.AppTitle}, {appSettings.WhatsAppMessageTemplate}, {appSettings.ShippingReadyMessageTemplate}, {appSettings.WelcomeMessageTemplate}, {appSettings.ThankYouMessageTemplate}, {appSettings.PrinterType}, {appSettings.LabelWidthMm}, {appSettings.LabelHeightMm}, {appSettings.DebugEnabled}, {appSettings.SoundNotificationsDisabled}, {appSettings.UpdatedAt});""",
+                    $"""INSERT INTO "AppSettings" ("AppSettingsId", "StoreName", "StorePhone", "StoreLink", "AppTitle", "WhatsAppMessageTemplate", "ShippingReadyMessageTemplate", "WelcomeMessageTemplate", "ThankYouMessageTemplate", "DeadlineMessageTemplate", "PrinterType", "LabelWidthMm", "LabelHeightMm", "DebugEnabled", "SoundNotificationsDisabled", "RefillPriceEur", "SourceCylinderCostEur", "SourceCylinderGasKg", "ConsumerCylinderGasG", "UpdatedAt") VALUES ({appSettings.AppSettingsId}, {appSettings.StoreName}, {appSettings.StorePhone}, {appSettings.StoreLink}, {appSettings.AppTitle}, {appSettings.WhatsAppMessageTemplate}, {appSettings.ShippingReadyMessageTemplate}, {appSettings.WelcomeMessageTemplate}, {appSettings.ThankYouMessageTemplate}, {appSettings.DeadlineMessageTemplate}, {appSettings.PrinterType}, {appSettings.LabelWidthMm}, {appSettings.LabelHeightMm}, {appSettings.DebugEnabled}, {appSettings.SoundNotificationsDisabled}, {appSettings.RefillPriceEur}, {appSettings.SourceCylinderCostEur}, {appSettings.SourceCylinderGasKg}, {appSettings.ConsumerCylinderGasG}, {appSettings.UpdatedAt});""",
                     cancellationToken);
             }
 
@@ -344,11 +344,16 @@ public class DebugController : ControllerBase
                 a.ShippingReadyMessageTemplate,
                 a.WelcomeMessageTemplate,
                 a.ThankYouMessageTemplate,
+                a.DeadlineMessageTemplate,
                 a.PrinterType,
                 a.LabelWidthMm,
                 a.LabelHeightMm,
                 a.DebugEnabled,
                 a.SoundNotificationsDisabled,
+                a.RefillPriceEur,
+                a.SourceCylinderCostEur,
+                a.SourceCylinderGasKg,
+                a.ConsumerCylinderGasG,
                 a.UpdatedAt))
             .ToListAsync(cancellationToken);
     }
@@ -467,4 +472,24 @@ public record DebugOrderRow(Guid OrderId, Guid CustomerId, string Status, string
 public record DebugCylinderRefRow(Guid OrderId, Guid CylinderId);
 public record DebugCylinderRow(Guid CylinderId, long SequentialNumber, string? LabelToken, string State, string? OccurrenceNotes, DateTime CreatedAt);
 public record DebugCylinderHistoryRow(Guid Id, Guid CylinderId, string EventType, string? Details, Guid? OrderId, DateTime Timestamp);
-public record DebugAppSettingsRow(Guid AppSettingsId, string StoreName, string StorePhone, string StoreLink, string AppTitle, string WhatsAppMessageTemplate, string ShippingReadyMessageTemplate, string WelcomeMessageTemplate, string ThankYouMessageTemplate, string PrinterType, int LabelWidthMm, int LabelHeightMm, bool DebugEnabled, bool SoundNotificationsDisabled, DateTime UpdatedAt);
+public record DebugAppSettingsRow(
+    Guid AppSettingsId,
+    string StoreName,
+    string StorePhone,
+    string StoreLink,
+    string AppTitle,
+    string WhatsAppMessageTemplate,
+    string ShippingReadyMessageTemplate,
+    string WelcomeMessageTemplate,
+    string ThankYouMessageTemplate,
+    string DeadlineMessageTemplate,
+    string PrinterType,
+    int LabelWidthMm,
+    int LabelHeightMm,
+    bool DebugEnabled,
+    bool SoundNotificationsDisabled,
+    decimal RefillPriceEur,
+    decimal SourceCylinderCostEur,
+    decimal SourceCylinderGasKg,
+    decimal ConsumerCylinderGasG,
+    DateTime UpdatedAt);

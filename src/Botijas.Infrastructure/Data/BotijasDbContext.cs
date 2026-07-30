@@ -89,6 +89,12 @@ public class BotijasDbContext : DbContext
             entity.Property(e => e.LabelHeightMm).IsRequired();
             entity.Property(e => e.DebugEnabled).IsRequired();
             entity.Property(e => e.SoundNotificationsDisabled).IsRequired();
+            entity.Property(e => e.RefillPriceEur).IsRequired().HasPrecision(10, 2);
+            entity.Property(e => e.SourceCylinderCostEur).IsRequired().HasPrecision(10, 2);
+            entity.Property(e => e.SourceCylinderGasKg).IsRequired().HasPrecision(10, 3);
+            entity.Property(e => e.ConsumerCylinderGasG).IsRequired().HasPrecision(10, 1);
+            entity.Ignore(e => e.FillsPerSourceCylinder);
+            entity.Ignore(e => e.GasCostPerFillEur);
             entity.Property(e => e.UpdatedAt).IsRequired();
         });
 
