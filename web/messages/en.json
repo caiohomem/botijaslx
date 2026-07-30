@@ -79,6 +79,13 @@
     "labelSettings": "Labels",
     "debugEnabled": "Show Debug tab",
     "debugEnabledHelp": "Disable in production to hide navigation and block the debug page.",
+    "businessFinance": "Business / Finance",
+    "businessFinanceHelp": "Parameters used by the Business dashboard to calculate revenue, gas cost and profit.",
+    "refillPriceEur": "Price per refill (€)",
+    "sourceCylinderCostEur": "Source tank cost (€)",
+    "sourceCylinderGasKg": "Gas in source tank (kg)",
+    "consumerCylinderGasG": "Gas per refill (g)",
+    "businessDerived": "≈ {fills} refills per source tank · gas cost ≈ {cost} €/refill",
     "reset": "Reset Defaults",
     "save": "Save"
   },

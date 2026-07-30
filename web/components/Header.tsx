@@ -21,7 +21,7 @@ const navItems = [
 
 export function Header() {
   const t = useTranslations();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const pathname = usePathname();
   const [appTitle, setAppTitle] = useState('');
   const [debugEnabled, setDebugEnabled] = useState(false);
@@ -73,7 +73,13 @@ export function Header() {
           </div>
         </div>
         <nav className="flex gap-1 mt-3 -mb-3 overflow-x-auto">
-          {navItems.filter((item) => item.key !== 'debug' || debugEnabled).map((item) => (
+          {navItems
+            .filter((item) => {
+              if (item.key === 'debug') return debugEnabled;
+              if (item.key === 'business') return isAdmin;
+              return true;
+            })
+            .map((item) => (
             <Link
               key={item.href}
               href={item.href}

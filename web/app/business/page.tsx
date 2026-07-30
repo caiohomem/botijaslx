@@ -1,12 +1,13 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import {
   BusinessOverview,
   businessApi,
 } from '@/lib/api';
-import { isAdminAuthenticated, loginAdmin } from '@/lib/auth';
+import { useAuth } from '@/components/AuthProvider';
 
 type PeriodDays = 7 | 30 | 90 | 365;
 
@@ -51,10 +52,8 @@ function simulate(params: {
 
 export default function BusinessPage() {
   const t = useTranslations();
-  const [unlocked, setUnlocked] = useState(false);
-  const [adminUser, setAdminUser] = useState('');
-  const [adminPass, setAdminPass] = useState('');
-  const [loginError, setLoginError] = useState(false);
+  const router = useRouter();
+  const { isAdmin, isLoading: authLoading } = useAuth();
   const [days, setDays] = useState<PeriodDays>(30);
   const [overview, setOverview] = useState<BusinessOverview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -75,11 +74,13 @@ export default function BusinessPage() {
   const [formConsumerG, setFormConsumerG] = useState(425);
 
   useEffect(() => {
-    setUnlocked(isAdminAuthenticated());
-  }, []);
+    if (!authLoading && !isAdmin) {
+      router.replace('/');
+    }
+  }, [authLoading, isAdmin, router]);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (!isAdmin) return;
 
     let cancelled = false;
     setLoading(true);
@@ -112,7 +113,7 @@ export default function BusinessPage() {
     return () => {
       cancelled = true;
     };
-  }, [unlocked, days, t, volumeTouched]);
+  }, [isAdmin, days, t, volumeTouched]);
 
   const currentSim = useMemo(() => {
     if (!overview) return null;
@@ -211,18 +212,6 @@ export default function BusinessPage() {
     return items;
   }, [overview, currentSim, simulated, simPrice, t]);
 
-  const handleUnlock = (e: FormEvent) => {
-    e.preventDefault();
-    if (loginAdmin(adminUser, adminPass)) {
-      setUnlocked(true);
-      setLoginError(false);
-      setAdminUser('');
-      setAdminPass('');
-    } else {
-      setLoginError(true);
-    }
-  };
-
   const handleSaveSettings = async () => {
     try {
       const saved = await businessApi.updateSettings({
@@ -242,45 +231,10 @@ export default function BusinessPage() {
     }
   };
 
-  if (!unlocked) {
+  if (authLoading || !isAdmin) {
     return (
-      <div className="max-w-md mx-auto space-y-6 py-12">
-        <h1 className="text-2xl font-bold text-center">{t('business.title')}</h1>
-        <p className="text-center text-muted-foreground">{t('business.unlockHint')}</p>
-        <form onSubmit={handleUnlock} className="p-4 border rounded-lg space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('business.adminUsername')}</label>
-            <input
-              type="text"
-              value={adminUser}
-              onChange={(e) => setAdminUser(e.target.value)}
-              autoComplete="username"
-              className="w-full px-3 py-2 border rounded-lg bg-background"
-              autoFocus
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{t('business.adminPassword')}</label>
-            <input
-              type="password"
-              value={adminPass}
-              onChange={(e) => setAdminPass(e.target.value)}
-              autoComplete="current-password"
-              className="w-full px-3 py-2 border rounded-lg bg-background"
-              required
-            />
-          </div>
-          {loginError && (
-            <div className="text-sm text-destructive">{t('business.loginInvalid')}</div>
-          )}
-          <button
-            type="submit"
-            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium"
-          >
-            {t('business.unlock')}
-          </button>
-        </form>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
       </div>
     );
   }

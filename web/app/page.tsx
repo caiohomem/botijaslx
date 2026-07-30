@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { loadAppSettings } from '@/lib/settings';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function HomePage() {
   const t = useTranslations();
+  const { isAdmin } = useAuth();
   const [debugEnabled, setDebugEnabled] = useState(false);
 
   useEffect(() => {
@@ -68,17 +70,19 @@ export default function HomePage() {
           </p>
         </Link>
 
-        <Link
-          href="/business"
-          className="p-6 border rounded-lg hover:bg-accent transition-colors"
-        >
-          <h2 className="text-xl font-semibold mb-2">
-            {t('navigation.business')}
-          </h2>
-          <p className="text-muted-foreground">
-            Lucros, previsões e simulador
-          </p>
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/business"
+            className="p-6 border rounded-lg hover:bg-accent transition-colors"
+          >
+            <h2 className="text-xl font-semibold mb-2">
+              {t('navigation.business')}
+            </h2>
+            <p className="text-muted-foreground">
+              Lucros, previsões e simulador
+            </p>
+          </Link>
+        )}
 
         <Link
           href="/clientes"
