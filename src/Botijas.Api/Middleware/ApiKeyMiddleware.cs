@@ -53,7 +53,9 @@ public class ApiKeyMiddleware
 
     private static bool IsPublicPath(string path)
     {
-        if (path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+        if (path.Equals("/", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/health", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/ready", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

@@ -26,7 +26,7 @@ function withApiKey(headers: HeadersInit = {}): HeadersInit {
 }
 
 export async function waitForApiReady(): Promise<void> {
-  const response = await fetch(`${BROWSER_API_BASE_URL}/health`, {
+  const response = await fetch(`${BROWSER_API_BASE_URL}/ready`, {
     method: 'GET',
     cache: 'no-store',
   });
