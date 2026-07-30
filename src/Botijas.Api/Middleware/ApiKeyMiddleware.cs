@@ -21,7 +21,7 @@ public class ApiKeyMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var path = context.Request.Path.Value ?? string.Empty;
-        if (path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+        if (IsPublicPath(path))
         {
             await _next(context);
             return;
@@ -49,5 +49,16 @@ public class ApiKeyMiddleware
         }
 
         await _next(context);
+    }
+
+    private static bool IsPublicPath(string path)
+    {
+        if (path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // Allow Swagger UI and OpenAPI docs without an API key.
+        return path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase);
     }
 }

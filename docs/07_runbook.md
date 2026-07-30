@@ -2,8 +2,31 @@
 
 ## Requisitos
 - Node.js 18+ (para frontend)
-- .NET SDK 8.0+ (para backend - quando implementado)
-- SQLite (para banco de dados - quando implementado)
+- .NET SDK 10.0+ (para backend)
+- Docker + Docker Compose (recomendado)
+- PostgreSQL (via Docker Compose)
+
+## Docker Compose
+
+```bash
+docker compose up --build
+```
+
+| Serviço | URL |
+|---------|-----|
+| Web | http://localhost:3000 |
+| API | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger |
+| Health | http://localhost:8080/health |
+| Postgres | localhost:5432 |
+
+Credenciais da API: header `X-Api-Key: oficina` (não necessário em `/health` nem `/swagger`).
+
+Compose de desenvolvimento (mesma exposição de portas):
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
 
 ## Frontend (Next.js)
 
