@@ -422,10 +422,13 @@
   },
   "business": {
     "title": "Negócio",
-    "unlockHint": "Introduza a palavra-passe de administrador para ver lucros e previsões.",
+    "unlockHint": "Entre com a conta de administrador para ver lucros e previsões.",
+    "adminUsername": "Utilizador admin",
+    "adminPassword": "Palavra-passe",
+    "loginInvalid": "Utilizador ou palavra-passe incorretos",
+    "unlock": "Entrar como admin",
     "pin": "Palavra-passe",
     "pinInvalid": "Palavra-passe incorreta",
-    "unlock": "Desbloquear",
     "loadError": "Erro ao carregar dados do negócio",
     "saveError": "Erro ao guardar configuração",
     "range": {

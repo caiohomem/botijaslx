@@ -6,7 +6,7 @@ import {
   BusinessOverview,
   businessApi,
 } from '@/lib/api';
-import { isBusinessUnlocked, unlockBusiness } from '@/lib/auth';
+import { isAdminAuthenticated, loginAdmin } from '@/lib/auth';
 
 type PeriodDays = 7 | 30 | 90 | 365;
 
@@ -52,8 +52,9 @@ function simulate(params: {
 export default function BusinessPage() {
   const t = useTranslations();
   const [unlocked, setUnlocked] = useState(false);
-  const [pin, setPin] = useState('');
-  const [pinError, setPinError] = useState(false);
+  const [adminUser, setAdminUser] = useState('');
+  const [adminPass, setAdminPass] = useState('');
+  const [loginError, setLoginError] = useState(false);
   const [days, setDays] = useState<PeriodDays>(30);
   const [overview, setOverview] = useState<BusinessOverview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,7 +75,7 @@ export default function BusinessPage() {
   const [formConsumerG, setFormConsumerG] = useState(425);
 
   useEffect(() => {
-    setUnlocked(isBusinessUnlocked());
+    setUnlocked(isAdminAuthenticated());
   }, []);
 
   useEffect(() => {
@@ -212,12 +213,13 @@ export default function BusinessPage() {
 
   const handleUnlock = (e: FormEvent) => {
     e.preventDefault();
-    if (unlockBusiness(pin)) {
+    if (loginAdmin(adminUser, adminPass)) {
       setUnlocked(true);
-      setPinError(false);
-      setPin('');
+      setLoginError(false);
+      setAdminUser('');
+      setAdminPass('');
     } else {
-      setPinError(true);
+      setLoginError(true);
     }
   };
 
@@ -247,17 +249,30 @@ export default function BusinessPage() {
         <p className="text-center text-muted-foreground">{t('business.unlockHint')}</p>
         <form onSubmit={handleUnlock} className="p-4 border rounded-lg space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{t('business.pin')}</label>
+            <label className="text-sm font-medium">{t('business.adminUsername')}</label>
             <input
-              type="password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
+              type="text"
+              value={adminUser}
+              onChange={(e) => setAdminUser(e.target.value)}
+              autoComplete="username"
               className="w-full px-3 py-2 border rounded-lg bg-background"
               autoFocus
+              required
             />
           </div>
-          {pinError && (
-            <div className="text-sm text-destructive">{t('business.pinInvalid')}</div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">{t('business.adminPassword')}</label>
+            <input
+              type="password"
+              value={adminPass}
+              onChange={(e) => setAdminPass(e.target.value)}
+              autoComplete="current-password"
+              className="w-full px-3 py-2 border rounded-lg bg-background"
+              required
+            />
+          </div>
+          {loginError && (
+            <div className="text-sm text-destructive">{t('business.loginInvalid')}</div>
           )}
           <button
             type="submit"
