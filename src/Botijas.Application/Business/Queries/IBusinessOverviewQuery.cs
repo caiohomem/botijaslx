@@ -41,6 +41,51 @@ public class BusinessWeekdayStatDto
     public decimal AverageFills { get; set; }
 }
 
+public class BusinessMonthlyPointDto
+{
+    /// <summary>Mês no formato yyyy-MM.</summary>
+    public string Month { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public int Filled { get; set; }
+    public int Delivered { get; set; }
+    public decimal Revenue { get; set; }
+    public decimal GasCost { get; set; }
+    public decimal Profit { get; set; }
+    /// <summary>Variação percentual de entregas face ao mês anterior.</summary>
+    public decimal GrowthPercent { get; set; }
+    /// <summary>True quando o mês ainda está a decorrer (dados parciais).</summary>
+    public bool IsPartial { get; set; }
+    /// <summary>Projeção de entregas ao fecho do mês (só para o mês corrente).</summary>
+    public decimal? ProjectedDelivered { get; set; }
+    public decimal? ProjectedRevenue { get; set; }
+    public decimal? ProjectedProfit { get; set; }
+    /// <summary>Valor previsto pela tendência (regressão linear) para meses futuros.</summary>
+    public bool IsForecast { get; set; }
+}
+
+public class BusinessMonthlyAnalysisDto
+{
+    /// <summary>Histórico mensal fechado + mês corrente (parcial).</summary>
+    public IReadOnlyList<BusinessMonthlyPointDto> History { get; set; } = [];
+    /// <summary>Meses projetados pela tendência.</summary>
+    public IReadOnlyList<BusinessMonthlyPointDto> Forecast { get; set; } = [];
+    /// <summary>Crescimento médio mensal (%) nos meses fechados.</summary>
+    public decimal AverageMonthlyGrowthPercent { get; set; }
+    /// <summary>Média de entregas por mês nos meses fechados.</summary>
+    public decimal AverageMonthlyDelivered { get; set; }
+    public decimal AverageMonthlyRevenue { get; set; }
+    public decimal AverageMonthlyProfit { get; set; }
+    /// <summary>Melhor mês fechado por lucro.</summary>
+    public string? BestMonth { get; set; }
+    public decimal BestMonthProfit { get; set; }
+    /// <summary>Inclinação da tendência (entregas por mês).</summary>
+    public decimal TrendSlopePerMonth { get; set; }
+    /// <summary>Total acumulado nos meses fechados.</summary>
+    public decimal TotalRevenue { get; set; }
+    public decimal TotalProfit { get; set; }
+    public int ClosedMonths { get; set; }
+}
+
 public class BusinessOverviewDto
 {
     public int Days { get; set; }
@@ -80,4 +125,5 @@ public class BusinessOverviewDto
 
     public IReadOnlyList<BusinessTopCustomerDto> TopCustomers { get; set; } = [];
     public IReadOnlyList<BusinessWeekdayStatDto> WeekdayStats { get; set; } = [];
+    public BusinessMonthlyAnalysisDto Monthly { get; set; } = new();
 }

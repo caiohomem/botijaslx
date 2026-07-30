@@ -568,6 +568,37 @@ export interface BusinessWeekdayStat {
   averageFills: number;
 }
 
+export interface BusinessMonthlyPoint {
+  month: string;
+  label: string;
+  filled: number;
+  delivered: number;
+  revenue: number;
+  gasCost: number;
+  profit: number;
+  growthPercent: number;
+  isPartial: boolean;
+  projectedDelivered?: number | null;
+  projectedRevenue?: number | null;
+  projectedProfit?: number | null;
+  isForecast: boolean;
+}
+
+export interface BusinessMonthlyAnalysis {
+  history: BusinessMonthlyPoint[];
+  forecast: BusinessMonthlyPoint[];
+  averageMonthlyGrowthPercent: number;
+  averageMonthlyDelivered: number;
+  averageMonthlyRevenue: number;
+  averageMonthlyProfit: number;
+  bestMonth?: string | null;
+  bestMonthProfit: number;
+  trendSlopePerMonth: number;
+  totalRevenue: number;
+  totalProfit: number;
+  closedMonths: number;
+}
+
 export interface BusinessOverview {
   days: number;
   settings: BusinessFinanceSettings;
@@ -600,6 +631,7 @@ export interface BusinessOverview {
   problemCylinders: number;
   topCustomers: BusinessTopCustomer[];
   weekdayStats: BusinessWeekdayStat[];
+  monthly: BusinessMonthlyAnalysis;
 }
 
 export const businessApi = {
