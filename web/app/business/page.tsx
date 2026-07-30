@@ -286,7 +286,7 @@ export default function BusinessPage() {
 
       {overview && (
         <>
-          {/* KPIs */}
+          {/* Period-scoped: reacts to the days filter above */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {t('business.sections.summary')}
@@ -328,7 +328,6 @@ export default function BusinessPage() {
             </div>
           </section>
 
-          {/* Chart */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {t('business.sections.evolution')}
@@ -336,7 +335,139 @@ export default function BusinessPage() {
             <BusinessChart points={overview.dailySeries} days={days} t={t} />
           </section>
 
-          {/* Monthly analysis */}
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('business.sections.forecast')}
+            </h2>
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+              <p className="text-sm text-muted-foreground">
+                {t('business.forecast.basis', {
+                  avg: overview.averageDailyFills.toFixed(1),
+                  days: overview.forecastDays,
+                  price: formatEur(simPrice),
+                })}
+              </p>
+              {(() => {
+                const forecastFills = overview.averageDailyFills * overview.forecastDays;
+                const costPerFill = overview.settings.fillsPerSourceCylinder > 0
+                  ? simSourceCost / overview.settings.fillsPerSourceCylinder
+                  : 0;
+                const forecastRevenue = forecastFills * simPrice;
+                const forecastProfit = forecastFills * (simPrice - costPerFill);
+                const forecastSources = overview.settings.fillsPerSourceCylinder > 0
+                  ? forecastFills / overview.settings.fillsPerSourceCylinder
+                  : 0;
+
+                return (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <KpiCard label={t('business.forecast.fills')} value={forecastFills.toFixed(0)} />
+                      <KpiCard label={t('business.forecast.revenue')} value={formatEur(forecastRevenue)} />
+                      <KpiCard label={t('business.forecast.profit')} value={formatEur(forecastProfit)} />
+                      <KpiCard label={t('business.forecast.source')} value={forecastSources.toFixed(1)} />
+                    </div>
+                    <p className="text-sm">
+                      {t('business.forecast.summary', {
+                        fills: forecastFills.toFixed(0),
+                        revenue: formatEur(forecastRevenue),
+                        profit: formatEur(forecastProfit),
+                        sources: forecastSources.toFixed(1),
+                      })}
+                    </p>
+                  </>
+                );
+              })()}
+              {overview.daysUntilNextSourceCylinder > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {t('business.forecast.nextSource', { days: overview.daysUntilNextSourceCylinder })}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('business.sections.insights')}
+            </h2>
+            <div className="space-y-2">
+              {insights.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg border text-sm ${
+                    item.severity === 'success'
+                      ? 'border-green-500/40 bg-green-500/10'
+                      : item.severity === 'warning'
+                        ? 'border-amber-500/40 bg-amber-500/10'
+                        : 'border-border bg-muted/30'
+                  }`}
+                >
+                  {item.text}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('business.sections.detail')}
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="border rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold">{t('business.weekday.title')}</h3>
+                <div className="space-y-2">
+                  {overview.weekdayStats.map((day) => {
+                    const max = Math.max(0.1, ...overview.weekdayStats.map((d) => d.averageFills));
+                    return (
+                      <div key={day.dayOfWeek} className="flex items-center gap-3 text-sm">
+                        <div className="w-16 text-muted-foreground">{day.dayName.slice(0, 3)}</div>
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary/70 rounded-full"
+                            style={{ width: `${(day.averageFills / max) * 100}%` }}
+                          />
+                        </div>
+                        <div className="w-10 text-right font-mono text-xs">
+                          {day.averageFills.toFixed(1)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-3">
+                <h3 className="font-semibold">{t('business.topCustomers.title')}</h3>
+                {overview.topCustomers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('business.topCustomers.empty')}</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-muted-foreground">
+                          <th className="py-2 pr-3 font-medium">#</th>
+                          <th className="py-2 pr-3 font-medium">{t('business.topCustomers.name')}</th>
+                          <th className="py-2 pr-3 font-medium">{t('business.topCustomers.fills')}</th>
+                          <th className="py-2 font-medium">{t('business.topCustomers.revenue')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {overview.topCustomers.map((customer, idx) => (
+                          <tr key={customer.customerId} className="border-b border-border/50">
+                            <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
+                            <td className="py-2 pr-3 font-medium">{customer.name}</td>
+                            <td className="py-2 pr-3">{customer.deliveredFills}</td>
+                            <td className="py-2">{formatEur(customer.revenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Independent of the days filter */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {t('business.sections.monthly')}
@@ -344,7 +475,6 @@ export default function BusinessPage() {
             <MonthlyAnalysis monthly={overview.monthly} t={t} />
           </section>
 
-          {/* Simulator */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               {t('business.sections.simulator')}
@@ -457,157 +587,25 @@ export default function BusinessPage() {
             </div>
           </section>
 
-          {/* Forecast */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('business.sections.forecast')}
+              {t('business.pipeline.title')}
             </h2>
-            <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
-              <p className="text-sm text-muted-foreground">
-                {t('business.forecast.basis', {
-                  avg: overview.averageDailyFills.toFixed(1),
-                  days: overview.forecastDays,
-                  price: formatEur(simPrice),
-                })}
-              </p>
-              {(() => {
-                const forecastFills = overview.averageDailyFills * overview.forecastDays;
-                const costPerFill = overview.settings.fillsPerSourceCylinder > 0
-                  ? simSourceCost / overview.settings.fillsPerSourceCylinder
-                  : 0;
-                const forecastRevenue = forecastFills * simPrice;
-                const forecastProfit = forecastFills * (simPrice - costPerFill);
-                const forecastSources = overview.settings.fillsPerSourceCylinder > 0
-                  ? forecastFills / overview.settings.fillsPerSourceCylinder
-                  : 0;
-
-                return (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <KpiCard label={t('business.forecast.fills')} value={forecastFills.toFixed(0)} />
-                      <KpiCard label={t('business.forecast.revenue')} value={formatEur(forecastRevenue)} />
-                      <KpiCard label={t('business.forecast.profit')} value={formatEur(forecastProfit)} />
-                      <KpiCard label={t('business.forecast.source')} value={forecastSources.toFixed(1)} />
-                    </div>
-                    <p className="text-sm">
-                      {t('business.forecast.summary', {
-                        fills: forecastFills.toFixed(0),
-                        revenue: formatEur(forecastRevenue),
-                        profit: formatEur(forecastProfit),
-                        sources: forecastSources.toFixed(1),
-                      })}
-                    </p>
-                  </>
-                );
-              })()}
-              {overview.daysUntilNextSourceCylinder > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {t('business.forecast.nextSource', { days: overview.daysUntilNextSourceCylinder })}
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* Insights */}
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('business.sections.insights')}
-            </h2>
-            <div className="space-y-2">
-              {insights.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-lg border text-sm ${
-                    item.severity === 'success'
-                      ? 'border-green-500/40 bg-green-500/10'
-                      : item.severity === 'warning'
-                        ? 'border-amber-500/40 bg-amber-500/10'
-                        : 'border-border bg-muted/30'
-                  }`}
-                >
-                  {item.text}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Detail: pipeline + top customers + weekday */}
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('business.sections.detail')}
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="border rounded-lg p-4 space-y-3">
-                <h3 className="font-semibold">{t('business.pipeline.title')}</h3>
-                <p className="text-sm text-muted-foreground">{t('business.pipeline.hint')}</p>
-                <div className="flex items-end gap-4">
-                  <div>
-                    <div className="text-3xl font-bold">{overview.pipelineReadyCount}</div>
-                    <div className="text-xs text-muted-foreground">{t('business.pipeline.ready')}</div>
-                  </div>
-                  <div>
-                    <div className="text-xl font-semibold">{formatEur(overview.pipelineValue)}</div>
-                    <div className="text-xs text-muted-foreground">{t('business.pipeline.value')}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border rounded-lg p-4 space-y-3">
-                <h3 className="font-semibold">{t('business.weekday.title')}</h3>
-                <div className="space-y-2">
-                  {overview.weekdayStats.map((day) => {
-                    const max = Math.max(0.1, ...overview.weekdayStats.map((d) => d.averageFills));
-                    return (
-                      <div key={day.dayOfWeek} className="flex items-center gap-3 text-sm">
-                        <div className="w-16 text-muted-foreground">{day.dayName.slice(0, 3)}</div>
-                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full bg-primary/70 rounded-full"
-                            style={{ width: `${(day.averageFills / max) * 100}%` }}
-                          />
-                        </div>
-                        <div className="w-10 text-right font-mono text-xs">
-                          {day.averageFills.toFixed(1)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
             <div className="border rounded-lg p-4 space-y-3">
-              <h3 className="font-semibold">{t('business.topCustomers.title')}</h3>
-              {overview.topCustomers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t('business.topCustomers.empty')}</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left text-muted-foreground">
-                        <th className="py-2 pr-3 font-medium">#</th>
-                        <th className="py-2 pr-3 font-medium">{t('business.topCustomers.name')}</th>
-                        <th className="py-2 pr-3 font-medium">{t('business.topCustomers.fills')}</th>
-                        <th className="py-2 font-medium">{t('business.topCustomers.revenue')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {overview.topCustomers.map((customer, idx) => (
-                        <tr key={customer.customerId} className="border-b border-border/50">
-                          <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
-                          <td className="py-2 pr-3 font-medium">{customer.name}</td>
-                          <td className="py-2 pr-3">{customer.deliveredFills}</td>
-                          <td className="py-2">{formatEur(customer.revenue)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <p className="text-sm text-muted-foreground">{t('business.pipeline.hint')}</p>
+              <div className="flex items-end gap-4">
+                <div>
+                  <div className="text-3xl font-bold">{overview.pipelineReadyCount}</div>
+                  <div className="text-xs text-muted-foreground">{t('business.pipeline.ready')}</div>
                 </div>
-              )}
+                <div>
+                  <div className="text-xl font-semibold">{formatEur(overview.pipelineValue)}</div>
+                  <div className="text-xs text-muted-foreground">{t('business.pipeline.value')}</div>
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* Settings */}
           <section className="space-y-3">
             <button
               onClick={() => setShowSettings(!showSettings)}
