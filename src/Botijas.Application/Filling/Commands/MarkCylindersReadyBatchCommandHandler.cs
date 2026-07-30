@@ -91,12 +91,17 @@ public class MarkCylindersReadyBatchCommandHandler
         // Check if order is now complete (all cylinders ready)
         var isOrderComplete = order.Status.ToString() == "ReadyForPickup";
 
+        var customerPendingCylinders = await _cylinderRepository.CountPendingByCustomerAsync(
+            order.CustomerId,
+            cancellationToken);
+
         return Result<BatchReadyResult>.Success(new BatchReadyResult
         {
             OrderId = order.OrderId,
             MarkedCount = markedCount,
             IsOrderComplete = isOrderComplete,
-            TotalCylindersInOrder = order.Cylinders.Count
+            TotalCylindersInOrder = order.Cylinders.Count,
+            CustomerPendingCylinders = customerPendingCylinders
         });
     }
 }
@@ -107,4 +112,6 @@ public class BatchReadyResult
     public int MarkedCount { get; set; }
     public bool IsOrderComplete { get; set; }
     public int TotalCylindersInOrder { get; set; }
+    /// <summary>Botijas do mesmo cliente ainda por encher noutros pedidos abertos.</summary>
+    public int CustomerPendingCylinders { get; set; }
 }

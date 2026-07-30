@@ -83,6 +83,12 @@ public class MarkCylinderReadyCommandHandler
         var totalCylinders = orderCylinders.Count;
         var readyCylinders = orderCylinders.Count(c => RefillOrder.IsCylinderReadyForPickup(c.State));
 
+        // O cliente pode ter botijas noutro pedido aberto (ex.: entrada dividida em dois
+        // passos). Avisar a UI para não convidar a notificar antes de tudo estar cheio.
+        var customerPendingCylinders = await _cylinderRepository.CountPendingByCustomerAsync(
+            order.CustomerId,
+            cancellationToken);
+
         return Result<FillingResultDto>.Success(new FillingResultDto
         {
             CylinderId = cylinder.CylinderId,
@@ -92,7 +98,8 @@ public class MarkCylinderReadyCommandHandler
             TotalCylindersInOrder = totalCylinders,
             ReadyCylindersInOrder = readyCylinders,
             IsOrderComplete = order.Status == RefillOrderStatus.ReadyForPickup,
-            WasAlreadyReady = wasAlreadyReady
+            WasAlreadyReady = wasAlreadyReady,
+            CustomerPendingCylinders = customerPendingCylinders
         });
     }
 }
@@ -107,4 +114,6 @@ public class FillingResultDto
     public int ReadyCylindersInOrder { get; set; }
     public bool IsOrderComplete { get; set; }
     public bool WasAlreadyReady { get; set; }
+    /// <summary>Botijas do mesmo cliente ainda por encher noutros pedidos abertos.</summary>
+    public int CustomerPendingCylinders { get; set; }
 }

@@ -132,6 +132,7 @@
     "alreadyMarkedRefresh": "{cylinder} já estava marcada como cheia. A fila foi atualizada.",
     "markAllReady": "Marcar {count} como prontas",
     "orderComplete": "Pedido de {name} completo!",
+    "orderCompleteButCustomerPending": "Pedido de {name} pronto, mas o cliente ainda tem {count} botija(s) por encher. WhatsApp só no fim.",
     "orderCompleteNotified": "Pedido completo! WhatsApp enviado para {name}.",
     "scanPlaceholder": "Escanear ou digitar codigo QR...",
     "scanCamera": "Escanear com Camera",
@@ -207,6 +208,7 @@
     "newCylinderDraft": "Nova botija",
     "closeOrder": "Fechar Pedido",
     "orderClosed": "Pedido fechado com sucesso",
+    "orderMerged": "Botijas juntas ao pedido aberto deste cliente",
     "reprintReason": "Motivo da reimpressão",
     "selectReason": "Selecione o motivo...",
     "reprintReasons": {

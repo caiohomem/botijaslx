@@ -150,7 +150,9 @@ export default function DeliveryPage() {
           orderStatus: cylinder.orderStatus,
           orderId: cylinder.orderId,
           lastEventAt: latestHistory?.timestamp || cylinder.createdAt,
-          availableForEntry: cylinder.state === 'Delivered',
+          // Disponível quando não está num pedido aberto nem já cheia. Assim uma botija
+          // que ficou em Received por uma entrada falhada pode voltar a ser dada entrada.
+          availableForEntry: cylinder.orderStatus !== 'Open' && cylinder.state !== 'Ready',
         };
       })
       .sort((a, b) => a.sequentialNumber - b.sequentialNumber);
@@ -379,64 +381,54 @@ export default function DeliveryPage() {
 
     setLoading(true);
     setError(null);
-    let createdOrderId: string | null = null;
 
     try {
-      const newOrder = await ordersApi.create({
+      const result = await ordersApi.closeIntake({
         customerId: selectedCustomer.customerId,
         fulfillmentMethod,
         refillPaid,
         shippingPaid: fulfillmentMethod === 'Shipping' ? shippingPaid : false,
+        existingCylinderIds: cylinders.filter(c => !c.isDraftNew).map(c => c.cylinderId),
+        newCylinderCount: cylinders.filter(c => c.isDraftNew).length,
       });
-      createdOrderId = newOrder.orderId;
-      const finalizedCylinders: Cylinder[] = [];
 
-      for (const cylinder of cylinders.filter(c => !c.isDraftNew)) {
-        const added = await ordersApi.addCylinder(newOrder.orderId, cylinder.cylinderId);
-        finalizedCylinders.push({ ...added });
-      }
+      const labelsToPrint = result.addedCylinders.filter(
+        (c) => !cylinders.some(draft => !draft.isDraftNew && draft.cylinderId === c.cylinderId)
+      );
 
-      const newDraftCount = cylinders.filter(c => c.isDraftNew).length;
-      if (newDraftCount > 0) {
-        const result = await ordersApi.addCylindersBatch(newOrder.orderId, newDraftCount);
-        const newCylinders = result.cylinders.map((c: any) => ({
-          cylinderId: c.cylinderId,
-          sequentialNumber: c.sequentialNumber,
-          labelToken: c.labelToken,
-          state: c.state,
-        }));
-
-        for (const createdCylinder of newCylinders) {
-          const qrCode = `${newOrder.orderId}-${createdCylinder.sequentialNumber}`;
-          const assigned = await cylindersApi.assignLabel(createdCylinder.cylinderId, qrCode);
-          createdCylinder.labelToken = assigned.labelToken;
-        }
-
-        finalizedCylinders.push(...newCylinders);
+      if (labelsToPrint.length > 0) {
         setPrintPreview({
-          labels: newCylinders.map((c: Cylinder) => ({
-            qrContent: c.labelToken ?? `${newOrder.orderId}-${c.sequentialNumber}`,
+          labels: labelsToPrint.map((c) => ({
+            qrContent: c.labelToken ?? `${result.orderId}-${c.sequentialNumber}`,
             sequentialNumber: c.sequentialNumber,
           })),
         });
       }
 
-      setOrder(newOrder);
-      setCylinders(finalizedCylinders);
-      showSuccess(tr('delivery.orderClosed', 'Pedido fechado'), 3000);
+      setOrder({
+        orderId: result.orderId,
+        customerId: result.customerId,
+        status: result.status,
+        fulfillmentMethod: result.fulfillmentMethod,
+        refillPaid: result.refillPaid,
+        shippingPaid: result.shippingPaid,
+        createdAt: result.createdAt,
+        cylinderCount: result.cylinderCount,
+      });
+      setCylinders(result.cylinders.map((c) => ({
+        cylinderId: c.cylinderId,
+        sequentialNumber: c.sequentialNumber,
+        labelToken: c.labelToken,
+        state: c.state,
+      })));
+
+      showSuccess(
+        result.reusedExistingOrder
+          ? tr('delivery.orderMerged', 'Botijas juntas ao pedido aberto deste cliente')
+          : tr('delivery.orderClosed', 'Pedido fechado'),
+        4000
+      );
     } catch (err) {
-      if (createdOrderId) {
-        // Evita deixar pedido Open órfão sem botijas (ou parcial incompleto → cancelar).
-        try {
-          await ordersApi.deleteEmpty(createdOrderId);
-        } catch {
-          try {
-            await ordersApi.cancel(createdOrderId, 'Rollback: falha ao fechar pedido');
-          } catch {
-            // best-effort cleanup
-          }
-        }
-      }
       setError(err instanceof Error ? err.message : 'Erro ao fechar pedido');
     } finally {
       setLoading(false);

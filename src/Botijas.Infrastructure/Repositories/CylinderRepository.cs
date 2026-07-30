@@ -55,6 +55,33 @@ public class CylinderRepository : ICylinderRepository
         return await FindByIdAsync(cylinderId, cancellationToken);
     }
 
+    public async Task<Guid?> FindOpenOrderIdAsync(Guid cylinderId, CancellationToken cancellationToken = default)
+    {
+        var orderId = await _context.CylinderRefs
+            .Join(_context.Orders,
+                cr => cr.OrderId,
+                o => o.OrderId,
+                (cr, o) => new { CylinderRef = cr, Order = o })
+            .Where(x => x.CylinderRef.CylinderId == cylinderId && x.Order.Status == RefillOrderStatus.Open)
+            .Select(x => (Guid?)x.Order.OrderId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return orderId;
+    }
+
+    public async Task<int> CountPendingByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
+    {
+        return await (
+            from cylinderRef in _context.CylinderRefs
+            join cylinder in _context.Cylinders on cylinderRef.CylinderId equals cylinder.CylinderId
+            join order in _context.Orders on cylinderRef.OrderId equals order.OrderId
+            where order.CustomerId == customerId
+                  && order.Status == RefillOrderStatus.Open
+                  && cylinder.State == CylinderState.Received
+            select cylinder.CylinderId
+        ).Distinct().CountAsync(cancellationToken);
+    }
+
     public async Task<List<Cylinder>> FindByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default)
     {
         var cylinderIds = await _context.CylinderRefs
