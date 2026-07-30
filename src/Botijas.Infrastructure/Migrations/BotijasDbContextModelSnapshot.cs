@@ -38,6 +38,10 @@ namespace Botijas.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<decimal>("ConsumerCylinderGasG")
+                        .HasPrecision(10, 1)
+                        .HasColumnType("numeric(10,1)");
+
                     b.Property<bool>("DebugEnabled")
                         .HasColumnType("boolean");
 
@@ -52,6 +56,10 @@ namespace Botijas.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<decimal>("RefillPriceEur")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
                     b.Property<string>("ShippingReadyMessageTemplate")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -59,6 +67,14 @@ namespace Botijas.Infrastructure.Migrations
 
                     b.Property<bool>("SoundNotificationsDisabled")
                         .HasColumnType("boolean");
+
+                    b.Property<decimal>("SourceCylinderCostEur")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("SourceCylinderGasKg")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
 
                     b.Property<string>("StoreLink")
                         .IsRequired()

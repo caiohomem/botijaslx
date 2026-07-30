@@ -529,6 +529,92 @@ export const reportsApi = {
   getStats: (days = 7) => apiRequest<DashboardStats>(`/api/reports/stats?days=${days}`),
 };
 
+// Business dashboard
+export interface BusinessFinanceSettings {
+  refillPriceEur: number;
+  sourceCylinderCostEur: number;
+  sourceCylinderGasKg: number;
+  consumerCylinderGasG: number;
+  fillsPerSourceCylinder: number;
+  gasCostPerFillEur: number;
+}
+
+export interface BusinessDailyPoint {
+  date: string;
+  filled: number;
+  delivered: number;
+  revenue: number;
+  gasCost: number;
+  profit: number;
+}
+
+export interface BusinessTopCustomer {
+  customerId: string;
+  name: string;
+  deliveredFills: number;
+  revenue: number;
+  lastDeliveredAt?: string;
+}
+
+export interface BusinessWeekdayStat {
+  dayOfWeek: number;
+  dayName: string;
+  averageFills: number;
+}
+
+export interface BusinessOverview {
+  days: number;
+  settings: BusinessFinanceSettings;
+  fillsDelivered: number;
+  fillsProduced: number;
+  revenue: number;
+  gasCost: number;
+  grossProfit: number;
+  marginPercent: number;
+  sourceCylindersConsumed: number;
+  prevFillsDelivered: number;
+  prevFillsProduced: number;
+  prevRevenue: number;
+  prevGrossProfit: number;
+  revenueChangePercent: number;
+  profitChangePercent: number;
+  fillsChangePercent: number;
+  dailySeries: BusinessDailyPoint[];
+  averageDailyFills: number;
+  forecastDays: number;
+  forecastFills: number;
+  forecastRevenue: number;
+  forecastGasCost: number;
+  forecastProfit: number;
+  forecastSourceCylinders: number;
+  daysUntilNextSourceCylinder: number;
+  pipelineReadyCount: number;
+  pipelineValue: number;
+  unpaidCompletedOrders: number;
+  problemCylinders: number;
+  topCustomers: BusinessTopCustomer[];
+  weekdayStats: BusinessWeekdayStat[];
+}
+
+export const businessApi = {
+  getOverview: (days = 30) =>
+    apiRequest<BusinessOverview>(`/api/business/overview?days=${days}`),
+
+  getSettings: () =>
+    apiRequest<BusinessFinanceSettings>('/api/business/settings'),
+
+  updateSettings: (data: {
+    refillPriceEur: number;
+    sourceCylinderCostEur: number;
+    sourceCylinderGasKg: number;
+    consumerCylinderGasG: number;
+  }) =>
+    apiRequest<BusinessFinanceSettings>('/api/business/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
 export const settingsApi = {
   get: () => apiRequest<AppSettings>('/api/settings'),
 
