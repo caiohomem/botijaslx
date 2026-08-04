@@ -1,5 +1,6 @@
 using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
+using Botijas.Domain.Services;
 using Botijas.Domain.ValueObjects;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -116,7 +117,6 @@ public class CylinderRepository : ICylinderRepository
                     join customer in _context.Customers on order.CustomerId equals customer.CustomerId
                     where cylinder.State == CylinderState.Received
                           && order.Status == RefillOrderStatus.Open
-                    orderby cylinder.CreatedAt ascending, cylinder.SequentialNumber ascending
                     select new
                     {
                         Cylinder = cylinder,
@@ -127,6 +127,7 @@ public class CylinderRepository : ICylinderRepository
         var results = await query.ToListAsync(cancellationToken);
 
         var orderIds = results.Select(r => r.Order.OrderId).Distinct().ToList();
+        var cylinderIds = results.Select(r => r.Cylinder.CylinderId).Distinct().ToList();
 
         var readyCounts = await (
             from cr in _context.CylinderRefs
@@ -145,21 +146,51 @@ public class CylinderRepository : ICylinderRepository
             .Select(g => new { OrderId = g.Key, TotalCount = g.Count() })
             .ToDictionaryAsync(x => x.OrderId, x => x.TotalCount, cancellationToken);
 
-        return results.Select(r => new FillingQueueItem
+        // Data de receção = evento Received deste pedido (botijas reutilizadas mantêm CreatedAt antigo).
+        var receivedEvents = await _context.CylinderHistory
+            .AsNoTracking()
+            .Where(h =>
+                cylinderIds.Contains(h.CylinderId) &&
+                h.EventType == CylinderEventType.Received &&
+                h.OrderId != null &&
+                orderIds.Contains(h.OrderId.Value))
+            .Select(h => new { h.CylinderId, OrderId = h.OrderId!.Value, h.Timestamp, h.Id })
+            .ToListAsync(cancellationToken);
+
+        var receivedAtByCylinderOrder = receivedEvents
+            .GroupBy(h => (h.CylinderId, h.OrderId))
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.Timestamp).ThenByDescending(x => x.Id).First().Timestamp);
+
+        return results
+            .Select(r =>
             {
-                CylinderId = r.Cylinder.CylinderId,
-                SequentialNumber = r.Cylinder.SequentialNumber,
-                LabelToken = r.Cylinder.LabelToken?.Value,
-                State = r.Cylinder.State.ToString(),
-                ReceivedAt = r.Cylinder.CreatedAt,
-                OrderId = r.Order.OrderId,
-                CustomerName = r.Customer.Name,
-                CustomerPhone = r.Customer.Phone.Value,
-                CustomerPhoneType = r.Customer.PhoneType.ToString(),
-                FulfillmentMethod = r.Order.FulfillmentMethod.ToString(),
-                TotalCylindersInOrder = totalCounts.GetValueOrDefault(r.Order.OrderId, 0),
-                ReadyCylindersInOrder = readyCounts.GetValueOrDefault(r.Order.OrderId, 0)
-        }).ToList();
+                DateTime? receivedEventAt = receivedAtByCylinderOrder.TryGetValue(
+                    (r.Cylinder.CylinderId, r.Order.OrderId),
+                    out var timestamp)
+                    ? timestamp
+                    : null;
+
+                return new FillingQueueItem
+                {
+                    CylinderId = r.Cylinder.CylinderId,
+                    SequentialNumber = r.Cylinder.SequentialNumber,
+                    LabelToken = r.Cylinder.LabelToken?.Value,
+                    State = r.Cylinder.State.ToString(),
+                    ReceivedAt = CylinderReceivedAt.Resolve(receivedEventAt, r.Order.CreatedAt),
+                    OrderId = r.Order.OrderId,
+                    CustomerName = r.Customer.Name,
+                    CustomerPhone = r.Customer.Phone.Value,
+                    CustomerPhoneType = r.Customer.PhoneType.ToString(),
+                    FulfillmentMethod = r.Order.FulfillmentMethod.ToString(),
+                    TotalCylindersInOrder = totalCounts.GetValueOrDefault(r.Order.OrderId, 0),
+                    ReadyCylindersInOrder = readyCounts.GetValueOrDefault(r.Order.OrderId, 0)
+                };
+            })
+            .OrderBy(item => item.ReceivedAt)
+            .ThenBy(item => item.SequentialNumber)
+            .ToList();
     }
 
     public async Task<List<Cylinder>> FindByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
