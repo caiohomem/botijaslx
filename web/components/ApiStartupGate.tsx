@@ -59,7 +59,7 @@ export function ApiStartupGate({ children }: ApiStartupGateProps) {
           </p>
           {showExtendedMessage ? (
             <p className="text-sm text-muted-foreground">
-              Isto pode demorar alguns segundos no plano gratuito do Render.
+              Confirma que a API está em http://localhost:8080/health. Se usares Docker: docker compose logs -f api
             </p>
           ) : null}
         </div>

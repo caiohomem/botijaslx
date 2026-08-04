@@ -15,22 +15,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    restart: unless-stopped
 
   api:
     build:
       context: .
       dockerfile: src/Botijas.Api/Dockerfile
     container_name: botijas-api
-    network_mode: host
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://127.0.0.1:8080
-      ConnectionStrings__Default: Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=devdb;Username=devuser;Password=devpass;Include Error Detail=true
       CORS__AllowedOrigins: http://localhost:3000
       API_KEY: oficina
     depends_on:
       postgres:
         condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
 
   web:
     build:
@@ -43,16 +53,16 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: 0.0.0.0
       NEXT_PUBLIC_API_BASE: http://localhost:8080
       NEXT_PUBLIC_API_KEY: oficina
-      INTERNAL_API_BASE: http://host.docker.internal:8080
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      INTERNAL_API_BASE: http://api:8080
     depends_on:
       api:
         condition: service_started
     ports:
       - "3000:3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:

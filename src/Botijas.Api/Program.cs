@@ -120,47 +120,93 @@ app.UseExceptionHandler(errorApp =>
 });
 app.UseMiddleware<ApiKeyMiddleware>();
 app.UseAuthorization();
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+// Track DB readiness so /health can stay up while migrations run after listen.
+var databaseReady = false;
+var databaseError = (string?)null;
+
+app.MapGet("/health", () =>
+{
+    // Liveness: process is listening on :8080 (fixes ERR_CONNECTION_REFUSED during migrate).
+    return Results.Ok(new
+    {
+        status = databaseReady ? "ok" : "starting",
+        database = databaseReady ? "ready" : "migrating",
+        error = databaseError
+    });
+});
+app.MapGet("/ready", () =>
+{
+    if (databaseReady)
+    {
+        return Results.Ok(new { status = "ok", database = "ready" });
+    }
+
+    return Results.Json(
+        new { status = "starting", database = "migrating", error = databaseError },
+        statusCode: StatusCodes.Status503ServiceUnavailable);
+});
+app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapControllers();
 
-// Database bootstrap: apply pending migrations automatically on startup.
+// Listen first, then migrate — otherwise nothing binds :8080 and the UI gets
+// ERR_CONNECTION_REFUSED while EF is still waiting on Postgres.
 var autoInitDb = builder.Configuration.GetValue("Database__AutoInitialize", true);
-if (autoInitDb)
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<BotijasDbContext>();
-    const int maxAttempts = 20;
-    var attempt = 0;
-
-    while (true)
+    if (!autoInitDb)
     {
-        try
-        {
-            var pending = dbContext.Database.GetPendingMigrations().ToList();
-            if (pending.Count > 0)
-            {
-                app.Logger.LogInformation(
-                    "Applying {Count} pending migrations: {Migrations}",
-                    pending.Count,
-                    string.Join(", ", pending));
-            }
-
-            dbContext.Database.Migrate();
-            break;
-        }
-        catch (Exception ex) when (attempt < maxAttempts)
-        {
-            attempt++;
-            app.Logger.LogWarning(
-                ex,
-                "Database not ready yet (attempt {Attempt}/{MaxAttempts}). Retrying in 2s...",
-                attempt,
-                maxAttempts);
-
-            Thread.Sleep(TimeSpan.FromSeconds(2));
-        }
+        databaseReady = true;
+        return;
     }
-}
+
+    _ = Task.Run(() =>
+    {
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<BotijasDbContext>();
+        const int maxAttempts = 30;
+        var attempt = 0;
+
+        while (true)
+        {
+            try
+            {
+                var pending = dbContext.Database.GetPendingMigrations().ToList();
+                if (pending.Count > 0)
+                {
+                    app.Logger.LogInformation(
+                        "Applying {Count} pending migrations: {Migrations}",
+                        pending.Count,
+                        string.Join(", ", pending));
+                }
+
+                dbContext.Database.Migrate();
+                databaseReady = true;
+                databaseError = null;
+                app.Logger.LogInformation("Database migrations applied successfully.");
+                break;
+            }
+            catch (Exception ex) when (attempt < maxAttempts)
+            {
+                attempt++;
+                databaseError = ex.GetBaseException().Message;
+                app.Logger.LogWarning(
+                    ex,
+                    "Database not ready yet (attempt {Attempt}/{MaxAttempts}). Retrying in 2s...",
+                    attempt,
+                    maxAttempts);
+
+                Thread.Sleep(TimeSpan.FromSeconds(2));
+            }
+            catch (Exception ex)
+            {
+                databaseError = ex.GetBaseException().Message;
+                app.Logger.LogError(ex, "Database migration failed after {MaxAttempts} attempts.", maxAttempts);
+                break;
+            }
+        }
+    });
+});
 
 app.Run();
 

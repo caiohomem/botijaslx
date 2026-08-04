@@ -1,10 +1,30 @@
 # Quick Start - Botijas CO₂
 
-## Pré-requisitos
+## Docker (mais fácil)
+
+```bash
+docker compose up --build
+```
+
+| Serviço | URL |
+|---------|-----|
+| Web | http://localhost:3000 |
+| API | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger |
+| Health | http://localhost:8080/health |
+
+Header obrigatório nas rotas `/api/*`: `X-Api-Key: oficina`
+
+```bash
+curl http://localhost:8080/health
+curl -H "X-Api-Key: oficina" "http://localhost:8080/api/customers?query=joao"
+```
+
+## Pré-requisitos (sem Docker)
 
 - Node.js 18+ (para frontend)
 - .NET SDK 10.0+ (para backend)
-- SQLite (vem com .NET)
+- PostgreSQL (ou use só o serviço `postgres` do compose)
 
 ## Iniciar Frontend
 
@@ -30,8 +50,9 @@ Acesse: http://localhost:5000/swagger
 
 ### Criar Cliente
 ```bash
-curl -X POST http://localhost:5000/api/customers \
+curl -X POST http://localhost:8080/api/customers \
   -H "Content-Type: application/json" \
+  -H "X-Api-Key: oficina" \
   -d '{
     "name": "João Silva",
     "phone": "912345678",
@@ -41,7 +62,7 @@ curl -X POST http://localhost:5000/api/customers \
 
 ### Buscar Clientes
 ```bash
-curl "http://localhost:5000/api/customers?query=joao"
+curl -H "X-Api-Key: oficina" "http://localhost:8080/api/customers?query=joao"
 ```
 
 ## Estrutura do Projeto

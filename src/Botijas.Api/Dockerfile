@@ -15,7 +15,13 @@ RUN dotnet publish src/Botijas.Api/Botijas.Api.csproj -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-ENV ASPNETCORE_URLS=http://+:8080
+# curl is used by compose healthchecks
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENV ASPNETCORE_HTTP_PORTS=8080
 ENV ASPNETCORE_ENVIRONMENT=Development
 
 EXPOSE 8080

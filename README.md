@@ -6,7 +6,7 @@ Sistema de gestão de enchimento de botijas CO₂ com foco em operação de loja
 
 - **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS
 - **Backend**: ASP.NET Core (.NET 10)
-- **DB**: SQLite com EF Core
+- **DB**: PostgreSQL com EF Core
 - **Real-time**: SignalR - *em desenvolvimento*
 
 ## Funcionalidades
@@ -15,7 +15,33 @@ Sistema de gestão de enchimento de botijas CO₂ com foco em operação de loja
 - 🌓 **Tema claro/escuro** com persistência
 - 📱 Interface responsiva
 
-## Desenvolvimento
+## Docker Compose (recomendado)
+
+```bash
+docker compose up --build
+```
+
+Serviços disponíveis:
+- **Web**: http://localhost:3000
+- **API**: http://localhost:8080
+- **Swagger**: http://localhost:8080/swagger
+- **Health**: http://localhost:8080/health
+- **Postgres**: localhost:5432 (`devuser` / `devpass` / `devdb`)
+
+A API exige o header `X-Api-Key: oficina` (exceto `/health` e `/swagger`).
+
+```bash
+curl http://localhost:8080/health
+curl -H "X-Api-Key: oficina" http://localhost:8080/api/customers
+```
+
+Para desenvolvimento local sem build do frontend:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+## Desenvolvimento (sem Docker)
 
 ### Frontend
 
