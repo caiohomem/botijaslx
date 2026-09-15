@@ -43,6 +43,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_API_BASE: http://localhost:8080
       NEXT_PUBLIC_API_KEY: oficina
       INTERNAL_API_BASE: http://host.docker.internal:8080
