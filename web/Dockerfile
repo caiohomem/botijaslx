@@ -19,10 +19,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+# Docker sets HOSTNAME to the container ID; Next.js standalone binds to HOSTNAME.
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3000
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-CMD ["node", "server.js"]
+# Force bind address at runtime (Docker may override ENV HOSTNAME with container ID).
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 exec node server.js"]

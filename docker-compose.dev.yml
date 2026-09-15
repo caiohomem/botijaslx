@@ -39,6 +39,7 @@ services:
         NEXT_PUBLIC_API_KEY: oficina
     environment:
       NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_API_BASE: http://localhost:8080
       NEXT_PUBLIC_API_KEY: oficina
       INTERNAL_API_BASE: http://api:8080
