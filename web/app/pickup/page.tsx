@@ -78,13 +78,6 @@ export default function PickupPage() {
 
   useEffect(() => {
     loadOrders(debouncedSearch || undefined);
-
-    // M5: Auto-refresh with polling every 10 seconds
-    const pollInterval = setInterval(() => {
-      loadOrders(debouncedSearchRef.current || undefined);
-    }, 10000);
-
-    return () => clearInterval(pollInterval);
   }, [debouncedSearch, loadOrders]);
 
   const openReadyWhatsApp = async (order: PickupOrder) => {
@@ -253,14 +246,7 @@ export default function PickupPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t('pickup.title')}</h1>
-        {/* M5: Auto-refresh indicator */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          {t('common.autoRefresh') || 'Auto-refresh: every 10s'}
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold">{t('pickup.title')}</h1>
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">{t('pickup.filterBy')}</span>
