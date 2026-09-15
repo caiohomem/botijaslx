@@ -86,6 +86,62 @@ public class PickupOrderConsolidatorTests
     }
 
     [Fact]
+    public void ConsolidateByCustomer_MergesOrdersWithSamePhoneButDifferentCustomerIds()
+    {
+        var olderOrderId = Guid.NewGuid();
+        var newerOrderId = Guid.NewGuid();
+
+        var orders = new List<PickupOrderDto>
+        {
+            new()
+            {
+                OrderId = olderOrderId,
+                CustomerId = Guid.NewGuid(),
+                CustomerName = "João Michel",
+                CustomerPhone = "914229090",
+                FulfillmentMethod = "Pickup",
+                CreatedAt = new DateTime(2026, 6, 5, 19, 47, 0, DateTimeKind.Utc),
+                ReadyAt = new DateTime(2026, 6, 5, 19, 47, 0, DateTimeKind.Utc),
+                Cylinders =
+                [
+                    new PickupCylinderDto
+                    {
+                        CylinderId = Guid.NewGuid(),
+                        SequentialNumber = 1188,
+                        State = "Ready",
+                        OrderId = olderOrderId,
+                    },
+                ],
+            },
+            new()
+            {
+                OrderId = newerOrderId,
+                CustomerId = Guid.NewGuid(),
+                CustomerName = "João Michel",
+                CustomerPhone = "+351 914 229 090",
+                FulfillmentMethod = "Pickup",
+                CreatedAt = new DateTime(2026, 9, 7, 13, 20, 0, DateTimeKind.Utc),
+                ReadyAt = new DateTime(2026, 9, 7, 13, 20, 0, DateTimeKind.Utc),
+                Cylinders =
+                [
+                    new PickupCylinderDto
+                    {
+                        CylinderId = Guid.NewGuid(),
+                        SequentialNumber = 1190,
+                        State = "Ready",
+                        OrderId = newerOrderId,
+                    },
+                ],
+            },
+        };
+
+        var consolidated = PickupOrderConsolidator.ConsolidateByCustomer(orders);
+
+        Assert.Single(consolidated);
+        Assert.Equal(2, consolidated[0].TotalCylinders);
+    }
+
+    [Fact]
     public void ConsolidateByCustomer_KeepsSeparateCardsForDifferentFulfillmentMethods()
     {
         var customerId = Guid.NewGuid();

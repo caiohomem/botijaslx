@@ -9,11 +9,17 @@ public static class PickupOrderConsolidator
     public static List<PickupOrderDto> ConsolidateByCustomer(IEnumerable<PickupOrderDto> orders)
     {
         return orders
-            .GroupBy(o => (o.CustomerId, o.FulfillmentMethod))
+            .GroupBy(o => (NormalizePhone(o.CustomerPhone), NormalizeFulfillment(o.FulfillmentMethod)))
             .Select(BuildConsolidatedOrder)
             .OrderBy(o => o.ReadyAt ?? o.CreatedAt)
             .ToList();
     }
+
+    internal static string NormalizePhone(string phone) =>
+        new string(phone.Where(char.IsDigit).ToArray());
+
+    internal static string NormalizeFulfillment(string fulfillment) =>
+        string.IsNullOrWhiteSpace(fulfillment) ? "Pickup" : fulfillment.Trim();
 
     private static PickupOrderDto BuildConsolidatedOrder(IEnumerable<PickupOrderDto> group)
     {
