@@ -31,13 +31,30 @@ public class CreateOrderCommandHandler
             return Result<OrderDto>.Failure("Customer not found");
         }
 
-        // Cada entrada de botijas gera um pedido distinto.
-        var order = RefillOrder.Create(
-            command.CustomerId,
-            fulfillmentMethod,
-            command.RefillPaid,
-            command.ShippingPaid);
-        await _orderRepository.AddAsync(order, cancellationToken);
+        // Uma visita = um pedido aberto por cliente/modo (mesma regra do CloseIntake).
+        var openOrders = await _orderRepository.FindOpenOrdersByCustomerAsync(command.CustomerId, cancellationToken);
+        var order = openOrders
+            .Where(o => o.FulfillmentMethod == fulfillmentMethod)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefault();
+
+        if (order == null)
+        {
+            order = RefillOrder.Create(
+                command.CustomerId,
+                fulfillmentMethod,
+                command.RefillPaid,
+                command.ShippingPaid);
+            await _orderRepository.AddAsync(order, cancellationToken);
+        }
+        else
+        {
+            order.UpdateFulfillmentDetails(
+                fulfillmentMethod,
+                order.RefillPaid || command.RefillPaid,
+                order.ShippingPaid || command.ShippingPaid);
+        }
+
         await _orderRepository.SaveChangesAsync(cancellationToken);
 
         return Result<OrderDto>.Success(new OrderDto

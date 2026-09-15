@@ -406,6 +406,7 @@ export interface PickupCylinder {
   state: string;
   occurrenceNotes?: string;
   isDelivered: boolean;
+  orderId?: string;
 }
 
 export interface PickupOrder {
