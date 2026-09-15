@@ -15,10 +15,12 @@ export default function PickupPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const requestIdRef = useRef(0);
+  const debouncedSearchRef = useRef('');
   const [pickupTemplate, setPickupTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
   const [shippingTemplate, setShippingTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
   const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
@@ -32,20 +34,26 @@ export default function PickupPage() {
     }
   }, []);
 
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (search?: string) => {
+    const requestId = ++requestIdRef.current;
+
     try {
       setError(null);
-      const response = await pickupApi.getReadyForPickup(searchQuery || undefined);
+      setLoading(true);
+      const response = await pickupApi.getReadyForPickup(search || undefined);
+      if (requestId !== requestIdRef.current) return;
       setOrders(response.orders);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : 'Erro ao carregar pedidos');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
-    loadOrders();
     loadAppSettings().then((settings) => {
       setPickupTemplate(settings.whatsAppMessageTemplate);
       setShippingTemplate(settings.shippingReadyMessageTemplate);
@@ -53,20 +61,31 @@ export default function PickupPage() {
       setDeadlineTemplate(settings.deadlineMessageTemplate);
       setStoreLink(settings.storeLink);
     });
+  }, []);
+
+  // M9: Debounced live search (300ms, same pattern as CustomerSearch)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    debouncedSearchRef.current = debouncedSearch;
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    loadOrders(debouncedSearch || undefined);
 
     // M5: Auto-refresh with polling every 10 seconds
     const pollInterval = setInterval(() => {
-      loadOrders();
+      loadOrders(debouncedSearchRef.current || undefined);
     }, 10000);
 
-    return () => {
-      clearInterval(pollInterval);
-      // M9: Cleanup debounce timer on unmount
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [loadOrders]);
+    return () => clearInterval(pollInterval);
+  }, [debouncedSearch, loadOrders]);
 
   const openReadyWhatsApp = async (order: PickupOrder) => {
     const template = order.fulfillmentMethod === 'Shipping'
@@ -149,8 +168,7 @@ export default function PickupPage() {
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao marcar pedido como enviado');
-      setLoading(true);
-      loadOrders();
+      loadOrders(debouncedSearchRef.current || undefined);
     } finally {
       setActionLoading(null);
     }
@@ -189,8 +207,7 @@ export default function PickupPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao entregar botijas');
       // Reload to get current state
-      setLoading(true);
-      loadOrders();
+      loadOrders(debouncedSearchRef.current || undefined);
     } finally {
       setActionLoading(null);
     }
@@ -233,22 +250,6 @@ export default function PickupPage() {
           ? t('pickup.filters.pickup')
           : t('pickup.filters.shipping')
       });
-
-  // M9: Debounced live search
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    // Set new timer for debounced search (500ms)
-    debounceTimerRef.current = setTimeout(() => {
-      setLoading(true);
-      // loadOrders will be called via useEffect when searchQuery changes
-    }, 500);
-  };
 
   return (
     <div className="space-y-6">
@@ -324,15 +325,15 @@ export default function PickupPage() {
       <div className="relative">
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t('pickup.searchPlaceholder')}
           className="w-full px-4 py-2 border rounded-lg bg-background text-foreground"
           autoComplete="off"
         />
-        {searchQuery && (
+        {searchInput && (
           <button
-            onClick={() => handleSearchChange('')}
+            onClick={() => setSearchInput('')}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
             title={t('common.close')}
           >
@@ -562,7 +563,7 @@ export default function PickupPage() {
       {/* Refresh Button */}
       <div className="flex justify-center">
         <button
-          onClick={() => { setLoading(true); loadOrders(); }}
+          onClick={() => loadOrders(debouncedSearchRef.current || undefined)}
           disabled={loading}
           className="px-4 py-2 border rounded-lg hover:bg-accent disabled:opacity-50"
         >
