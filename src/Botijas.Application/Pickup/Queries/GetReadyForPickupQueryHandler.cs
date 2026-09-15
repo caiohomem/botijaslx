@@ -58,7 +58,8 @@ public class GetReadyForPickupQueryHandler
                 LabelToken = c.LabelToken?.Value,
                 State = c.State.ToString(),
                 OccurrenceNotes = c.OccurrenceNotes,
-                IsDelivered = c.State == CylinderState.Delivered
+                IsDelivered = c.State == CylinderState.Delivered,
+                OrderId = order.OrderId,
             }).ToList();
 
             result.Add(new PickupOrderDto
@@ -83,8 +84,7 @@ public class GetReadyForPickupQueryHandler
             });
         }
 
-        // Ordenar por data em que ficou pronto (mais antigos primeiro)
-        result = result.OrderBy(o => o.ReadyAt ?? o.CreatedAt).ToList();
+        result = PickupOrderConsolidator.ConsolidateByCustomer(result);
 
         return Result<List<PickupOrderDto>>.Success(result);
     }

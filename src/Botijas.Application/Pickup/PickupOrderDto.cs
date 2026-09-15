@@ -29,4 +29,6 @@ public class PickupCylinderDto
     public string State { get; set; } = string.Empty;
     public string? OccurrenceNotes { get; set; }
     public bool IsDelivered { get; set; }
+    /// <summary>Pedido real da botija (útil quando vários pedidos do mesmo cliente foram agregados).</summary>
+    public Guid OrderId { get; set; }
 }

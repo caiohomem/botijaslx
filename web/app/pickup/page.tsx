@@ -80,6 +80,14 @@ export default function PickupPage() {
     loadOrders(debouncedSearch || undefined);
   }, [debouncedSearch, loadOrders]);
 
+  const getRelatedOrderIds = (order: PickupOrder): string[] => {
+    const ids = order.cylinders
+      .map((cylinder) => cylinder.orderId)
+      .filter((id): id is string => Boolean(id));
+
+    return [...new Set(ids.length > 0 ? ids : [order.orderId])];
+  };
+
   const openReadyWhatsApp = async (order: PickupOrder) => {
     const template = order.fulfillmentMethod === 'Shipping'
       ? shippingTemplate
@@ -95,10 +103,10 @@ export default function PickupPage() {
     );
     window.open(link, '_blank');
 
-    // Marcar como notificado se ainda não foi
+    // Marcar como notificado se ainda não foi (inclui pedidos agregados do mesmo cliente)
     if (order.needsNotification) {
       try {
-        await pickupApi.markNotified(order.orderId);
+        await Promise.all(getRelatedOrderIds(order).map((orderId) => pickupApi.markNotified(orderId)));
         setOrders(prev => prev.map(o =>
           o.orderId === order.orderId
             ? { ...o, needsNotification: false, notifiedAt: new Date().toISOString() }
@@ -152,7 +160,9 @@ export default function PickupPage() {
     setSuccessMessage(null);
 
     try {
-      await pickupApi.markShipped(order.orderId);
+      for (const orderId of getRelatedOrderIds(order)) {
+        await pickupApi.markShipped(orderId);
+      }
       openThankYouWhatsApp(order);
       playSound('complete');
       setOrders(prev => prev.filter(o => o.orderId !== order.orderId));
@@ -176,9 +186,9 @@ export default function PickupPage() {
     setSuccessMessage(null);
 
     try {
-      // Deliver all undelivered cylinders one by one
+      // Deliver all undelivered cylinders one by one (cada botija pertence ao seu pedido real)
       for (const cylinder of undelivered) {
-        await pickupApi.deliverCylinder(order.orderId, cylinder.cylinderId);
+        await pickupApi.deliverCylinder(cylinder.orderId ?? order.orderId, cylinder.cylinderId);
       }
 
       if (sendThankYou) {
