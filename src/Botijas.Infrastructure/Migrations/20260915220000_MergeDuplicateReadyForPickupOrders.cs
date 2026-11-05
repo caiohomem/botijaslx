@@ -16,6 +16,7 @@ public partial class MergeDuplicateReadyForPickupOrders : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         // Pedidos ReadyForPickup duplicados do mesmo cliente/modo (legado) → um só pedido.
+        // Um único statement: o Npgsql executa cada comando separado e a CTE não chega ao DELETE.
         migrationBuilder.Sql(
             $"""
             WITH grouped AS (
@@ -36,12 +37,14 @@ public partial class MergeDuplicateReadyForPickupOrders : Migration
                 FROM grouped g
                 CROSS JOIN LATERAL unnest(g.order_ids) AS duplicate_id
                 WHERE duplicate_id <> g.primary_order_id
+            ),
+            moved_refs AS (
+                UPDATE "CylinderRefs" cr
+                SET "OrderId" = dm.primary_order_id
+                FROM duplicate_map dm
+                WHERE cr."OrderId" = dm.duplicate_id
+                RETURNING cr."CylinderId"
             )
-            UPDATE "CylinderRefs" cr
-            SET "OrderId" = dm.primary_order_id
-            FROM duplicate_map dm
-            WHERE cr."OrderId" = dm.duplicate_id;
-
             DELETE FROM "Orders" o
             USING grouped g
             WHERE o."Status" = '{nameof(RefillOrderStatus.ReadyForPickup)}'

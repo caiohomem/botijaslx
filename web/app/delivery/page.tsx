@@ -45,6 +45,7 @@ interface CustomerCylinderListItem {
   orderId: string;
   lastEventAt: string;
   availableForEntry: boolean;
+  returnedWithoutExit: boolean;
 }
 
 interface CustomerOrderHistoryItem {
@@ -150,9 +151,10 @@ export default function DeliveryPage() {
           orderStatus: cylinder.orderStatus,
           orderId: cylinder.orderId,
           lastEventAt: latestHistory?.timestamp || cylinder.createdAt,
-          // Disponível quando não está num pedido aberto nem já cheia. Assim uma botija
-          // que ficou em Received por uma entrada falhada pode voltar a ser dada entrada.
-          availableForEntry: cylinder.orderStatus !== 'Open' && cylinder.state !== 'Ready',
+          // Uma botija pronta ainda «por sair» pode voltar: a entrada regista a saída em falta.
+          // Received num pedido aberto continua na oficina, à espera de encher.
+          returnedWithoutExit: cylinder.state === 'Ready',
+          availableForEntry: cylinder.state === 'Ready' || cylinder.orderStatus !== 'Open',
         };
       })
       .sort((a, b) => a.sequentialNumber - b.sequentialNumber);
@@ -549,7 +551,7 @@ export default function DeliveryPage() {
                   {tr('delivery.customerCylinders', 'Botijas do cliente')} ({customerCylinders.length})
                 </h3>
                 <div className="text-sm text-muted-foreground">
-                  {tr('delivery.customerCylindersHelp', 'Selecione as botijas entregues que quer dar entrada neste pedido')}
+                  {tr('delivery.customerCylindersHelp', 'Selecione as botijas que quer dar entrada. Se ainda estão por sair, a entrada regista a saída em falta.')}
                 </div>
               </div>
 
@@ -557,9 +559,11 @@ export default function DeliveryPage() {
                 {customerCylinders.map((cylinder) => {
                   const selected = cylinders.some(c => c.cylinderId === cylinder.cylinderId);
                   const available = cylinder.availableForEntry;
-                  const label = available
-                    ? tr('delivery.availableForEntry', 'Disponível para entrada')
-                    : tr('delivery.notAvailableForEntry', 'Indisponível');
+                  const label = !available
+                    ? tr('delivery.notAvailableForEntry', 'Indisponível')
+                    : cylinder.returnedWithoutExit
+                      ? tr('delivery.returnedWithoutExit', 'Voltou sem saída')
+                      : tr('delivery.availableForEntry', 'Disponível para entrada');
 
                   return (
                     <button
@@ -574,9 +578,11 @@ export default function DeliveryPage() {
                       className={`p-3 border rounded-lg text-left transition-colors ${
                         selected
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                          : available
-                            ? 'hover:bg-accent border-blue-200 dark:border-blue-800'
-                            : 'opacity-60 border-muted bg-muted/20 cursor-not-allowed'
+                          : cylinder.returnedWithoutExit
+                            ? 'hover:bg-accent border-amber-300 dark:border-amber-700'
+                            : available
+                              ? 'hover:bg-accent border-blue-200 dark:border-blue-800'
+                              : 'opacity-60 border-muted bg-muted/20 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -591,9 +597,11 @@ export default function DeliveryPage() {
                         <div className={`text-xs font-medium px-2 py-1 rounded-full ${
                           selected
                             ? 'bg-green-600 text-white'
-                            : available
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                              : 'bg-muted text-muted-foreground'
+                            : cylinder.returnedWithoutExit
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+                              : available
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'bg-muted text-muted-foreground'
                         }`}>
                           {selected ? tr('delivery.selectedForOrder', 'Selecionada') : label}
                         </div>

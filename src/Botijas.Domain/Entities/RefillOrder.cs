@@ -101,6 +101,21 @@ public class RefillOrder
         _cylinders.Add(new CylinderRef(OrderId, cylinder.CylinderId));
     }
 
+    /// <summary>
+    /// Tira a botija deste pedido. A saída fica no histórico: o ciclo novo não pode
+    /// continuar ligado aqui quando o pedido ainda tem outras botijas.
+    /// </summary>
+    public bool ReleaseCylinder(Guid cylinderId)
+    {
+        var match = _cylinders.FirstOrDefault(c => c.CylinderId == cylinderId);
+        if (match == null)
+        {
+            return false;
+        }
+
+        return _cylinders.Remove(match);
+    }
+
     public void Cancel(string notes)
     {
         if (Status == RefillOrderStatus.Completed)
