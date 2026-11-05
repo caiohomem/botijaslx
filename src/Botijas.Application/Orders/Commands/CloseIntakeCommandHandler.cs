@@ -66,6 +66,33 @@ public class CloseIntakeCommandHandler
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefault();
 
+        if (order != null)
+        {
+            var candidateId = order.OrderId;
+            var promotedAway = false;
+            await _orderRepository.ExecuteLockedAsync(candidateId, async ct =>
+            {
+                var fresh = await _orderRepository.FindByIdAsync(candidateId, ct);
+                if (fresh == null || fresh.Status != RefillOrderStatus.Open)
+                {
+                    promotedAway = true;
+                    return;
+                }
+
+                var existingCylinders = await _cylinderRepository.FindByOrderIdAsync(candidateId, ct);
+                fresh.RecalculateStatus(existingCylinders);
+                if (fresh.Status != RefillOrderStatus.Open)
+                {
+                    promotedAway = true;
+                    await _orderRepository.SaveChangesAsync(ct);
+                }
+            }, cancellationToken);
+
+            order = promotedAway
+                ? null
+                : await _orderRepository.FindByIdAsync(candidateId, cancellationToken);
+        }
+
         var reusedExistingOrder = order != null;
 
         if (order == null)

@@ -22,15 +22,36 @@ public class MarkCylinderReadyCommandHandler
 
     public async Task<Result<FillingResultDto>> Handle(MarkCylinderReadyCommand command, CancellationToken cancellationToken)
     {
-        // Buscar cilindro
-        var cylinder = await _cylinderRepository.FindByIdAsync(command.CylinderId, cancellationToken);
+        var probe = await _cylinderRepository.FindByIdAsync(command.CylinderId, cancellationToken);
+        if (probe == null)
+        {
+            return Result<FillingResultDto>.Failure("Botija não encontrada");
+        }
+
+        var probeOrder = await _orderRepository.FindByCylinderIdAsync(command.CylinderId, cancellationToken);
+        if (probeOrder == null)
+        {
+            return Result<FillingResultDto>.Failure("Pedido não encontrado para esta botija");
+        }
+
+        Result<FillingResultDto>? result = null;
+        await _orderRepository.ExecuteLockedAsync(probeOrder.OrderId, async ct =>
+        {
+            result = await MarkLockedAsync(command.CylinderId, ct);
+        }, cancellationToken);
+
+        return result ?? Result<FillingResultDto>.Failure("Pedido não encontrado para esta botija");
+    }
+
+    private async Task<Result<FillingResultDto>> MarkLockedAsync(Guid cylinderId, CancellationToken cancellationToken)
+    {
+        var cylinder = await _cylinderRepository.FindByIdAsync(cylinderId, cancellationToken);
         if (cylinder == null)
         {
             return Result<FillingResultDto>.Failure("Botija não encontrada");
         }
 
-        // Buscar pedido que contém esta botija
-        var order = await _orderRepository.FindByCylinderIdAsync(command.CylinderId, cancellationToken);
+        var order = await _orderRepository.FindByCylinderIdAsync(cylinderId, cancellationToken);
         if (order == null)
         {
             return Result<FillingResultDto>.Failure("Pedido não encontrado para esta botija");
@@ -42,15 +63,10 @@ public class MarkCylinderReadyCommandHandler
                 $"Pedido não está aberto para enchimento. Estado atual: {order.Status}");
         }
 
-        var orderCylinderRef = order.Cylinders.FirstOrDefault(c => c.CylinderId == command.CylinderId);
-        if (orderCylinderRef == null)
+        if (order.Cylinders.All(c => c.CylinderId != cylinderId))
         {
             return Result<FillingResultDto>.Failure("Botija não pertence ao pedido aberto");
         }
-
-        // Buscar todos os cilindros do pedido e sincronizar refs antes de validar o estado.
-        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-        order.RecalculateStatus(orderCylinders);
 
         var wasAlreadyReady = RefillOrder.IsCylinderReadyForPickup(cylinder.State);
 
@@ -65,32 +81,31 @@ public class MarkCylinderReadyCommandHandler
                 return Result<FillingResultDto>.Failure(ex.Message);
             }
 
-            order.RecalculateStatus(orderCylinders);
-
-            var historyEntry = CylinderHistoryEntry.Create(
-                cylinder.CylinderId,
-                CylinderEventType.MarkedReady,
-                "Botija marcada como cheia",
-                order.OrderId);
-            await _historyRepository.AddAsync(historyEntry, cancellationToken);
+            await _historyRepository.AddAsync(
+                CylinderHistoryEntry.Create(
+                    cylinder.CylinderId,
+                    CylinderEventType.MarkedReady,
+                    "Botija marcada como cheia",
+                    order.OrderId),
+                cancellationToken);
         }
+
+        // Recalcular só depois da mudança, já com o lock: a última botija do lote
+        // vê as irmãs que os pedidos anteriores acabaram de gravar.
+        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+        order.RecalculateStatus(orderCylinders);
 
         await _cylinderRepository.SaveChangesAsync(cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);
         await _historyRepository.SaveChangesAsync(cancellationToken);
 
-        // Calcular progresso
         var totalCylinders = orderCylinders.Count;
         var readyCylinders = orderCylinders.Count(c => RefillOrder.IsCylinderReadyForPickup(c.State));
 
-        // O cliente pode ter botijas noutro pedido aberto (ex.: entrada dividida em dois
-        // passos). Avisar a UI para não convidar a notificar antes de tudo estar cheio.
         var customerPendingCylinders = await _cylinderRepository.CountPendingByCustomerAsync(
             order.CustomerId,
             cancellationToken);
 
-        // Se o cliente tinha pedidos partidos, o WhatsApp deve refletir o total pronto
-        // (todos os pedidos ReadyForPickup), não só o pedido que acabou de fechar.
         var notifyCylinderCount = totalCylinders;
         if (order.Status == RefillOrderStatus.ReadyForPickup && customerPendingCylinders == 0)
         {

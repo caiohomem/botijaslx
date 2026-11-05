@@ -92,5 +92,8 @@ public class DeleteEmptyOpenOrderCommandHandlerTests
 
         public Task SaveChangesAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task ExecuteLockedAsync(Guid orderId, Func<CancellationToken, Task> action, CancellationToken cancellationToken = default)
+            => action(cancellationToken);
     }
 }
