@@ -1,7 +1,9 @@
+using System.Data;
 using Botijas.Domain.Entities;
 using Botijas.Domain.Repositories;
 using Botijas.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Botijas.Infrastructure.Repositories;
 
@@ -146,5 +148,42 @@ public class RefillOrderRepository : IRefillOrderRepository
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task ExecuteLockedAsync(
+        Guid orderId,
+        Func<CancellationToken, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        var connection = _context.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction.GetDbTransaction();
+            command.CommandText = """SELECT 1 FROM "Orders" WHERE "OrderId" = @id FOR UPDATE""";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "id";
+            parameter.Value = orderId;
+            command.Parameters.Add(parameter);
+            await command.ExecuteScalarAsync(cancellationToken);
+        }
+
+        // Leituras feitas antes do lock ficam obsoletas. A acção tem de voltar a carregar.
+        foreach (var entry in _context.ChangeTracker.Entries().ToList())
+        {
+            if (entry.Entity is RefillOrder or Cylinder or CylinderRef)
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+
+        await action(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 }

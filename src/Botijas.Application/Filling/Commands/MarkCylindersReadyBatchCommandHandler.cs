@@ -24,13 +24,29 @@ public class MarkCylindersReadyBatchCommandHandler
         MarkCylindersReadyBatchCommand command,
         CancellationToken cancellationToken)
     {
-        var order = await _orderRepository.FindByIdAsync(command.OrderId, cancellationToken);
+        var probe = await _orderRepository.FindByIdAsync(command.OrderId, cancellationToken);
+        if (probe == null)
+        {
+            return Result<BatchReadyResult>.Failure("Order not found");
+        }
+
+        Result<BatchReadyResult>? result = null;
+        await _orderRepository.ExecuteLockedAsync(probe.OrderId, async ct =>
+        {
+            result = await MarkLockedAsync(command.OrderId, ct);
+        }, cancellationToken);
+
+        return result ?? Result<BatchReadyResult>.Failure("Order not found");
+    }
+
+    private async Task<Result<BatchReadyResult>> MarkLockedAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        var order = await _orderRepository.FindByIdAsync(orderId, cancellationToken);
         if (order == null)
         {
             return Result<BatchReadyResult>.Failure("Order not found");
         }
 
-        // Membership via CylinderRef; readiness via Cylinder.State (não CylinderRef.State).
         var cylinderIds = order.Cylinders.Select(c => c.CylinderId).ToList();
         if (cylinderIds.Count == 0)
         {
@@ -68,22 +84,14 @@ public class MarkCylindersReadyBatchCommandHandler
             }
         }
 
-        if (markedCount == 0)
+        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+        if (markedCount == 0 && orderCylinders.All(c => RefillOrder.IsCylinderReadyForPickup(c.State)) && order.Status == RefillOrderStatus.ReadyForPickup)
         {
-            var orderCylindersCheck = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-            if (orderCylindersCheck.All(c => RefillOrder.IsCylinderReadyForPickup(c.State)))
-            {
-                return Result<BatchReadyResult>.Failure("No cylinders to mark as ready in this order");
-            }
+            return Result<BatchReadyResult>.Failure("No cylinders to mark as ready in this order");
         }
 
-        // Get updated cylinders for order status check
-        var orderCylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
-
-        // Sincronizar refs e recalcular status do pedido.
         order.RecalculateStatus(orderCylinders);
 
-        // Save changes
         await _cylinderRepository.SaveChangesAsync(cancellationToken);
         await _orderRepository.SaveChangesAsync(cancellationToken);
         await _historyRepository.SaveChangesAsync(cancellationToken);

@@ -14,6 +14,13 @@ public interface IRefillOrderRepository
     Task AddAsync(RefillOrder order, CancellationToken cancellationToken = default);
     Task DeleteAsync(RefillOrder order, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Serializa alterações ao mesmo pedido. Sem este lock, marcações de "cheia"
+    /// em paralelo gravam todas as botijas como Ready e a última escrita deixa o
+    /// pedido Open — as botijas desaparecem da fila e não entram na Out.
+    /// </summary>
+    Task ExecuteLockedAsync(Guid orderId, Func<CancellationToken, Task> action, CancellationToken cancellationToken = default);
 }
 
 public class CurrentCylinderOrderInfo

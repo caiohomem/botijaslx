@@ -48,8 +48,24 @@ public class GetReadyForPickupQueryHandler
                 }
             }
 
-            // Buscar botijas do pedido (read-only: status só muda em comandos)
             var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+
+            // Corrige pedidos presos: todas as botijas já prontas mas o estado ficou Open
+            // (marcação em paralelo), ou todas entregues mas o pedido não fechou.
+            var allDelivered = cylinders.Count > 0 && cylinders.All(c => c.State == CylinderState.Delivered);
+            var allReady = cylinders.Count > 0 && cylinders.All(c => RefillOrder.IsCylinderReadyForPickup(c.State));
+            if ((order.Status == RefillOrderStatus.Open && allReady) ||
+                (order.Status == RefillOrderStatus.ReadyForPickup && allDelivered))
+            {
+                order.RecalculateStatus(cylinders);
+                if (order.Status is RefillOrderStatus.Completed or RefillOrderStatus.Cancelled)
+                {
+                    await _orderRepository.SaveChangesAsync(cancellationToken);
+                    continue;
+                }
+
+                await _orderRepository.SaveChangesAsync(cancellationToken);
+            }
 
             var cylinderDtos = cylinders.Select(c => new PickupCylinderDto
             {

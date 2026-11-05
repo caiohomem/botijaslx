@@ -35,12 +35,17 @@ public class MarkOrderShippedCommandHandler
             return Result<MarkOrderShippedResultDto>.Failure("Este pedido não está marcado para envio");
         }
 
+        var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
+        if (order.Status == RefillOrderStatus.Open)
+        {
+            order.RecalculateStatus(cylinders);
+        }
+
         if (order.Status != RefillOrderStatus.ReadyForPickup)
         {
             return Result<MarkOrderShippedResultDto>.Failure($"Pedido não está pronto para envio. Status atual: {order.Status}");
         }
 
-        var cylinders = await _cylinderRepository.FindByOrderIdAsync(order.OrderId, cancellationToken);
         if (cylinders.Count == 0)
         {
             return Result<MarkOrderShippedResultDto>.Failure("Pedido sem botijas");

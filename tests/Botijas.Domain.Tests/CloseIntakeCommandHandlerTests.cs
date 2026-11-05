@@ -107,6 +107,37 @@ public class CloseIntakeCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_PromotesFinishedOpenOrderInsteadOfAppendingNewVisit()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Handler.Handle(
+            new CloseIntakeCommand(fixture.Customer.CustomerId, NewCylinderCount: 2),
+            CancellationToken.None);
+
+        Assert.True(first.IsSuccess, first.Error);
+
+        var stuckOrder = fixture.Orders.All.Single();
+        var stuckCylinders = await fixture.Cylinders.FindByOrderIdAsync(stuckOrder.OrderId);
+        foreach (var cylinder in stuckCylinders)
+        {
+            cylinder.MarkAsReady();
+        }
+
+        Assert.Equal(RefillOrderStatus.Open, stuckOrder.Status);
+
+        var second = await fixture.Handler.Handle(
+            new CloseIntakeCommand(fixture.Customer.CustomerId, NewCylinderCount: 1),
+            CancellationToken.None);
+
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.False(second.Value!.ReusedExistingOrder);
+        Assert.NotEqual(first.Value!.OrderId, second.Value.OrderId);
+        Assert.Equal(RefillOrderStatus.ReadyForPickup, stuckOrder.Status);
+        Assert.Equal(1, second.Value.CylinderCount);
+        Assert.Equal(2, fixture.Orders.All.Count());
+    }
+
+    [Fact]
     public async Task Handle_RejectsEmptyIntake()
     {
         var fixture = new Fixture();
@@ -194,6 +225,9 @@ public class CloseIntakeCommandHandlerTests
             => throw new NotImplementedException();
 
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task ExecuteLockedAsync(Guid orderId, Func<CancellationToken, Task> action, CancellationToken cancellationToken = default)
+            => action(cancellationToken);
     }
 
     private sealed class FakeCylinderRepository : ICylinderRepository
