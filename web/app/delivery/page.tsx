@@ -45,8 +45,11 @@ interface CustomerCylinderListItem {
   orderId: string;
   lastEventAt: string;
   availableForEntry: boolean;
-  returnedWithoutExit: boolean;
+  stage: CustomerCylinderStage;
+  stageAt: string;
 }
+
+type CustomerCylinderStage = 'returnedWithoutExit' | 'filling' | 'problem' | 'available' | 'unavailable';
 
 interface CustomerOrderHistoryItem {
   orderId: string;
@@ -140,8 +143,28 @@ export default function DeliveryPage() {
   const mapCustomerCylinders = (allCylinders: CustomerCylinder[]): CustomerCylinderListItem[] => {
     return getUniqueCustomerCylinders(allCylinders)
       .map((cylinder) => {
-        const latestHistory = [...cylinder.history]
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        const newestFirst = [...cylinder.history]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const lastEventAt = newestFirst[0]?.timestamp || cylinder.createdAt;
+        const lastEventOf = (eventType: string) =>
+          newestFirst.find(h => h.eventType === eventType)?.timestamp || lastEventAt;
+
+        // Pronta num pedido para recolha pode ter saído sem registo: a entrada regista a saída em falta.
+        // Num pedido aberto continua na oficina, à espera que o resto do pedido encha.
+        const returnedWithoutExit = cylinder.state === 'Ready';
+        const availableForEntry = returnedWithoutExit || cylinder.orderStatus !== 'Open';
+        let stage: CustomerCylinderStage = availableForEntry ? 'available' : 'unavailable';
+        let stageAt = lastEventAt;
+        if (returnedWithoutExit && availableForEntry) {
+          stage = 'returnedWithoutExit';
+          stageAt = lastEventOf('MarkedReady');
+        } else if (!availableForEntry && cylinder.state === 'Received') {
+          stage = 'filling';
+          stageAt = lastEventOf('Received');
+        } else if (!availableForEntry && cylinder.state === 'Problem') {
+          stage = 'problem';
+          stageAt = lastEventOf('ProblemReported');
+        }
 
         return {
           cylinderId: cylinder.cylinderId,
@@ -150,11 +173,10 @@ export default function DeliveryPage() {
           state: cylinder.state,
           orderStatus: cylinder.orderStatus,
           orderId: cylinder.orderId,
-          lastEventAt: latestHistory?.timestamp || cylinder.createdAt,
-          // Uma botija pronta ainda «por sair» pode voltar: a entrada regista a saída em falta.
-          // Received num pedido aberto continua na oficina, à espera de encher.
-          returnedWithoutExit: cylinder.state === 'Ready',
-          availableForEntry: cylinder.state === 'Ready' || cylinder.orderStatus !== 'Open',
+          lastEventAt,
+          availableForEntry,
+          stage,
+          stageAt,
         };
       })
       .sort((a, b) => a.sequentialNumber - b.sequentialNumber);
@@ -559,11 +581,34 @@ export default function DeliveryPage() {
                 {customerCylinders.map((cylinder) => {
                   const selected = cylinders.some(c => c.cylinderId === cylinder.cylinderId);
                   const available = cylinder.availableForEntry;
-                  const label = !available
-                    ? tr('delivery.notAvailableForEntry', 'Indisponível')
-                    : cylinder.returnedWithoutExit
-                      ? tr('delivery.returnedWithoutExit', 'Voltou sem saída')
-                      : tr('delivery.availableForEntry', 'Disponível para entrada');
+                  const returnedWithoutExit = cylinder.stage === 'returnedWithoutExit';
+                  const stageView = {
+                    returnedWithoutExit: {
+                      label: tr('delivery.returnedWithoutExit', 'Voltou sem saída'),
+                      badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
+                      dateLabel: tr('delivery.readySince', 'Pronta desde'),
+                    },
+                    filling: {
+                      label: tr('delivery.inFilling', 'Em enchimento'),
+                      badge: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200',
+                      dateLabel: tr('delivery.receivedOn', 'Entrada'),
+                    },
+                    problem: {
+                      label: tr('delivery.withProblem', 'Com problema'),
+                      badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                      dateLabel: tr('delivery.problemSince', 'Problema desde'),
+                    },
+                    available: {
+                      label: tr('delivery.availableForEntry', 'Disponível para entrada'),
+                      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                      dateLabel: tr('delivery.lastMovement', 'Último movimento'),
+                    },
+                    unavailable: {
+                      label: tr('delivery.notAvailableForEntry', 'Indisponível'),
+                      badge: 'bg-muted text-muted-foreground',
+                      dateLabel: tr('delivery.lastMovement', 'Último movimento'),
+                    },
+                  }[cylinder.stage];
 
                   return (
                     <button
@@ -578,11 +623,11 @@ export default function DeliveryPage() {
                       className={`p-3 border rounded-lg text-left transition-colors ${
                         selected
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                          : cylinder.returnedWithoutExit
+                          : returnedWithoutExit
                             ? 'hover:bg-accent border-amber-300 dark:border-amber-700'
                             : available
                               ? 'hover:bg-accent border-blue-200 dark:border-blue-800'
-                              : 'opacity-60 border-muted bg-muted/20 cursor-not-allowed'
+                              : 'opacity-80 border-muted bg-muted/20 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -595,19 +640,13 @@ export default function DeliveryPage() {
                           </div>
                         </div>
                         <div className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          selected
-                            ? 'bg-green-600 text-white'
-                            : cylinder.returnedWithoutExit
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
-                              : available
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                : 'bg-muted text-muted-foreground'
+                          selected ? 'bg-green-600 text-white' : stageView.badge
                         }`}>
-                          {selected ? tr('delivery.selectedForOrder', 'Selecionada') : label}
+                          {selected ? tr('delivery.selectedForOrder', 'Selecionada') : stageView.label}
                         </div>
                       </div>
                       <div className="mt-2 text-xs text-muted-foreground">
-                        {tr('delivery.lastMovement', 'Último movimento')}: {formatDate(cylinder.lastEventAt)}
+                        {stageView.dateLabel}: {formatDate(cylinder.stageAt)}
                       </div>
                     </button>
                   );
