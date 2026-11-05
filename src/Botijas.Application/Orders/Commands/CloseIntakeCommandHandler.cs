@@ -58,6 +58,10 @@ public class CloseIntakeCommandHandler
             return Result<CloseIntakeResultDto>.Failure("Quantidade de botijas novas demasiado alta");
         }
 
+        // Botijas que saíram da loja sem ninguém carregar em Entregar continuam Ready.
+        // Quando voltam, a entrada regista essa saída e só depois abre o ciclo novo.
+        await SettleCylindersReturnedWithoutExitAsync(existingIds, cancellationToken);
+
         // Uma visita = um pedido. Reaproveita o pedido aberto do cliente com o mesmo
         // modo de entrega para que botijas dadas em passos separados fiquem juntas.
         var openOrders = await _orderRepository.FindOpenOrdersByCustomerAsync(command.CustomerId, cancellationToken);
@@ -229,6 +233,102 @@ public class CloseIntakeCommandHandler
                 .ToList()
         });
     }
+
+    private async Task SettleCylindersReturnedWithoutExitAsync(
+        IReadOnlyList<Guid> cylinderIds,
+        CancellationToken cancellationToken)
+    {
+        var returningByOrder = new Dictionary<Guid, List<Guid>>();
+        var settledOutsideAnOrder = false;
+
+        foreach (var cylinderId in cylinderIds)
+        {
+            var cylinder = await _cylinderRepository.FindByIdAsync(cylinderId, cancellationToken);
+            if (cylinder?.State != CylinderState.Ready)
+            {
+                continue;
+            }
+
+            var order = await _orderRepository.FindByCylinderIdAsync(cylinderId, cancellationToken);
+            if (order == null || order.Status is not (RefillOrderStatus.Open or RefillOrderStatus.ReadyForPickup))
+            {
+                cylinder.MarkAsDelivered();
+                await _historyRepository.AddAsync(
+                    CylinderHistoryEntry.Create(
+                        cylinder.CylinderId,
+                        CylinderEventType.Delivered,
+                        MissedExitDetails),
+                    cancellationToken);
+                settledOutsideAnOrder = true;
+                continue;
+            }
+
+            if (!returningByOrder.TryGetValue(order.OrderId, out var ids))
+            {
+                ids = new List<Guid>();
+                returningByOrder[order.OrderId] = ids;
+            }
+
+            ids.Add(cylinderId);
+        }
+
+        if (settledOutsideAnOrder)
+        {
+            await _cylinderRepository.SaveChangesAsync(cancellationToken);
+            await _historyRepository.SaveChangesAsync(cancellationToken);
+        }
+
+        foreach (var (orderId, returningIds) in returningByOrder)
+        {
+            await _orderRepository.ExecuteLockedAsync(orderId, async ct =>
+            {
+                var order = await _orderRepository.FindByIdAsync(orderId, ct);
+                if (order == null || order.Status is not (RefillOrderStatus.Open or RefillOrderStatus.ReadyForPickup))
+                {
+                    return;
+                }
+
+                var onOrder = await _cylinderRepository.FindByOrderIdAsync(orderId, ct);
+                var returning = returningIds.ToHashSet();
+                var settled = new List<Guid>();
+                foreach (var cylinder in onOrder.Where(c => returning.Contains(c.CylinderId) && c.State == CylinderState.Ready))
+                {
+                    cylinder.MarkAsDelivered();
+                    settled.Add(cylinder.CylinderId);
+                    await _historyRepository.AddAsync(
+                        CylinderHistoryEntry.Create(
+                            cylinder.CylinderId,
+                            CylinderEventType.Delivered,
+                            MissedExitDetails,
+                            order.OrderId),
+                        ct);
+                }
+
+                var allDelivered = onOrder.Count > 0 && onOrder.All(c => c.State == CylinderState.Delivered);
+                if (allDelivered)
+                {
+                    order.RecalculateStatus(onOrder);
+                }
+                else
+                {
+                    foreach (var id in settled)
+                    {
+                        order.ReleaseCylinder(id);
+                    }
+
+                    var remaining = onOrder.Where(c => !settled.Contains(c.CylinderId)).ToList();
+                    order.RecalculateStatus(remaining);
+                }
+
+                await _cylinderRepository.SaveChangesAsync(ct);
+                await _orderRepository.SaveChangesAsync(ct);
+                await _historyRepository.SaveChangesAsync(ct);
+            }, cancellationToken);
+        }
+    }
+
+    private const string MissedExitDetails =
+        "Saída registada na entrada: a botija voltou sem ter sido dada saída";
 }
 
 public class CloseIntakeResultDto

@@ -138,6 +138,106 @@ public class CloseIntakeCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_RecordsMissedExitWhenReadyCylindersComeBack()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Handler.Handle(
+            new CloseIntakeCommand(fixture.Customer.CustomerId, NewCylinderCount: 4),
+            CancellationToken.None);
+
+        Assert.True(first.IsSuccess, first.Error);
+        var previousOrder = fixture.Orders.All.Single();
+        var stuck = await fixture.Cylinders.FindByOrderIdAsync(previousOrder.OrderId);
+        foreach (var cylinder in stuck)
+        {
+            cylinder.MarkAsReady();
+        }
+
+        var second = await fixture.Handler.Handle(
+            new CloseIntakeCommand(
+                fixture.Customer.CustomerId,
+                ExistingCylinderIds: stuck.Select(c => c.CylinderId).ToArray()),
+            CancellationToken.None);
+
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.False(second.Value!.ReusedExistingOrder);
+        Assert.NotEqual(previousOrder.OrderId, second.Value.OrderId);
+        Assert.Equal(RefillOrderStatus.Completed, previousOrder.Status);
+        Assert.Equal(4, previousOrder.Cylinders.Count);
+        Assert.Equal(4, second.Value.CylinderCount);
+        Assert.All(second.Value.AddedCylinders, c => Assert.Equal("Received", c.State));
+        Assert.Equal(4, fixture.History.Entries.Count(e => e.EventType == CylinderEventType.Delivered));
+        Assert.Contains(
+            fixture.History.Entries,
+            e => e.EventType == CylinderEventType.Delivered && e.OrderId == previousOrder.OrderId);
+    }
+
+    [Fact]
+    public async Task Handle_RecordsMissedExitWhenOrderWasAlreadyReadyForPickup()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Handler.Handle(
+            new CloseIntakeCommand(fixture.Customer.CustomerId, NewCylinderCount: 2),
+            CancellationToken.None);
+
+        var previousOrder = fixture.Orders.All.Single();
+        var stuck = await fixture.Cylinders.FindByOrderIdAsync(previousOrder.OrderId);
+        foreach (var cylinder in stuck)
+        {
+            cylinder.MarkAsReady();
+        }
+
+        previousOrder.RecalculateStatus(stuck);
+        Assert.Equal(RefillOrderStatus.ReadyForPickup, previousOrder.Status);
+
+        var second = await fixture.Handler.Handle(
+            new CloseIntakeCommand(
+                fixture.Customer.CustomerId,
+                ExistingCylinderIds: stuck.Select(c => c.CylinderId).ToArray()),
+            CancellationToken.None);
+
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.Equal(RefillOrderStatus.Completed, previousOrder.Status);
+        Assert.NotEqual(previousOrder.OrderId, second.Value!.OrderId);
+        Assert.All(second.Value.AddedCylinders, c => Assert.Equal("Received", c.State));
+    }
+
+    [Fact]
+    public async Task Handle_TakesBackReadyCylindersThatShareAnOrderWithANewVisit()
+    {
+        var fixture = new Fixture();
+        var first = await fixture.Handler.Handle(
+            new CloseIntakeCommand(fixture.Customer.CustomerId, NewCylinderCount: 1),
+            CancellationToken.None);
+
+        Assert.True(first.IsSuccess, first.Error);
+        var order = fixture.Orders.All.Single();
+        var readyA = Cylinder.Create(1115);
+        var readyB = Cylinder.Create(1116);
+        readyA.MarkAsReady();
+        readyB.MarkAsReady();
+        fixture.Cylinders.Seed(readyA);
+        fixture.Cylinders.Seed(readyB);
+        order.AddCylinder(readyA);
+        order.AddCylinder(readyB);
+
+        var second = await fixture.Handler.Handle(
+            new CloseIntakeCommand(
+                fixture.Customer.CustomerId,
+                ExistingCylinderIds: [readyA.CylinderId, readyB.CylinderId]),
+            CancellationToken.None);
+
+        Assert.True(second.IsSuccess, second.Error);
+        Assert.True(second.Value!.ReusedExistingOrder);
+        Assert.Equal(order.OrderId, second.Value.OrderId);
+        Assert.Equal(RefillOrderStatus.Open, order.Status);
+        Assert.Equal(3, second.Value.CylinderCount);
+        Assert.All(second.Value.Cylinders, c => Assert.Equal("Received", c.State));
+        Assert.Equal(2, fixture.History.Entries.Count(e =>
+            e.EventType == CylinderEventType.Delivered && e.OrderId == order.OrderId));
+    }
+
+    [Fact]
     public async Task Handle_RejectsEmptyIntake()
     {
         var fixture = new Fixture();
