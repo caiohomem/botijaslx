@@ -7,7 +7,13 @@ import { CreateCustomerForm } from '@/components/CreateCustomerForm';
 import { AppSettings, ordersApi, cylindersApi, customersApi, historyApi, generateWhatsAppLink, CustomerCylinder } from '@/lib/api';
 import { QrScanner } from '@/components/QrScanner';
 import { LabelPreview, printLabels } from '@/components/LabelPreview';
-import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
+import {
+  DEFAULT_APP_SETTINGS,
+  SETTINGS_UPDATED_EVENT,
+  formatWhatsAppTemplate,
+  loadAppSettings,
+  loadMessagingSettingsForSend,
+} from '@/lib/settings';
 
 interface Customer {
   customerId: string;
@@ -113,7 +119,27 @@ export default function DeliveryPage() {
   const labelsContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadAppSettings().then(setSettings);
+    loadAppSettings(true).then(setSettings);
+
+    const onUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<AppSettings>).detail;
+      if (detail) {
+        setSettings({ ...DEFAULT_APP_SETTINGS, ...detail });
+      } else {
+        loadAppSettings(true).then(setSettings);
+      }
+    };
+
+    const onFocus = () => {
+      loadAppSettings(true).then(setSettings);
+    };
+
+    window.addEventListener(SETTINGS_UPDATED_EVENT, onUpdated);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener(SETTINGS_UPDATED_EVENT, onUpdated);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const tr = (key: string, fallback: string) => {
@@ -259,10 +285,14 @@ export default function DeliveryPage() {
     }
   };
 
-  const openWelcomeWhatsApp = (customer: Customer) => {
-    const template = settings.welcomeMessageTemplate || DEFAULT_APP_SETTINGS.welcomeMessageTemplate;
-    const link = settings.storeLink || '';
-    const message = template.replace('{name}', customer.name).replace('{link}', link);
+  const openWelcomeWhatsApp = async (customer: Customer) => {
+    const freshSettings = await loadMessagingSettingsForSend();
+    const template =
+      freshSettings.welcomeMessageTemplate || DEFAULT_APP_SETTINGS.welcomeMessageTemplate;
+    const message = formatWhatsAppTemplate(template, {
+      name: customer.name,
+      link: freshSettings.storeLink,
+    });
     const waLink = generateWhatsAppLink(customer.phone, message, customer.phoneType === 'International' ? 'international' : 'pt');
     window.open(waLink, '_blank');
   };

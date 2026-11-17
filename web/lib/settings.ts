@@ -51,3 +51,19 @@ export async function saveAppSettings(settings: AppSettings): Promise<AppSetting
 export function getCachedAppSettings(): AppSettings {
   return cachedSettings ?? { ...DEFAULT_APP_SETTINGS };
 }
+
+export function formatWhatsAppTemplate(
+  template: string,
+  params: { name: string; count?: number | string; days?: number | string; link?: string }
+): string {
+  return template
+    .replace(/\{name\}/g, params.name)
+    .replace(/\{count\}/g, String(params.count ?? ''))
+    .replace(/\{days\}/g, String(params.days ?? ''))
+    .replace(/\{link\}/g, params.link ?? '');
+}
+
+/** Garante que o texto enviado corresponde à configuração guardada no servidor. */
+export async function loadMessagingSettingsForSend(): Promise<AppSettings> {
+  return loadAppSettings(true);
+}
