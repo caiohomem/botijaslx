@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import { cylindersApi, pickupApi, historyApi, generateWhatsAppLink, FillingQueueItem } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
 import { QrScanner } from '@/components/QrScanner';
-import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
+import { formatWhatsAppTemplate } from '@/lib/settings';
+import { useMessagingAppSettings } from '@/hooks/useMessagingAppSettings';
 import { getWaitTimeMinutes, formatWaitTime } from '@/lib/time';
 
 const PROBLEM_TYPES = [
@@ -40,9 +41,7 @@ export default function FillingPage() {
     notes: string;
     timestamp: string;
   }>>([]);
-  const [messageTemplate, setMessageTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
-  const [shippingMessageTemplate, setShippingMessageTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
-  const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
+  const { loadForSend } = useMessagingAppSettings();
   const [completedOrders, setCompletedOrders] = useState<Array<{
     orderId: string;
     customerName: string;
@@ -87,11 +86,6 @@ export default function FillingPage() {
 
   useEffect(() => {
     loadQueue();
-    loadAppSettings().then((settings) => {
-      setMessageTemplate(settings.whatsAppMessageTemplate);
-      setShippingMessageTemplate(settings.shippingReadyMessageTemplate);
-      setStoreLink(settings.storeLink);
-    });
   }, [loadQueue]);
 
   useEffect(() => {
@@ -102,7 +96,7 @@ export default function FillingPage() {
     return () => clearInterval(interval);
   }, [loadQueue]);
 
-  const openWhatsApp = (
+  const openWhatsApp = async (
     customerName: string,
     customerPhone: string,
     customerPhoneType: string,
@@ -110,13 +104,15 @@ export default function FillingPage() {
     cylinderCount: number,
     orderId: string
   ) => {
+    const settings = await loadForSend();
     const selectedTemplate = fulfillmentMethod === 'Shipping'
-      ? shippingMessageTemplate
-      : messageTemplate;
-    const message = selectedTemplate
-      .replace('{name}', customerName)
-      .replace('{count}', String(cylinderCount))
-      .replace('{link}', storeLink);
+      ? settings.shippingReadyMessageTemplate
+      : settings.whatsAppMessageTemplate;
+    const message = formatWhatsAppTemplate(selectedTemplate, {
+      name: customerName,
+      count: cylinderCount,
+      link: settings.storeLink,
+    });
     const link = generateWhatsAppLink(
       customerPhone,
       message,

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { pickupApi, generateWhatsAppLink, PickupOrder } from '@/lib/api';
 import { playSound } from '@/lib/sounds';
-import { DEFAULT_APP_SETTINGS, loadAppSettings } from '@/lib/settings';
+import { formatWhatsAppTemplate } from '@/lib/settings';
+import { useMessagingAppSettings } from '@/hooks/useMessagingAppSettings';
 import { getWaitTimeMinutes, formatWaitTime } from '@/lib/time';
 
 export default function PickupPage() {
@@ -21,11 +22,7 @@ export default function PickupPage() {
   const [confirmDeliver, setConfirmDeliver] = useState<{ orderId: string; count: number } | null>(null);
   const requestIdRef = useRef(0);
   const debouncedSearchRef = useRef('');
-  const [pickupTemplate, setPickupTemplate] = useState(DEFAULT_APP_SETTINGS.whatsAppMessageTemplate);
-  const [shippingTemplate, setShippingTemplate] = useState(DEFAULT_APP_SETTINGS.shippingReadyMessageTemplate);
-  const [thankYouTemplate, setThankYouTemplate] = useState(DEFAULT_APP_SETTINGS.thankYouMessageTemplate);
-  const [deadlineTemplate, setDeadlineTemplate] = useState(DEFAULT_APP_SETTINGS.deadlineMessageTemplate);
-  const [storeLink, setStoreLink] = useState(DEFAULT_APP_SETTINGS.storeLink);
+  const { loadForSend } = useMessagingAppSettings();
 
   useEffect(() => {
     const filter = new URLSearchParams(window.location.search).get('filter');
@@ -51,16 +48,6 @@ export default function PickupPage() {
         setLoading(false);
       }
     }
-  }, []);
-
-  useEffect(() => {
-    loadAppSettings().then((settings) => {
-      setPickupTemplate(settings.whatsAppMessageTemplate);
-      setShippingTemplate(settings.shippingReadyMessageTemplate);
-      setThankYouTemplate(settings.thankYouMessageTemplate);
-      setDeadlineTemplate(settings.deadlineMessageTemplate);
-      setStoreLink(settings.storeLink);
-    });
   }, []);
 
   // M9: Debounced live search (300ms, same pattern as CustomerSearch)
@@ -89,13 +76,15 @@ export default function PickupPage() {
   };
 
   const openReadyWhatsApp = async (order: PickupOrder) => {
+    const settings = await loadForSend();
     const template = order.fulfillmentMethod === 'Shipping'
-      ? shippingTemplate
-      : pickupTemplate;
-    const message = template
-      .replace('{name}', order.customerName)
-      .replace('{count}', String(order.totalCylinders))
-      .replace('{link}', storeLink);
+      ? settings.shippingReadyMessageTemplate
+      : settings.whatsAppMessageTemplate;
+    const message = formatWhatsAppTemplate(template, {
+      name: order.customerName,
+      count: order.totalCylinders,
+      link: settings.storeLink,
+    });
     const link = generateWhatsAppLink(
       order.customerPhone,
       message,
@@ -118,17 +107,19 @@ export default function PickupPage() {
     }
   };
 
-  const openDeadlineWhatsApp = (order: PickupOrder) => {
+  const openDeadlineWhatsApp = async (order: PickupOrder) => {
+    const settings = await loadForSend();
     const base = order.readyAt ?? order.createdAt;
     const days = Math.max(
       0,
       Math.floor((Date.now() - new Date(base).getTime()) / 86400000)
     );
-    const message = deadlineTemplate
-      .replace('{name}', order.customerName)
-      .replace('{count}', String(order.totalCylinders))
-      .replace('{days}', String(days))
-      .replace('{link}', storeLink);
+    const message = formatWhatsAppTemplate(settings.deadlineMessageTemplate, {
+      name: order.customerName,
+      count: order.totalCylinders,
+      days,
+      link: settings.storeLink,
+    });
 
     const link = generateWhatsAppLink(
       order.customerPhone,
@@ -139,11 +130,13 @@ export default function PickupPage() {
     window.open(link, '_blank');
   };
 
-  const openThankYouWhatsApp = (order: PickupOrder) => {
-    const message = thankYouTemplate
-      .replace('{name}', order.customerName)
-      .replace('{count}', String(order.totalCylinders))
-      .replace('{link}', storeLink);
+  const openThankYouWhatsApp = async (order: PickupOrder) => {
+    const settings = await loadForSend();
+    const message = formatWhatsAppTemplate(settings.thankYouMessageTemplate, {
+      name: order.customerName,
+      count: order.totalCylinders,
+      link: settings.storeLink,
+    });
 
     const link = generateWhatsAppLink(
       order.customerPhone,
